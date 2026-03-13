@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="description" content="SoloScribe" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Roboto:wght@300;400;500;700&family=Open+Sans:wght@300;400;500;600;700&family=Lato:wght@300;400;700&family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Merriweather:wght@300;400;700&family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+      crossorigin="anonymous"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"
+      rel="stylesheet"
+      crossorigin="anonymous"
+    />
+    <link rel="stylesheet" href="/index.css" />
+    <title>SoloScribe</title>
+    <script>
+      window.process = {
+        env: {
+          API_KEY: "{{API_KEY}}"
+        }
+      };
+      // Suppress benign Vite HMR errors that clutter the console in this environment
+      const originalError = console.error;
+      const originalWarn = console.warn;
+      
+      const isBenignViteError = (msg) => {
+        if (typeof msg !== 'string') return false;
+        return msg.includes('[vite] failed to connect to websocket') || 
+               msg.includes('WebSocket closed without opened') ||
+               msg.includes('[vite] server connection lost');
+      };
+
+      console.error = (...args) => {
+        if (isBenignViteError(args[0])) return;
+        originalError.apply(console, args);
+      };
+      
+      console.warn = (...args) => {
+        if (isBenignViteError(args[0])) return;
+        originalWarn.apply(console, args);
+      };
+
+      window.addEventListener('unhandledrejection', (event) => {
+        if (isBenignViteError(event.reason) || isBenignViteError(event.reason?.message)) {
+          event.preventDefault();
+        }
+      });
+    </script>
+    <script>
+      MathJax = {
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          displayMath: [['$$', '$$'], ['\\[', '\\]']]
+        },
+        options: {
+          ignoreHtmlClass: 'mathjax_ignore',
+          processHtmlClass: 'mathjax_process'
+        },
+        svg: {
+          fontCache: 'global'
+        }
+      };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  </head>
+
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
