@@ -24,19 +24,22 @@
 export const DEFAULT_LIVE_API_MODEL = 'gemini-2.5-flash-native-audio-preview-09-2025';
 
 export const FONT_OPTIONS = [
-  'Arial',
-  'Verdana',
-  'Georgia',
-  'Times New Roman',
-  'Courier New',
+  'Rajdhani',
+  'Orbitron',
+  'Space Grotesk',
+  'Space Mono',
+  'Inter',
   'Roboto',
   'Open Sans',
   'Lato',
   'Montserrat',
   'Playfair Display',
   'Merriweather',
-  'Inter',
-  'Space Mono',
+  'Arial',
+  'Verdana',
+  'Georgia',
+  'Times New Roman',
+  'Courier New',
 ];
 
 export const PLACEHOLDER_DOC = 'As you talk, your AI co-founder will draft your business plan, pitch deck, or strategy here...';

@@ -5,7 +5,8 @@
 import * as React from 'react';
 import { useEffect, useState, useMemo } from 'react';
 import { useUI } from '../lib/state';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, LogIn } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 const TRANSLITERATIONS = [
   { text: 'Co-founder', lang: 'English' },
@@ -35,6 +36,7 @@ const TRANSLITERATIONS = [
  */
 export default function WelcomeScreen() {
   const { setShowWelcomeScreen, setShowDisclaimer } = useUI();
+  const { user, signIn } = useAuth();
   const [isExiting, setIsExiting] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -106,10 +108,22 @@ export default function WelcomeScreen() {
             </p>
           </div>
 
-          <button onClick={handleClose} className="start-button glass-button">
-            <span>Start session</span>
-            <ArrowRight size={20} className="arrow-icon" />
-          </button>
+          {user ? (
+            <button onClick={handleClose} className="start-button glass-button">
+              <span>Start session</span>
+              <ArrowRight size={20} className="arrow-icon" />
+            </button>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center' }}>
+              <button onClick={signIn} className="start-button glass-button" style={{ backgroundColor: 'var(--theme-accent)', color: '#000' }}>
+                <LogIn size={20} className="arrow-icon" style={{ marginRight: '8px' }} />
+                <span>Sign up / Log in with Google</span>
+              </button>
+              <p style={{ fontSize: '0.85rem', opacity: 0.7, marginTop: '8px' }}>
+                You must be logged in to use Soloscribe.
+              </p>
+            </div>
+          )}
 
           <div className="powered-by-gemini welcome-footer">
             <svg

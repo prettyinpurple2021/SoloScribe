@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
-import { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Agent,
   INTERLOCUTOR_VOICE,
@@ -24,6 +24,11 @@ export default function EditAgent() {
   // Fetches the function to control the visibility of this modal from the UI store.
   const { setShowAgentEdit } = useUI();
 
+  // Local state for form fields
+  const [name, setName] = useState(agent.name);
+  const [voice, setVoice] = useState<INTERLOCUTOR_VOICE>(agent.voice);
+  const [personality, setPersonality] = useState(agent.personality);
+
   /**
    * Closes the agent editing modal.
    */
@@ -32,21 +37,19 @@ export default function EditAgent() {
   }
 
   /**
-   * A helper function to update the current agent's properties.
-   * @param adjustments A partial object of the Agent type containing the fields to update.
+   * Handles form submission to update the global agent state.
    */
-  function updateCurrentAgent(adjustments: Partial<Agent>) {
-    updateAgent(agent.id, adjustments);
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    updateAgent(agent.id, { name, voice, personality });
+    onClose();
   }
 
   return (
     <Modal onClose={() => onClose()} className="agent-edit-modal">
       <form
         className="edit-agent-form"
-        onSubmit={e => {
-          e.preventDefault();
-          onClose();
-        }}
+        onSubmit={handleSubmit}
       >
         <div className="agent-edit-header">
           <div className="config-field name-field">
@@ -54,8 +57,8 @@ export default function EditAgent() {
             <input
               type="text"
               placeholder="Name"
-              value={agent.name}
-              onChange={e => updateCurrentAgent({ name: e.target.value })}
+              value={name}
+              onChange={e => setName(e.target.value)}
               ref={nameInput}
               className="header-input"
             />
@@ -63,17 +66,13 @@ export default function EditAgent() {
           <div className="config-field voice-field">
             <label>Voice</label>
             <select
-              value={agent.voice}
-              onChange={e => {
-                updateCurrentAgent({
-                  voice: e.target.value as INTERLOCUTOR_VOICE,
-                });
-              }}
+              value={voice}
+              onChange={e => setVoice(e.target.value as INTERLOCUTOR_VOICE)}
               className="header-input"
             >
-              {INTERLOCUTOR_VOICES.map(voice => (
-                <option key={voice} value={voice}>
-                  {voice}
+              {INTERLOCUTOR_VOICES.map(v => (
+                <option key={v} value={v}>
+                  {v}
                 </option>
               ))}
             </select>
@@ -84,10 +83,13 @@ export default function EditAgent() {
         </div>
 
         <div className="agent-personality">
-          <label>Personality</label>
+          <div className="personality-header">
+            <label>Personality</label>
+            <span className="char-counter">{personality.length} characters</span>
+          </div>
           <textarea
-            value={agent.personality}
-            onChange={e => updateCurrentAgent({ personality: e.target.value })}
+            value={personality}
+            onChange={e => setPersonality(e.target.value)}
             placeholder="How should this assistant act? What is its purpose?"
           />
         </div>

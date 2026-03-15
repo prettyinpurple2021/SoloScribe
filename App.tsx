@@ -34,6 +34,8 @@ import { themes } from './lib/themes';
 import FloatingAvatar from './components/FloatingAvatar';
 import HelpModal from './components/HelpModal';
 import LegalDisclaimer from './components/LegalDisclaimer';
+import { useAuth } from './contexts/AuthContext';
+import { PublicInterview } from './components/PublicInterview';
 
 const getApiKey = () => {
   if (typeof window !== 'undefined' && window.process?.env?.API_KEY && window.process.env.API_KEY !== '{{API_KEY}}') {
@@ -98,20 +100,28 @@ function AppContent() {
  * global theme, and provides the LiveAPI context to its children.
  */
 function App() {
-  // An API key is required. If it's missing, render an error message.
-  if (!API_KEY) {
-    return (
-      <div className="fullscreen-error">
-        <h1>Configuration Error</h1>
-        <p>
-          Missing required environment variable: <code>API_KEY</code>.
-        </p>
-        <p>Please ensure it is configured in your environment to run the app.</p>
-      </div>
-    );
-  }
+  const [hasKey, setHasKey] = useState<boolean | null>(null);
+  const { showWelcomeScreen, setShowWelcomeScreen, theme, font } = useUI();
+  const { user, loading } = useAuth();
 
-  const { showWelcomeScreen, theme, font } = useUI();
+  useEffect(() => {
+    if (!loading && !user) {
+      setShowWelcomeScreen(true);
+    }
+  }, [user, loading, setShowWelcomeScreen]);
+
+  useEffect(() => {
+    const checkKey = async () => {
+      if (typeof window !== 'undefined' && (window as any).aistudio?.hasSelectedApiKey) {
+        const selected = await (window as any).aistudio.hasSelectedApiKey();
+        setHasKey(selected);
+      } else {
+        // Fallback for local dev or if aistudio is not available
+        setHasKey(!!getApiKey());
+      }
+    };
+    checkKey();
+  }, []);
 
   // This effect applies the selected theme's colors as CSS variables to the root element,
   // allowing for dynamic theming of the entire application.
@@ -130,10 +140,48 @@ function App() {
     document.documentElement.style.setProperty('--font-document', font);
   }, [font]);
 
+  const handleSelectKey = async () => {
+    if (typeof window !== 'undefined' && (window as any).aistudio?.openSelectKey) {
+      await (window as any).aistudio.openSelectKey();
+      // Assume success to mitigate race condition
+      setHasKey(true);
+    }
+  };
+
+  if (hasKey === null) {
+    return <div className="fullscreen-error"><p>Loading...</p></div>;
+  }
+
+  if (!hasKey) {
+    return (
+      <div className="fullscreen-error">
+        <h1 style={{ color: 'var(--theme-accent)' }}>API Key Required</h1>
+        <p>This application requires a paid Google Cloud API key to generate images and use the Live API.</p>
+        <p>
+          <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noreferrer" style={{ color: 'var(--theme-accent-secondary)' }}>
+            Learn more about billing
+          </a>
+        </p>
+        <button onClick={handleSelectKey} className="start-button glass-button" style={{ marginTop: '20px' }}>
+          <span>Select API Key</span>
+        </button>
+      </div>
+    );
+  }
+
+  const currentApiKey = getApiKey() as string;
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const interviewId = urlParams.get('interview');
+
+  if (interviewId) {
+    return <PublicInterview interviewId={interviewId} />;
+  }
+
   return (
     <div className="App">
       {showWelcomeScreen && <WelcomeScreen />}
-      <LiveAPIProvider apiKey={API_KEY}>
+      <LiveAPIProvider apiKey={currentApiKey}>
         <AppContent />
       </LiveAPIProvider>
     </div>

@@ -15,7 +15,13 @@ import {
   ClipboardList, 
   Volume2,
   ChevronDown,
+  LogOut,
+  LogIn,
+  Wrench,
+  ShieldAlert,
+  LineChart
 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 /**
  * The main header component for the application. It displays the current
@@ -36,18 +42,24 @@ export default function Header() {
     setDocumentTab,
     outputModality,
     setOutputModality,
+    showChatHistory,
+    setShowChatHistory,
   } = useUI();
   const { name } = useUser();
-  const { current, setCurrent, availablePresets } = useAgent();
+  const { current, setCurrent, availablePresets, update: updateAgent } = useAgent();
   const { disconnect } = useLiveAPIContext();
+  const { user, signIn, signOut } = useAuth();
 
   // State to manage the visibility of dropdowns.
   const [showRoomList, setShowRoomList] = useState(false);
   const [showOutputMenu, setShowOutputMenu] = useState(false);
   const [showViewMenu, setShowViewMenu] = useState(false);
+  const [showPromptMenu, setShowPromptMenu] = useState(false);
+  const [tempPrompt, setTempPrompt] = useState(current.personality);
   
   const outputMenuRef = useRef<HTMLDivElement>(null);
   const viewMenuRef = useRef<HTMLDivElement>(null);
+  const promptMenuRef = useRef<HTMLDivElement>(null);
 
   // Close dropdowns when clicking outside.
   useEffect(() => {
@@ -59,10 +71,18 @@ export default function Header() {
       if (viewMenuRef.current && !viewMenuRef.current.contains(e.target as Node)) {
         setShowViewMenu(false);
       }
+      if (promptMenuRef.current && !promptMenuRef.current.contains(e.target as Node)) {
+        setShowPromptMenu(false);
+      }
     };
     addEventListener('click', closeDropdowns);
     return () => removeEventListener('click', closeDropdowns);
   }, []);
+
+  // Update tempPrompt when current agent changes
+  useEffect(() => {
+    setTempPrompt(current.personality);
+  }, [current.personality]);
 
   /**
    * Handles changing the current agent.
@@ -89,6 +109,10 @@ export default function Header() {
       case 'transcript': return 'Transcript';
       case 'minutes': return 'Minutes';
       case 'audio-log': return 'Audio Log';
+      case 'chatbot': return 'Chatbot';
+      case 'tools': return 'AI Tools';
+      case 'validation': return 'Validation Engine';
+      case 'projections': return 'Projections';
       default: return 'View';
     }
   };
@@ -228,6 +252,10 @@ export default function Header() {
                 {mainTab === 'transcript' && <MessageSquare size={16} />}
                 {mainTab === 'minutes' && <ClipboardList size={16} />}
                 {mainTab === 'audio-log' && <Volume2 size={16} />}
+                {mainTab === 'chatbot' && <MessageSquare size={16} />}
+                {mainTab === 'tools' && <Wrench size={16} />}
+                {mainTab === 'validation' && <ShieldAlert size={16} />}
+                {mainTab === 'projections' && <LineChart size={16} />}
               </div>
               <span className="menu-label">{getViewLabel()}</span>
               <ChevronDown size={14} className={c('chevron', { open: showViewMenu })} />
@@ -287,6 +315,127 @@ export default function Header() {
                   <Volume2 size={16} />
                   <span>Audio Log</span>
                 </button>
+                <button 
+                  className={c('menu-item', { active: mainTab === 'chatbot' })}
+                  onClick={() => {
+                    setMainTab('chatbot');
+                    setShowViewMenu(false);
+                  }}
+                >
+                  <MessageSquare size={16} />
+                  <span>Chatbot</span>
+                </button>
+                <button 
+                  className={c('menu-item', { active: mainTab === 'tools' })}
+                  onClick={() => {
+                    setMainTab('tools');
+                    setShowViewMenu(false);
+                  }}
+                >
+                  <Wrench size={16} />
+                  <span>AI Tools</span>
+                </button>
+                <button 
+                  className={c('menu-item', { active: mainTab === 'validation' })}
+                  onClick={() => {
+                    setMainTab('validation');
+                    setShowViewMenu(false);
+                  }}
+                >
+                  <ShieldAlert size={16} />
+                  <span>Validation Engine</span>
+                </button>
+                <button 
+                  className={c('menu-item', { active: mainTab === 'projections' })}
+                  onClick={() => {
+                    setMainTab('projections');
+                    setShowViewMenu(false);
+                  }}
+                >
+                  <LineChart size={16} />
+                  <span>Projections</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Prompt Menu Dropdown */}
+        <div className="header-menu-container">
+          <span className="header-menu-title">Prompt:</span>
+          <div className="header-menu-wrapper" ref={promptMenuRef}>
+            <button 
+              className={c('header-menu-trigger', { active: showPromptMenu })}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowPromptMenu(!showPromptMenu);
+              }}
+            >
+              <div className="trigger-icon mobile-only">
+                <Edit3 size={16} />
+              </div>
+              <span className="menu-label">Edit Prompt</span>
+              <ChevronDown size={14} className={c('chevron', { open: showPromptMenu })} />
+            </button>
+            
+            {showPromptMenu && (
+              <div className="header-dropdown-menu prompt-dropdown-menu" style={{ width: '350px', padding: '12px' }}>
+                <textarea
+                  value={tempPrompt}
+                  onChange={(e) => setTempPrompt(e.target.value)}
+                  style={{
+                    width: '100%',
+                    height: '150px',
+                    padding: '8px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--theme-surface)',
+                    backgroundColor: 'var(--theme-bg)',
+                    color: 'var(--theme-text)',
+                    fontSize: '13px',
+                    resize: 'vertical',
+                    marginBottom: '8px',
+                    fontFamily: 'inherit'
+                  }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                  <button
+                    onClick={() => {
+                      setTempPrompt(current.personality);
+                      setShowPromptMenu(false);
+                    }}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '6px',
+                      backgroundColor: 'transparent',
+                      border: '1px solid var(--theme-surface)',
+                      color: 'var(--theme-text)',
+                      cursor: 'pointer',
+                      fontSize: '13px'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      updateAgent(current.id, { personality: tempPrompt });
+                      setShowPromptMenu(false);
+                      // Disconnect to force the new prompt to take effect on next connection
+                      disconnect();
+                    }}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '6px',
+                      backgroundColor: 'var(--theme-accent)',
+                      color: '#000',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      fontWeight: 600
+                    }}
+                  >
+                    Save & Restart
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -294,6 +443,30 @@ export default function Header() {
       </div>
 
       <div className="header-controls">
+        {user ? (
+          <button
+            className="userSettingsButton"
+            onClick={signOut}
+            title="Sign Out"
+          >
+            <LogOut size={20} />
+          </button>
+        ) : (
+          <button
+            className="userSettingsButton"
+            onClick={signIn}
+            title="Sign In"
+          >
+            <LogIn size={20} />
+          </button>
+        )}
+        <button
+          className={c('userSettingsButton', { active: showChatHistory })}
+          onClick={() => setShowChatHistory(!showChatHistory)}
+          title="Toggle Chat History"
+        >
+          <span className="icon">history</span>
+        </button>
         {/* Displays the number of times the model has edited the document */}
         <div className="change-counter" title="Number of edits by the model">
           <span className="change-counter-number">{changeCount}</span>

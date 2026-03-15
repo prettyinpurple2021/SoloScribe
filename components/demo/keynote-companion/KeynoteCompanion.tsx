@@ -41,7 +41,15 @@ import {
 import { pcmToWav, combineArrayBuffers } from '../../../lib/utils';
 import Modal from '../../Modal';
 import FunctionPlotter from './FunctionPlotter';
+import { ChatbotTab } from './ChatbotTab';
+import { AIToolsTab } from './AIToolsTab';
+import { ValidationEngineTab } from './ValidationEngineTab';
+import { ProjectionsTab } from './ProjectionsTab';
+import { CopilotSidebar } from './CopilotSidebar';
 import { MinutesLoadingAnimation } from '../../MinutesLoadingAnimation';
+import { useAuth } from '../../../contexts/AuthContext';
+import { db, handleFirestoreError, OperationType } from '../../../firebase';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 
 // Defines the shape for an entry in the text-based conversation transcript.
 type TranscriptEntry = {
@@ -716,6 +724,12 @@ export default function KeynoteCompanion() {
     setDocumentContent,
     outputModality,
     useSearch,
+    showChatHistory,
+    setShowChatHistory,
+    showCopilot,
+    setShowCopilot,
+    transcript,
+    setTranscript,
   } = useUI();
 
   // Update muted state when outputModality changes
@@ -726,7 +740,6 @@ export default function KeynoteCompanion() {
   const { addLog: addPerfLog } = usePerfLogStore();
   const [documentHistory, setDocumentHistory] = useState<string[]>([]);
   const [redoHistory, setRedoHistory] = useState<string[]>([]);
-  const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [audioLog, setAudioLog] = useState<AudioLogEntry[]>([]);
   const [correctedTranscript, setCorrectedTranscript] = useState('');
   const [accurateTranscript, setAccurateTranscript] = useState('');
@@ -741,6 +754,51 @@ export default function KeynoteCompanion() {
   } | null>(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [showMobileToolbar, setShowMobileToolbar] = useState(false);
+  const [isSavingToCloud, setIsSavingToCloud] = useState(false);
+  const { user: authUser } = useAuth();
+  
+  const handleSaveToCloud = async () => {
+    if (!authUser) {
+      alert('Please sign in to save your project to the cloud.');
+      return;
+    }
+    setIsSavingToCloud(true);
+    const projectId = 'default-project'; // In a real app, this could be dynamic
+    const path = `users/${authUser.uid}/projects/${projectId}`;
+    try {
+      const projectRef = doc(db, 'users', authUser.uid, 'projects', projectId);
+      const projectSnap = await getDoc(projectRef);
+      
+      if (projectSnap.exists()) {
+        await setDoc(projectRef, {
+          id: projectId,
+          userId: authUser.uid,
+          name: 'My Startup Workspace',
+          documentContent,
+          transcript,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      } else {
+        await setDoc(projectRef, {
+          id: projectId,
+          userId: authUser.uid,
+          name: 'My Startup Workspace',
+          documentContent,
+          transcript,
+          updatedAt: serverTimestamp(),
+          createdAt: serverTimestamp()
+        });
+      }
+      
+      alert('Project saved to cloud successfully!');
+    } catch (error) {
+      console.error('Error saving to cloud:', error);
+      alert('Failed to save project to cloud.');
+      handleFirestoreError(error, OperationType.WRITE, path);
+    } finally {
+      setIsSavingToCloud(false);
+    }
+  };
 
   const renderedViewRef = useRef<HTMLDivElement>(null);
   const minutesViewRef = useRef<HTMLDivElement>(null);
@@ -783,7 +841,11 @@ export default function KeynoteCompanion() {
   userRef.current = user;
   const agentRef = useRef(current);
   agentRef.current = current;
-  const ai = useRef(API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null);
+
+  const getAiClient = () => {
+    const key = getApiKey();
+    return key ? new GoogleGenAI({ apiKey: key }) : null;
+  };
 
   const generatingIdsRef = useRef<Set<string>>(new Set());
 
@@ -948,8 +1010,9 @@ export default function KeynoteCompanion() {
           const model = isDiagram ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image';
           const config = isDiagram ? {} : { responseModalities: [Modality.IMAGE] };
 
-          if (ai.current) {
-            ai.current.models.generateContent({
+          const aiClient = getAiClient();
+          if (aiClient) {
+            aiClient.models.generateContent({
               model,
               contents: { parts: [{ text: prompt }] },
               config,
@@ -1143,6 +1206,66 @@ export default function KeynoteCompanion() {
     },
   };
 
+  const generateImageDeclaration: FunctionDeclaration = {
+    name: 'generateImage',
+    description: 'Generates an image based on a text prompt and returns a URL.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        prompt: {
+          type: Type.STRING,
+          description: 'The prompt to generate the image from.',
+        },
+      },
+      required: ['prompt'],
+    },
+  };
+
+  const generateVideoDeclaration: FunctionDeclaration = {
+    name: 'generateVideo',
+    description: 'Generates a video based on a text prompt and returns a URL to the video.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        prompt: {
+          type: Type.STRING,
+          description: 'The prompt to generate the video from.',
+        },
+      },
+      required: ['prompt'],
+    },
+  };
+
+  const thinkDeeplyDeclaration: FunctionDeclaration = {
+    name: 'thinkDeeply',
+    description: 'Uses an advanced reasoning model to think deeply about a complex query and returns the thoughts.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        query: {
+          type: Type.STRING,
+          description: 'The complex query to think about.',
+        },
+      },
+      required: ['query'],
+    },
+  };
+
+  const searchWebDeclaration: FunctionDeclaration = {
+    name: 'searchWeb',
+    description: 'Searches the web for up to date information using Google Search and returns the results.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        query: {
+          type: Type.STRING,
+          description: 'The query to search for.',
+        },
+      },
+      required: ['query'],
+    },
+  };
+
   useEffect(() => {
     // We only update the config when NOT connected to avoid interrupting an active session.
     // When the user pauses (disconnects), this will re-run and capture the latest document state
@@ -1176,6 +1299,10 @@ export default function KeynoteCompanion() {
           functionDeclarations: [
             getContextDeclaration,
             updateDocumentDeclaration,
+            generateImageDeclaration,
+            generateVideoDeclaration,
+            thinkDeeplyDeclaration,
+            searchWebDeclaration,
           ],
         },
       ],
@@ -1499,7 +1626,7 @@ export default function KeynoteCompanion() {
       }
     };
 
-    const handleToolCall = (toolCall: LiveServerToolCall) => {
+    const handleToolCall = async (toolCall: LiveServerToolCall) => {
       updateSuppressionState();
       const isStale =
         suppressStaleAgentResponses &&
@@ -1553,19 +1680,20 @@ export default function KeynoteCompanion() {
       for (const fc of toolCall.functionCalls) {
         let result: Record<string, any> = { status: 'OK' };
 
-        switch (fc.name) {
-          case 'getContext': {
-            setAgentState('Processing Context');
-            const currentDoc = documentContentRef.current;
-            const documentContext =
-              currentDoc === PLACEHOLDER_DOC
-                ? '(The document is currently empty.)'
-                : currentDoc;
-            const recentTranscript = transcriptRef.current
-              .slice(-10)
-              .map(t => `${t.speaker}: ${t.text}`)
-              .join('\n');
-            const fullContext = `
+        try {
+          switch (fc.name) {
+            case 'getContext': {
+              setAgentState('Processing Context');
+              const currentDoc = documentContentRef.current;
+              const documentContext =
+                currentDoc === PLACEHOLDER_DOC
+                  ? '(The document is currently empty.)'
+                  : currentDoc;
+              const recentTranscript = transcriptRef.current
+                .slice(-10)
+                .map(t => `${t.speaker}: ${t.text}`)
+                .join('\n');
+              const fullContext = `
 User: "${userRef.current.name}"
 Writing Topic: "${userRef.current.topic}"
 Output Format: ${userRef.current.format}
@@ -1576,26 +1704,71 @@ ${documentContext}
 ---
 Here is the recent conversation history:
 ${recentTranscript}`;
-            result = { text: fullContext };
-            break;
-          }
-          case 'updateDocument': {
-            setAgentState(hasSearchedThisTurnRef.current ? 'Search based update' : 'Updating Document');
-            const { content } = fc.args;
-            if (typeof content === 'string') {
-              pushToHistory(documentContentRef.current);
-              setDocumentContent(content);
-              incrementChangeCount();
-              docContentBeforeEditRef.current = content;
+              result = { text: fullContext };
+              break;
             }
-            break;
+            case 'updateDocument': {
+              setAgentState(hasSearchedThisTurnRef.current ? 'Search based update' : 'Updating Document');
+              const { content } = fc.args;
+              if (typeof content === 'string') {
+                pushToHistory(documentContentRef.current);
+                setDocumentContent(content);
+                incrementChangeCount();
+                docContentBeforeEditRef.current = content;
+              }
+              break;
+            }
+            case 'googleSearch': {
+              setAgentState('SEARCHING');
+              hasSearchedThisTurnRef.current = true;
+              break;
+            }
+            case 'generateImage': {
+              setAgentState('Generating Image');
+              const { prompt } = fc.args;
+              if (typeof prompt === 'string') {
+                const { generateImage } = await import('../../../lib/ai-tools');
+                const imageUrl = await generateImage(prompt);
+                result = { imageUrl };
+              }
+              break;
+            }
+            case 'generateVideo': {
+              setAgentState('Generating Video');
+              const { prompt } = fc.args;
+              if (typeof prompt === 'string') {
+                const { generateVideo } = await import('../../../lib/ai-tools');
+                const videoUrl = await generateVideo(prompt);
+                result = { videoUrl };
+              }
+              break;
+            }
+            case 'thinkDeeply': {
+              setAgentState('Thinking Deeply');
+              const { query } = fc.args;
+              if (typeof query === 'string') {
+                const { thinkDeeply } = await import('../../../lib/ai-tools');
+                const thoughts = await thinkDeeply(query);
+                result = { thoughts };
+              }
+              break;
+            }
+            case 'searchWeb': {
+              setAgentState('Searching Web');
+              const { query } = fc.args;
+              if (typeof query === 'string') {
+                const { searchWeb } = await import('../../../lib/ai-tools');
+                const searchResults = await searchWeb(query);
+                result = { searchResults };
+              }
+              break;
+            }
           }
-          case 'googleSearch': {
-            setAgentState('SEARCHING');
-            hasSearchedThisTurnRef.current = true;
-            break;
-          }
+        } catch (error) {
+          console.error(`Error executing tool ${fc.name}:`, error);
+          result = { error: error instanceof Error ? error.message : 'Unknown error' };
         }
+        
         functionResponses.push({
           id: fc.id,
           name: fc.name,
@@ -1964,7 +2137,8 @@ ${recentTranscript}`;
   };
 
   const handleGetMinutes = async () => {
-    if (!ai.current) return;
+    const aiClient = getAiClient();
+    if (!aiClient) return;
     setIsCorrectingTranscript(true);
     setCorrectedTranscript('Correcting and summarizing...');
 
@@ -1973,7 +2147,7 @@ ${recentTranscript}`;
         .map(t => `${t.speaker}: ${t.text}`)
         .join('\n');
       const prompt = `Please correct any transcription errors in the following conversation and format it as clean, readable meeting minutes. Use markdown for formatting. Transcript:\n\n${fullTranscript}`;
-      const response = await ai.current.models.generateContent({
+      const response = await aiClient.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: prompt,
       });
@@ -1988,7 +2162,8 @@ ${recentTranscript}`;
   };
 
   const handleGetAccurateTranscript = async () => {
-    if (!ai.current || audioLog.length === 0) {
+    const aiClient = getAiClient();
+    if (!aiClient || audioLog.length === 0) {
       alert("No audio data available to transcribe. Please ensure you've spoken with your co-founder first.");
       return;
     }
@@ -2034,7 +2209,7 @@ ${recentTranscript}`;
 
       const speakerTimeLog = logEntries.join('\n');
       
-      const response = await ai.current.models.generateContent({
+      const response = await aiClient.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: [
           {
@@ -2400,8 +2575,9 @@ ${recentTranscript}`;
     <div className="keynote-companion">
       <div className="document-view-container">
         {mainTab === 'document' && (
-          <div className="document-editor-container">
-            {documentTab === 'editor' && (
+          <div style={{ display: 'flex', flexDirection: 'row', height: '100%', width: '100%' }}>
+            <div className="document-editor-container" style={{ flex: 1, overflow: 'hidden' }}>
+              {documentTab === 'editor' && (
               <>
                 <div className="document-toolbar">
                   {isMobile ? (
@@ -2430,6 +2606,9 @@ ${recentTranscript}`;
                             <button onClick={() => { handleClear(); setShowMobileToolbar(false); }}>
                               <span className="material-symbols-outlined">delete</span> Clear
                             </button>
+                            <button onClick={() => { handleSaveToCloud(); setShowMobileToolbar(false); }} disabled={isSavingToCloud} style={{ color: '#1a73e8' }}>
+                              <span className="material-symbols-outlined">cloud_upload</span> {isSavingToCloud ? 'Saving...' : 'Save to Cloud'}
+                            </button>
                           </div>
                         </>
                       )}
@@ -2439,6 +2618,16 @@ ${recentTranscript}`;
                       <button onClick={handleUndo} disabled={documentHistory.length === 0}>Undo</button>
                       <button onClick={handleRedo} disabled={redoHistory.length === 0}>Redo</button>
                       <button onClick={handleClear}>Clear</button>
+                      <button onClick={handleSaveToCloud} disabled={isSavingToCloud} style={{ marginLeft: '10px', backgroundColor: '#e8f0fe', color: '#1a73e8', border: '1px solid #1a73e8' }}>
+                        {isSavingToCloud ? 'Saving...' : 'Save to Cloud'}
+                      </button>
+                      <button 
+                        onClick={() => setShowCopilot(!showCopilot)} 
+                        style={{ marginLeft: '10px', backgroundColor: showCopilot ? 'rgba(0, 243, 255, 0.2)' : 'transparent', color: 'var(--theme-accent)', border: '1px solid var(--theme-accent)', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>lightbulb</span>
+                        {showCopilot ? 'Hide Copilot' : 'AI Copilot'}
+                      </button>
                       <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
                         <select
                           className="font-selector"
@@ -2505,6 +2694,8 @@ ${recentTranscript}`;
                 </div>
               </>
             )}
+            {showCopilot && <CopilotSidebar />}
+            </div>
           </div>
         )}
 
@@ -2535,10 +2726,10 @@ ${recentTranscript}`;
               <MinutesLoadingAnimation />
             ) : accurateTranscript ? (
               <div className="accurate-transcript-view prose-view">
-                <div className="flex items-center justify-between mb-6 pb-4 border-b border-black/5">
-                  <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Accurate Version</h4>
+                <div className="flex items-center justify-between mb-6 pb-4 border-b border-[rgba(0,243,255,0.2)]">
+                  <h4 className="text-sm font-semibold text-[var(--theme-accent)] uppercase tracking-wider font-[var(--font-display)]">Accurate Version</h4>
                   <button 
-                    className="flex items-center gap-2 px-3 py-1.5 bg-blue-500 text-white text-xs font-medium rounded-lg hover:bg-blue-600 transition-colors shadow-sm"
+                    className="flex items-center gap-2 px-3 py-1.5 bg-[rgba(0,243,255,0.1)] text-[var(--theme-accent)] text-xs font-medium rounded-lg hover:bg-[rgba(0,243,255,0.2)] transition-all shadow-[0_0_10px_rgba(0,243,255,0.2)] border border-[rgba(0,243,255,0.3)] hover:shadow-[0_0_15px_rgba(0,243,255,0.4)] hover:text-white"
                     onClick={handleReplaceTranscript}
                   >
                     <span className="icon text-sm">swap_horiz</span>
@@ -2547,7 +2738,7 @@ ${recentTranscript}`;
                 </div>
                 <div className="accurate-content-body" dangerouslySetInnerHTML={{ __html: marked.parse(accurateTranscript) }} />
                 <button 
-                  className="text-xs text-blue-500 mt-8 hover:underline flex items-center gap-1"
+                  className="text-xs text-[var(--theme-accent)] mt-8 hover:text-white hover:shadow-[0_0_5px_rgba(0,243,255,0.8)] transition-all flex items-center gap-1"
                   onClick={() => setAccurateTranscript('')}
                 >
                   <span className="icon text-sm">arrow_back</span>
@@ -2639,7 +2830,49 @@ ${recentTranscript}`;
             </div>
           </div>
         )}
+
+        {mainTab === 'chatbot' && (
+          <ChatbotTab />
+        )}
+
+        {mainTab === 'tools' && (
+          <AIToolsTab />
+        )}
+
+        {mainTab === 'validation' && (
+          <ValidationEngineTab />
+        )}
+
+        {mainTab === 'projections' && (
+          <ProjectionsTab />
+        )}
       </div>
+
+      {showChatHistory && (
+        <div className="chat-history-sidebar">
+          <div className="chat-history-header">
+            <h3>Chat History</h3>
+            <button className="close-button" onClick={() => setShowChatHistory(false)}>
+              <span className="icon">close</span>
+            </button>
+          </div>
+          <div className="chat-history-messages">
+            {transcript.length > 0 ? (
+              transcript.map((entry, index) => (
+                <div key={index} className={`chat-message ${entry.speaker === user.name ? 'user-message' : 'agent-message'}`}>
+                  <div className="message-speaker">{entry.speaker}</div>
+                  <div className="message-text">{entry.text}</div>
+                </div>
+              ))
+            ) : (
+              <div className="chat-history-empty">
+                <span className="icon">forum</span>
+                <p>No messages yet.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

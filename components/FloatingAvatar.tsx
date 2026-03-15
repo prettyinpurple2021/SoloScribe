@@ -47,10 +47,10 @@ export default function FloatingAvatar() {
   // Set initial position after mount to ensure window.innerWidth is correct
   useEffect(() => {
     const isMobile = window.innerWidth < 768;
-    // Position it at top-center (or top-center-right on mobile), slightly higher
+    // Position it at top-center (or top-center-right on mobile)
     setPosition({ 
       x: isMobile ? window.innerWidth / 2 + 40 : window.innerWidth / 2 - 50, 
-      y: -15 
+      y: 20 
     });
   }, []);
 
@@ -76,7 +76,7 @@ export default function FloatingAvatar() {
           // Snap back to top-center (or top-center-right on mobile) if pushed off-screen
           return {
             x: isMobile ? window.innerWidth / 2 + 40 : window.innerWidth / 2 - 50,
-            y: -15,
+            y: 20,
           };
         }
 

@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import {
   Agent,
   Alice,
@@ -99,60 +100,72 @@ export const useAgent = create<{
   setCurrent: (agent: Agent | string) => void;
   addAgent: (agent: Agent) => void;
   update: (agentId: string, adjustments: Partial<Agent>) => void;
-}>(set => ({
-  current: Alice,
-  availablePresets: [
-    Alice,
-    Sam,
-    Irene,
-    Tom,
-    Rahul,
-    Ramon,
-    Amelie,
-    Ari,
-    Mei,
-    Hiro,
-    Jiwon,
-    Hans,
-    Newton,
-    Defne,
-    Karim,
-    Reza,
-    Ines,
-    Olga,
-    Luca,
-  ],
-  availablePersonal: [],
+}>()(
+  persist(
+    (set) => ({
+      current: Alice,
+      availablePresets: [
+        Alice,
+        Sam,
+        Irene,
+        Tom,
+        Rahul,
+        Ramon,
+        Amelie,
+        Ari,
+        Mei,
+        Hiro,
+        Jiwon,
+        Hans,
+        Newton,
+        Defne,
+        Karim,
+        Reza,
+        Ines,
+        Olga,
+        Luca,
+      ],
+      availablePersonal: [],
 
-  addAgent: (agent: Agent) => {
-    set(state => ({
-      availablePersonal: [...state.availablePersonal, agent],
-      current: agent,
-    }));
-  },
-  setCurrent: (agent: Agent | string) =>
-    set({ current: typeof agent === 'string' ? getAgentById(agent) : agent }),
-  update: (agentId: string, adjustments: Partial<Agent>) => {
-    let agent = getAgentById(agentId);
-    if (!agent) return;
-    const updatedAgent = { ...agent, ...adjustments };
-    set(state => ({
-      availablePresets: state.availablePresets.map(a =>
-        a.id === agentId ? updatedAgent : a
-      ),
-      availablePersonal: state.availablePersonal.map(a =>
-        a.id === agentId ? updatedAgent : a
-      ),
-      current: state.current.id === agentId ? updatedAgent : state.current,
-    }));
-  },
-}));
+      addAgent: (agent: Agent) => {
+        set(state => ({
+          availablePersonal: [...state.availablePersonal, agent],
+          current: agent,
+        }));
+      },
+      setCurrent: (agent: Agent | string) =>
+        set({ current: typeof agent === 'string' ? getAgentById(agent) : agent }),
+      update: (agentId: string, adjustments: Partial<Agent>) => {
+        let agent = getAgentById(agentId);
+        if (!agent) return;
+        const updatedAgent = { ...agent, ...adjustments };
+        set(state => ({
+          availablePresets: state.availablePresets.map(a =>
+            a.id === agentId ? updatedAgent : a
+          ),
+          availablePersonal: state.availablePersonal.map(a =>
+            a.id === agentId ? updatedAgent : a
+          ),
+          current: state.current.id === agentId ? updatedAgent : state.current,
+        }));
+      },
+    }),
+    {
+      name: 'agent-storage',
+    }
+  ) as any
+);
 
 /**
  * `useUI` Store
  * Manages the state of the user interface, such as the visibility of modals,
  * the selected theme, and other UI-related flags.
  */
+export type TranscriptEntry = {
+  speaker: string;
+  text: string;
+};
+
 export const useUI = create<{
   showWelcomeScreen: boolean;
   setShowWelcomeScreen: (show: boolean) => void;
@@ -166,6 +179,10 @@ export const useUI = create<{
   setShowHelpModal: (show: boolean) => void;
   showDisclaimer: boolean;
   setShowDisclaimer: (show: boolean) => void;
+  showChatHistory: boolean;
+  setShowChatHistory: (show: boolean) => void;
+  showCopilot: boolean;
+  setShowCopilot: (show: boolean) => void;
   theme: string;
   setTheme: (themeName: string) => void;
   font: string;
@@ -180,8 +197,8 @@ export const useUI = create<{
   incrementChangeCount: () => void;
   agentState: string | null;
   setAgentState: (state: string | null) => void;
-  mainTab: 'document' | 'transcript' | 'minutes' | 'audio-log';
-  setMainTab: (tab: 'document' | 'transcript' | 'minutes' | 'audio-log') => void;
+  mainTab: 'document' | 'transcript' | 'minutes' | 'audio-log' | 'chatbot' | 'tools' | 'validation' | 'projections';
+  setMainTab: (tab: 'document' | 'transcript' | 'minutes' | 'audio-log' | 'chatbot' | 'tools' | 'validation' | 'projections') => void;
   documentTab: 'editor' | 'rendered';
   setDocumentTab: (tab: 'editor' | 'rendered') => void;
   speechBubbleText: string | null;
@@ -194,6 +211,8 @@ export const useUI = create<{
   setUseSearch: (useSearch: boolean) => void;
   liveApiModel: string;
   setLiveApiModel: (model: string) => void;
+  transcript: TranscriptEntry[];
+  setTranscript: (transcript: TranscriptEntry[] | ((prev: TranscriptEntry[]) => TranscriptEntry[])) => void;
 }>(set => ({
   showWelcomeScreen: true,
   setShowWelcomeScreen: (show: boolean) => set({ showWelcomeScreen: show }),
@@ -207,9 +226,13 @@ export const useUI = create<{
   setShowHelpModal: (show: boolean) => set({ showHelpModal: show }),
   showDisclaimer: false,
   setShowDisclaimer: (show: boolean) => set({ showDisclaimer: show }),
+  showChatHistory: false,
+  setShowChatHistory: (show: boolean) => set({ showChatHistory: show }),
+  showCopilot: false,
+  setShowCopilot: (show: boolean) => set({ showCopilot: show }),
   theme: themes[0].name,
   setTheme: (themeName: string) => set({ theme: themeName }),
-  font: 'Arial',
+  font: 'Rajdhani',
   setFont: (fontName: string) => set({ font: fontName }),
   suppressRedundantLogs: false, // Default to OFF
   setSuppressRedundantLogs: (suppress: boolean) =>
@@ -226,7 +249,7 @@ export const useUI = create<{
   agentState: null,
   setAgentState: (state: string | null) => set({ agentState: state }),
   mainTab: 'document',
-  setMainTab: (tab: 'document' | 'transcript' | 'minutes' | 'audio-log') => set({ mainTab: tab }),
+  setMainTab: (tab: 'document' | 'transcript' | 'minutes' | 'audio-log' | 'chatbot' | 'tools' | 'validation' | 'projections') => set({ mainTab: tab }),
   documentTab: 'rendered',
   setDocumentTab: (tab: 'editor' | 'rendered') => set({ documentTab: tab }),
   speechBubbleText: null,
@@ -243,6 +266,12 @@ export const useUI = create<{
   setUseSearch: (useSearch: boolean) => set({ useSearch }),
   liveApiModel: 'gemini-2.5-flash-native-audio-preview-09-2025',
   setLiveApiModel: (model: string) => set({ liveApiModel: model }),
+  transcript: [],
+  setTranscript: (transcript: TranscriptEntry[] | ((prev: TranscriptEntry[]) => TranscriptEntry[])) =>
+    set(state => ({
+      transcript:
+        typeof transcript === 'function' ? transcript(state.transcript) : transcript,
+    })),
 }));
 
 /**

@@ -31,6 +31,14 @@ export const createSystemInstructions = (
     ? '\n\n**GOOGLE SEARCH:** The `googleSearch` tool is available. Use it to retrieve fresh, factual, or advanced information on any topic discussed if your internal knowledge is insufficient or if the user asks for current events.'
     : '';
 
+  const newToolsPrompt = `
+**Advanced Tools Available:**
+- **generateImage**: Use this tool to generate an image based on a prompt and get a URL back. Use this when the user explicitly asks to generate an image. When you receive the URL, insert it into the document using a standard HTML image tag: <img src="URL" width="100%" />.
+- **generateVideo**: Use this tool to generate a video based on a prompt and get a URL back. Use this when the user explicitly asks to generate a video. When you receive the URL, insert it into the document using a standard HTML video tag: <video src="URL" controls width="100%"></video>.
+- **thinkDeeply**: Use this tool to think deeply about a complex query using an advanced reasoning model. Use this when the user asks a complex question that requires deep thought or step-by-step reasoning.
+- **searchWeb**: Use this tool to search the web for up to date information. This is an alternative to the built-in googleSearch tool.
+`;
+
   // Include the current document state if it's a warm start.
   const documentPrompt = currentDocument && currentDocument !== 'As you talk, your AI co-founder will draft your business plan, pitch deck, or strategy here...'
     ? `\n\n**WARM START:** This is a continuation of a previous session. The document is NOT empty. 
@@ -69,6 +77,7 @@ The user has provided the following context for your conversation: "${
   }".
 The topic of your writing is: "${user.topic || 'Not specified yet'}".
 ${pdfPrompt}
+${newToolsPrompt}
 
 **Core Interaction Rules:**
 1. **Be a Creative Partner:** Instead of asking "What's next?" or "What would you like to add?", be a proactive collaborator. Offer 2-3 specific, constructive, and creative suggestions for how to expand or improve the document based on the current context. For example, if writing about a medical topic like ACL tears, you might suggest adding a section on "Post-Surgery Rehabilitation" or "Prevention Exercises for Athletes".
