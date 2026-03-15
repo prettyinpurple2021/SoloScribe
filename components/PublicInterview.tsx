@@ -69,7 +69,7 @@ Rules:
 6. When you feel you have gathered enough information to answer the key questions, thank them for their time and say "INTERVIEW_COMPLETE".`;
 
       const chat = ai.chats.create({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.0-flash',
         config: {
           systemInstruction,
           temperature: 0.7,
@@ -133,7 +133,7 @@ Rules:
       const summaryPrompt = `Summarize the following user interview transcript. Focus on the key insights related to the goal: "${interview.goal}".\n\nTranscript:\n${transcriptText}`;
       
       const summaryResponse = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.0-flash',
         contents: summaryPrompt
       });
 
