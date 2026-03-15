@@ -9,7 +9,7 @@ const getAi = () => {
 export const searchWeb = async (query: string): Promise<string> => {
   const ai = getAi();
   const response = await ai.models.generateContent({
-    model: "gemini-2.0-flash",
+    model: "gemini-3-flash-preview",
     contents: query,
     config: {
       tools: [{ googleSearch: {} }],
@@ -21,7 +21,7 @@ export const searchWeb = async (query: string): Promise<string> => {
 export const thinkDeeply = async (query: string): Promise<string> => {
   const ai = getAi();
   const response = await ai.models.generateContent({
-    model: "gemini-2.5-pro",
+    model: "gemini-3.1-pro-preview",
     contents: query,
     config: {
       thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH }
@@ -33,12 +33,15 @@ export const thinkDeeply = async (query: string): Promise<string> => {
 export const generateImage = async (prompt: string): Promise<string> => {
   const ai = getAi();
   const response = await ai.models.generateContent({
-    model: 'gemini-2.0-flash-preview-image-generation',
+    model: 'gemini-3.1-flash-image-preview',
     contents: {
       parts: [{ text: prompt }],
     },
     config: {
-      responseModalities: [Modality.IMAGE],
+      imageConfig: {
+        aspectRatio: "16:9",
+        imageSize: "1K"
+      }
     },
   });
   
@@ -60,7 +63,7 @@ export const generateImage = async (prompt: string): Promise<string> => {
 export const generateVideo = async (prompt: string): Promise<string> => {
   const ai = getAi();
   let operation = await ai.models.generateVideos({
-    model: 'veo-2.0-generate-001',
+    model: 'veo-3.1-fast-generate-preview',
     prompt: prompt,
     config: {
       numberOfVideos: 1,
@@ -124,7 +127,7 @@ export const generateSpeech = async (text: string): Promise<string> => {
 export const animateImage = async (prompt: string, imageBase64: string, mimeType: string): Promise<string> => {
   const ai = getAi();
   let operation = await ai.models.generateVideos({
-    model: 'veo-2.0-generate-001',
+    model: 'veo-3.1-fast-generate-preview',
     prompt: prompt,
     image: {
       imageBytes: imageBase64,
