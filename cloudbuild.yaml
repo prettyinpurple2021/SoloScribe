@@ -1,0 +1,76 @@
+# cloudbuild.yaml
+# Google Cloud Build pipeline for SoloScribe
+#
+# Required Cloud Build substitution variables (set in the trigger or manually):
+#   _GEMINI_API_KEY  – Gemini / Google AI Studio API key used at build time
+#   _FIREBASE_TOKEN  – CI token generated with `firebase login:ci`
+#
+# The Docker image is pushed to Google Artifact Registry / Container Registry
+# using the built-in $PROJECT_ID substitution.
+
+substitutions:
+  _GEMINI_API_KEY: ""   # override in the Cloud Build trigger
+  _FIREBASE_TOKEN: ""   # override in the Cloud Build trigger
+
+steps:
+  # ── Step 1: Install npm dependencies ─────────────────────────────────────
+  - name: "node:20-alpine"
+    id: "install"
+    entrypoint: "npm"
+    args: ["ci"]
+
+  # ── Step 2: Type-check / lint (tsc --noEmit) ─────────────────────────────
+  - name: "node:20-alpine"
+    id: "lint"
+    entrypoint: "npm"
+    args: ["run", "lint"]
+    waitFor: ["install"]
+
+  # ── Step 3: Build the Vite application ───────────────────────────────────
+  # Both API_KEY and GEMINI_API_KEY are passed because vite.config.ts resolves
+  # whichever variable is present (env.API_KEY || env.GEMINI_API_KEY).
+  - name: "node:20-alpine"
+    id: "build"
+    entrypoint: "npm"
+    args: ["run", "build"]
+    env:
+      - "API_KEY=${_GEMINI_API_KEY}"
+      - "GEMINI_API_KEY=${_GEMINI_API_KEY}"
+    waitFor: ["lint"]
+
+  # ── Step 4: Build the Docker image ───────────────────────────────────────
+  - name: "gcr.io/cloud-builders/docker"
+    id: "docker-build"
+    args:
+      - "build"
+      - "--tag"
+      - "gcr.io/$PROJECT_ID/soloscribe:$COMMIT_SHA"
+      - "--tag"
+      - "gcr.io/$PROJECT_ID/soloscribe:latest"
+      - "."
+    waitFor: ["build"]
+
+  # ── Step 5: Deploy static assets to Firebase Hosting ────────────────────
+  - name: "gcr.io/firebase-tools/firebase"
+    id: "firebase-deploy"
+    args:
+      - "deploy"
+      - "--only"
+      - "hosting"
+      - "--non-interactive"
+      - "--token"
+      - "${_FIREBASE_TOKEN}"
+    waitFor: ["build"]
+
+# Images produced by this build – Cloud Build pushes these to Container Registry
+# and links them to this build for provenance tracking in Cloud Build history.
+# (No separate docker push step is needed; Cloud Build handles the push.)
+images:
+  - "gcr.io/$PROJECT_ID/soloscribe:$COMMIT_SHA"
+  - "gcr.io/$PROJECT_ID/soloscribe:latest"
+
+# Build timeout (10 minutes is usually sufficient for this project)
+timeout: "600s"
+
+options:
+  logging: CLOUD_LOGGING_ONLY
