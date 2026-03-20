@@ -5,54 +5,14 @@
 import React, { useEffect, useRef } from 'react';
 import { useUI } from '../lib/state';
 
+import Modal from './Modal';
+
 /**
  * LegalDisclaimer component displays a mandatory notice to the user.
  * It ensures accessibility by trapping focus within the modal.
  */
 export default function LegalDisclaimer() {
   const { setShowDisclaimer, setShowUserConfig } = useUI();
-  const modalRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const modal = modalRef.current;
-    if (!modal) return;
-
-    // Find all focusable elements within the modal to implement focus trapping.
-    const focusableElements = modal.querySelectorAll<HTMLElement>(
-      'a[href], button:not([disabled])'
-    );
-    const firstElement = focusableElements[0];
-    const lastElement = focusableElements[focusableElements.length - 1];
-
-    /**
-     * Handles keyboard navigation to keep focus within the modal.
-     */
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== 'Tab') return;
-
-      if (e.shiftKey) {
-        // Shift + Tab: if on first element, wrap to last.
-        if (document.activeElement === firstElement) {
-          lastElement.focus();
-          e.preventDefault();
-        }
-      } else {
-        // Tab: if on last element, wrap to first.
-        if (document.activeElement === lastElement) {
-          firstElement.focus();
-          e.preventDefault();
-        }
-      }
-    };
-
-    // Focus the modal container initially.
-    modal.focus();
-    document.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, []);
 
   const handleAcknowledge = () => {
     setShowDisclaimer(false);
@@ -60,25 +20,22 @@ export default function LegalDisclaimer() {
   };
 
   return (
-    <div
-      className="legal-disclaimer-overlay"
-      ref={modalRef}
-      role="dialog"
-      aria-modal="true"
-      tabIndex={-1}
-    >
+    <Modal onClose={handleAcknowledge} title="Legal Protocol">
       <div className="legal-disclaimer-content">
-        <h3 className="disclaimer-title">Please Note</h3>
+        <p className="config-description">
+          SoloScribe is an experimental documentation orchestration platform. 
+          By initializing this session, you acknowledge and accept the following protocols:
+        </p>
         <ul className="disclaimer-list">
           <li>
-            Make sure you have the necessary rights to any content you upload.
+            Ensure you possess the necessary authorization for any uploaded content.
           </li>
           <li>
-            Do not generate content that infringes on others' intellectual
+            Do not generate content that infringes upon third-party intellectual
             property or privacy rights.
           </li>
           <li>
-            Your use of this generative AI service is subject to Google's{' '}
+            Utilization of this generative AI service is subject to Google's{' '}
             <a
               href="https://policies.google.com/terms/generative-ai/use-policy"
               target="_blank"
@@ -89,14 +46,14 @@ export default function LegalDisclaimer() {
             </a>
             .
           </li>
-          <li>Gemini can make mistakes, so double-check it.</li>
+          <li>The underlying LLM may produce inaccuracies. Verification is mandatory.</li>
         </ul>
-        <div className="disclaimer-actions">
-          <button onClick={handleAcknowledge} className="disclaimer-button">
-            OK
+        <div className="disclaimer-actions" style={{ marginTop: '20px' }}>
+          <button onClick={handleAcknowledge} className="brutalist-button" style={{ width: '100%' }}>
+            ACKNOWLEDGE & PROCEED
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

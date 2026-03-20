@@ -21,6 +21,17 @@
 import cn from 'classnames';
 
 import { memo, ReactNode, useEffect, useRef, useState } from 'react';
+import { 
+  Mic, 
+  MicOff, 
+  Send, 
+  X, 
+  RefreshCw, 
+  Pause, 
+  Play, 
+  Keyboard, 
+  HelpCircle 
+} from 'lucide-react';
 import { AudioRecorder } from '../../../lib/audio-recorder';
 
 import { useLiveAPIContext } from '../../../contexts/LiveAPIContext';
@@ -206,19 +217,19 @@ function ControlTray({ children }: ControlTrayProps) {
               }}
             />
             <button 
-              className="text-input-action-btn send-btn" 
+              className="text-input-action-btn send-btn brutalist-button" 
               onClick={handleSendText}
               disabled={!textInput.trim() || !connected}
               title={connected ? "Send command" : "Connect to send commands"}
             >
-              <span className="material-symbols-outlined">send</span>
+              <Send size={18} />
             </button>
             <button 
-              className="text-input-action-btn close-btn" 
+              className="text-input-action-btn close-btn brutalist-button" 
               onClick={() => setShowTextInput(false)}
               title="Close"
             >
-              <span className="material-symbols-outlined">close</span>
+              <X size={18} />
             </button>
           </div>
         </div>
@@ -229,27 +240,28 @@ function ControlTray({ children }: ControlTrayProps) {
 
       <div className={cn('button-group')}>
         <button
-          className={cn('action-button mic-button', {
+          className={cn('action-button mic-button brutalist-button', {
             talking: isUserSpeaking && !muted && connected && !isConnecting,
+            muted: muted
           })}
           onClick={() => setMuted(!muted)}
           title={muted ? "Unmute microphone" : "Mute microphone"}
         >
           {!muted ? (
-            <span className="material-symbols-outlined filled">mic</span>
+            <Mic size={20} />
           ) : (
-            <span className="material-symbols-outlined filled">mic_off</span>
+            <MicOff size={20} />
           )}
         </button>
         {children}
 
         <div className={cn('connection-button-container', { connected: connected || isConnecting })}>
           {isUserSpeaking && !connected && !isConnecting && (
-            <span className="agent-off-indicator">The agent is not on</span>
+            <span className="agent-off-indicator">SYSTEM_OFFLINE</span>
           )}
           <button
             ref={connectButtonRef}
-            className={cn('action-button connect-toggle', { connected: connected && !isConnecting })}
+            className={cn('action-button connect-toggle brutalist-button', { connected: connected && !isConnecting })}
             onClick={() => {
               if (connected) {
                 disconnect();
@@ -263,31 +275,35 @@ function ControlTray({ children }: ControlTrayProps) {
             disabled={isConnecting}
             title={connected ? "Disconnect agent" : "Connect agent"}
           >
-            <span className="material-symbols-outlined filled">
-              {isConnecting ? 'sync' : connected ? 'pause' : 'play_arrow'}
-            </span>
+            {isConnecting ? (
+              <RefreshCw size={20} className="animate-spin" />
+            ) : connected ? (
+              <Pause size={20} />
+            ) : (
+              <Play size={20} />
+            )}
           </button>
-          <span className="text-indicator">{isConnecting ? 'Connecting' : 'Streaming'}</span>
+          <span className="text-indicator">{isConnecting ? 'LINKING...' : 'ACTIVE_LINK'}</span>
         </div>
 
         <button
-          className={cn('action-button keyboard-button', {
+          className={cn('action-button keyboard-button brutalist-button', {
             active: showTextInput,
           })}
           onClick={() => setShowTextInput(!showTextInput)}
           title="Type a command"
         >
-          <span className="material-symbols-outlined filled">keyboard</span>
+          <Keyboard size={20} />
         </button>
       </div>
 
       <div className="control-tray-right">
         <button
-          className="action-button help-button"
+          className="action-button help-button brutalist-button"
           onClick={() => setShowHelpModal(true)}
           title="Help"
         >
-          <span className="icon">help</span>
+          <HelpCircle size={20} />
         </button>
       </div>
     </div>

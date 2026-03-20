@@ -54,7 +54,51 @@ import { db, handleFirestoreError, OperationType } from '../../firebase';
 import { doc, setDoc, getDoc, serverTimestamp, collection, addDoc, query, orderBy, getDocs } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { thinkDeeply } from '../../lib/ai-tools';
-import { Share2, Sparkles } from 'lucide-react';
+import { 
+  Share2, 
+  Sparkles, 
+  Play, 
+  Mic, 
+  Search, 
+  FileText, 
+  BarChart2, 
+  Image as ImageIcon, 
+  Edit3,
+  Save,
+  Download,
+  Copy,
+  Wand2,
+  History,
+  LayoutDashboard,
+  CloudUpload,
+  Heading1,
+  Heading2,
+  List,
+  Bold,
+  ChevronDown,
+  Trash2,
+  X,
+  MessageSquare,
+  Pause,
+  PlayCircle,
+  PauseCircle,
+  Clock,
+  Eye,
+  ClipboardList,
+  Volume2,
+  Wrench,
+  ShieldAlert,
+  LineChart,
+  Map as MapIcon,
+  Undo2,
+  Redo2,
+  Eraser,
+  MoreVertical,
+  Type as TypeIcon,
+  Lightbulb,
+  ChevronRight,
+  ChevronLeft
+} from 'lucide-react';
 import { ShareModal } from './ShareModal';
 
 // Defines the shape for an entry in the text-based conversation transcript.
@@ -125,56 +169,68 @@ declare const MathJax: any;
 const WelcomePlaceholder = () => (
   <div className="welcome-placeholder">
     <h1 className="welcome-placeholder-title">
-      <span className="welcome-prefix">Welcome to </span>SoloScribe
+      <span className="welcome-prefix">SYSTEM_INITIALIZED // </span>SoloScribe
     </h1>
     <p className="welcome-placeholder-subtitle">
-      Press the{' '}
-      <span className="icon" style={{ verticalAlign: 'bottom' }}>
-        play_arrow
+      PRESS THE{' '}
+      <span className="icon">
+        <Play size={18} fill="currentColor" />
       </span>{' '}
-      button below to begin your session.
+      BUTTON BELOW TO INITIALIZE SESSION.
     </p>
     <div className="placeholder-features-grid">
       <div className="placeholder-feature">
-        <span className="icon">graphic_eq</span>
+        <div className="icon">
+          <Mic size={20} />
+        </div>
         <div>
-          <h3>Conversational Writing</h3>
-          <p className="feature-desc">Talk, and your co-founder drafts your document in real-time.</p>
+          <h3>CONVERSATIONAL_WRITING</h3>
+          <p className="feature-desc">VOICE_INPUT_STREAM: REAL-TIME DOCUMENT SYNTHESIS VIA CO-FOUNDER AGENT.</p>
         </div>
       </div>
       <div className="placeholder-feature">
-        <span className="icon">search</span>
+        <div className="icon">
+          <Search size={20} />
+        </div>
         <div>
-          <h3>Google Search</h3>
-          <p className="feature-desc">Real-time web access for research and fact-checking.</p>
+          <h3>WEB_GROUNDING</h3>
+          <p className="feature-desc">GOOGLE_SEARCH_INTEGRATION: LIVE KNOWLEDGE RETRIEVAL AND FACT_VERIFICATION.</p>
         </div>
       </div>
       <div className="placeholder-feature">
-        <span className="icon">picture_as_pdf</span>
+        <div className="icon">
+          <FileText size={20} />
+        </div>
         <div>
-          <h3>PDF Context</h3>
-          <p className="feature-desc">Upload documents to provide deep background information.</p>
+          <h3>PDF_CONTEXT_INJECTION</h3>
+          <p className="feature-desc">DATA_UPLOAD: INGEST EXTERNAL DOCUMENTS FOR DEEP DOMAIN KNOWLEDGE.</p>
         </div>
       </div>
       <div className="placeholder-feature">
-        <span className="icon">show_chart</span>
+        <div className="icon">
+          <BarChart2 size={20} />
+        </div>
         <div>
-          <h3>Interactive Graphs</h3>
-          <p className="feature-desc">Plot mathematical functions with zoom and pan support.</p>
+          <h3>DYNAMIC_VISUALIZATION</h3>
+          <p className="feature-desc">DATA_PLOTTING: INTERACTIVE MATHEMATICAL GRAPHS WITH REAL-TIME MANIPULATION.</p>
         </div>
       </div>
       <div className="placeholder-feature">
-        <span className="icon">palette</span>
+        <div className="icon">
+          <ImageIcon size={20} />
+        </div>
         <div>
-          <h3>Visual Illustrations</h3>
-          <p className="feature-desc">Ask for images and diagrams to visualize your ideas.</p>
+          <h3>VISUAL_SYNTHESIS</h3>
+          <p className="feature-desc">IMAGE_GENERATION: AI-DRIVEN ILLUSTRATIONS AND SCHEMATICS FOR YOUR CONCEPTS.</p>
         </div>
       </div>
       <div className="placeholder-feature">
-        <span className="icon">edit_document</span>
+        <div className="icon">
+          <Edit3 size={20} />
+        </div>
         <div>
-          <h3>You're in Control</h3>
-          <p className="feature-desc">Directly edit the document at any time to guide the process.</p>
+          <h3>MANUAL_OVERRIDE</h3>
+          <p className="feature-desc">DIRECT_EDIT_MODE: FULL CONTROL OVER DOCUMENT STATE AT ANY TIME.</p>
         </div>
       </div>
     </div>
@@ -2970,13 +3026,13 @@ Format your response in Markdown.`;
                 <div className="document-toolbar">
                   {isMobile ? (
                     <div className="mobile-toolbar-container">
-                      <span style={{ fontWeight: 500, opacity: 0.7 }}>Actions</span>
+                      <span className="mobile-toolbar-label">Actions</span>
                       <button
-                        className="mobile-menu-trigger"
+                        className="mobile-menu-trigger brutalist-button"
                         onClick={() => setShowMobileToolbar(!showMobileToolbar)}
                         title="Document Actions"
                       >
-                        <span className="material-symbols-outlined">more_vert</span>
+                        <MoreVertical size={18} />
                       </button>
                       {showMobileToolbar && (
                         <>
@@ -2984,35 +3040,35 @@ Format your response in Markdown.`;
                             className="mobile-menu-overlay" 
                             onClick={() => setShowMobileToolbar(false)} 
                           />
-                          <div className="mobile-menu-dropdown">
-                            <button onClick={() => { handleUndo(); setShowMobileToolbar(false); }} disabled={documentHistory.length === 0}>
-                              <span className="material-symbols-outlined">undo</span> Undo
+                          <div className="mobile-menu-dropdown brutalist-card">
+                            <button className="mobile-menu-item" onClick={() => { handleUndo(); setShowMobileToolbar(false); }} disabled={documentHistory.length === 0}>
+                              <Undo2 size={16} /> Undo
                             </button>
-                            <button onClick={() => { handleRedo(); setShowMobileToolbar(false); }} disabled={redoHistory.length === 0}>
-                              <span className="material-symbols-outlined">redo</span> Redo
+                            <button className="mobile-menu-item" onClick={() => { handleRedo(); setShowMobileToolbar(false); }} disabled={redoHistory.length === 0}>
+                              <Redo2 size={16} /> Redo
                             </button>
-                            <button onClick={() => { handleClear(); setShowMobileToolbar(false); }}>
-                              <span className="material-symbols-outlined">delete</span> Clear
+                            <button className="mobile-menu-item" onClick={() => { handleClear(); setShowMobileToolbar(false); }}>
+                              <Eraser size={16} /> Clear
                             </button>
-                            <div style={{ height: '1px', backgroundColor: 'rgba(255,255,255,0.1)', margin: '4px 0' }}></div>
-                            <button onClick={() => { handleSlashCommand('h1'); setShowMobileToolbar(false); }}>
-                              <span className="material-symbols-outlined">format_h1</span> H1
+                            <div className="mobile-menu-divider"></div>
+                            <button className="mobile-menu-item" onClick={() => { handleSlashCommand('h1'); setShowMobileToolbar(false); }}>
+                              <Heading1 size={16} /> H1
                             </button>
-                            <button onClick={() => { handleSlashCommand('h2'); setShowMobileToolbar(false); }}>
-                              <span className="material-symbols-outlined">format_h2</span> H2
+                            <button className="mobile-menu-item" onClick={() => { handleSlashCommand('h2'); setShowMobileToolbar(false); }}>
+                              <Heading2 size={16} /> H2
                             </button>
-                            <button onClick={() => { handleSlashCommand('list'); setShowMobileToolbar(false); }}>
-                              <span className="material-symbols-outlined">format_list_bulleted</span> List
+                            <button className="mobile-menu-item" onClick={() => { handleSlashCommand('list'); setShowMobileToolbar(false); }}>
+                              <List size={16} /> List
                             </button>
-                            <button onClick={() => { handleSlashCommand('bold'); setShowMobileToolbar(false); }}>
-                              <span className="material-symbols-outlined">format_bold</span> Bold
+                            <button className="mobile-menu-item" onClick={() => { handleSlashCommand('bold'); setShowMobileToolbar(false); }}>
+                              <Bold size={16} /> Bold
                             </button>
-                            <button onClick={() => { handleSlashCommand('collapse'); setShowMobileToolbar(false); }}>
-                              <span className="material-symbols-outlined">expand_more</span> Collapsible
+                            <button className="mobile-menu-item" onClick={() => { handleSlashCommand('collapse'); setShowMobileToolbar(false); }}>
+                              <ChevronDown size={16} /> Collapsible
                             </button>
-                            <div style={{ height: '1px', backgroundColor: 'rgba(255,255,255,0.1)', margin: '4px 0' }}></div>
-                            <button onClick={() => { handleSaveToCloud(); setShowMobileToolbar(false); }} disabled={isSavingToCloud}>
-                              <span className="material-symbols-outlined">cloud_upload</span> {isSavingToCloud ? 'Saving...' : 'Save to Cloud'}
+                            <div className="mobile-menu-divider"></div>
+                            <button className="mobile-menu-item" onClick={() => { handleSaveToCloud(); setShowMobileToolbar(false); }} disabled={isSavingToCloud}>
+                              <CloudUpload size={16} /> {isSavingToCloud ? 'Saving...' : 'Save to Cloud'}
                             </button>
                           </div>
                         </>
@@ -3020,99 +3076,138 @@ Format your response in Markdown.`;
                     </div>
                   ) : (
                     <>
-                      <button onClick={handleUndo} disabled={documentHistory.length === 0}>Undo</button>
-                      <button onClick={handleRedo} disabled={redoHistory.length === 0}>Redo</button>
-                      <button onClick={handleClear}>Clear</button>
-                      <div style={{ width: '1px', height: '20px', backgroundColor: 'rgba(255,255,255,0.1)', margin: '0 10px' }}></div>
-                      <button onClick={() => handleSlashCommand('h1')} title="Heading 1">H1</button>
-                      <button onClick={() => handleSlashCommand('h2')} title="Heading 2">H2</button>
-                      <button onClick={() => handleSlashCommand('list')} title="Bullet List">List</button>
-                      <button onClick={() => handleSlashCommand('bold')} title="Bold">Bold</button>
-                      <button onClick={() => handleSlashCommand('collapse')} title="Collapsible Section">Collapse</button>
-                      <button 
-                        onClick={handleStrategicReview} 
-                        style={{ 
-                          backgroundColor: 'rgba(0, 243, 255, 0.1)', 
-                          color: 'var(--theme-accent)',
-                          border: '1px solid rgba(0, 243, 255, 0.3)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '5px'
-                        }}
-                        title="Get AI Strategic Review"
-                      >
-                        <Sparkles size={14} /> Strategic Review
-                      </button>
-                      <div style={{ width: '1px', height: '20px', backgroundColor: 'rgba(255,255,255,0.1)', margin: '0 10px' }}></div>
-                      <button 
-                        onClick={() => {
-                          fetchVersions();
-                          setShowHistoryModal(true);
-                        }}
-                        style={{ marginLeft: '10px' }}
-                      >
-                        History
-                      </button>
-                      <button 
-                        onClick={() => setShowTemplatesModal(true)}
-                        style={{ marginLeft: '10px' }}
-                      >
-                        Templates
-                      </button>
-                      <button 
-                        onClick={() => {
-                          fetchProjects();
-                          setShowDashboardModal(true);
-                        }}
-                        style={{ marginLeft: '10px' }}
-                      >
-                        Dashboard
-                      </button>
-                      <button 
-                        onClick={handleDownloadMarkdown}
-                        style={{ marginLeft: '10px' }}
-                      >
-                        Export MD
-                      </button>
-                      <button 
-                        onClick={handleSaveToCloud} 
-                        disabled={isSavingToCloud} 
-                        style={{ marginLeft: '10px' }}
-                      >
-                        {isSavingToCloud ? 'Saving...' : 'Save to Cloud'}
-                      </button>
-                      {lastAutoSavedAt && (
-                        <span style={{ marginLeft: '10px', fontSize: '11px', opacity: 0.5, fontStyle: 'italic' }}>
-                          Last auto-saved: {lastAutoSavedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      )}
-                      <button 
-                        onClick={() => setShowCopilot(!showCopilot)} 
-                        style={{ 
-                          marginLeft: '10px', 
-                          backgroundColor: showCopilot ? 'rgba(0, 243, 255, 0.2)' : 'transparent', 
-                          border: showCopilot ? '1px solid var(--theme-accent)' : undefined,
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '4px' 
-                        }}
-                      >
-                        <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>lightbulb</span>
-                        {showCopilot ? 'Hide Copilot' : 'AI Copilot'}
-                      </button>
-                      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
-                        <select
-                          className="font-selector"
-                          value={font}
-                          onChange={e => setFont(e.target.value)}
-                          title="Select document font"
+                      <div className="toolbar-group">
+                        <button className="brutalist-button-sm" onClick={handleUndo} disabled={documentHistory.length === 0} title="Undo">
+                          <Undo2 size={14} />
+                        </button>
+                        <button className="brutalist-button-sm" onClick={handleRedo} disabled={redoHistory.length === 0} title="Redo">
+                          <Redo2 size={14} />
+                        </button>
+                        <button className="brutalist-button-sm" onClick={handleClear} title="Clear Document">
+                          <Eraser size={14} />
+                        </button>
+                      </div>
+
+                      <div className="toolbar-divider"></div>
+
+                      <div className="toolbar-group">
+                        <button className="brutalist-button-sm" onClick={() => handleSlashCommand('h1')} title="Heading 1">
+                          <Heading1 size={14} />
+                        </button>
+                        <button className="brutalist-button-sm" onClick={() => handleSlashCommand('h2')} title="Heading 2">
+                          <Heading2 size={14} />
+                        </button>
+                        <button className="brutalist-button-sm" onClick={() => handleSlashCommand('list')} title="Bullet List">
+                          <List size={14} />
+                        </button>
+                        <button className="brutalist-button-sm" onClick={() => handleSlashCommand('bold')} title="Bold">
+                          <Bold size={14} />
+                        </button>
+                        <button className="brutalist-button-sm" onClick={() => handleSlashCommand('collapse')} title="Collapsible Section">
+                          <ChevronDown size={14} />
+                        </button>
+                      </div>
+
+                      <div className="toolbar-divider"></div>
+
+                      <div className="toolbar-group">
+                        <button 
+                          className="brutalist-button-sm ai-button"
+                          onClick={handleStrategicReview} 
+                          title="Get AI Strategic Review"
                         >
-                          {FONT_OPTIONS.map(fontName => (
-                            <option key={fontName} value={fontName}>
-                              {fontName}
-                            </option>
-                          ))}
-                        </select>
+                          <Sparkles size={14} />
+                          <span>Strategic Review</span>
+                        </button>
+                        
+                        <button 
+                          className="brutalist-button-sm"
+                          onClick={() => {
+                            fetchVersions();
+                            setShowHistoryModal(true);
+                          }}
+                          title="Version History"
+                        >
+                          <History size={14} />
+                          <span>History</span>
+                        </button>
+
+                        <button 
+                          className="brutalist-button-sm"
+                          onClick={() => setShowTemplatesModal(true)}
+                          title="Document Templates"
+                        >
+                          <FileText size={14} />
+                          <span>Templates</span>
+                        </button>
+
+                        <button 
+                          className="brutalist-button-sm"
+                          onClick={() => {
+                            fetchProjects();
+                            setShowDashboardModal(true);
+                          }}
+                          title="Project Dashboard"
+                        >
+                          <LayoutDashboard size={14} />
+                          <span>Dashboard</span>
+                        </button>
+                      </div>
+
+                      <div className="toolbar-divider"></div>
+
+                      <div className="toolbar-group">
+                        <button 
+                          className="brutalist-button-sm"
+                          onClick={handleDownloadMarkdown}
+                          title="Export as Markdown"
+                        >
+                          <Download size={14} />
+                          <span>Export MD</span>
+                        </button>
+
+                        <button 
+                          className="brutalist-button-sm"
+                          onClick={handleSaveToCloud} 
+                          disabled={isSavingToCloud}
+                          title="Save to Cloud"
+                        >
+                          <CloudUpload size={14} />
+                          <span>{isSavingToCloud ? 'Saving...' : 'Save to Cloud'}</span>
+                        </button>
+                      </div>
+
+                      <div className="toolbar-group ml-auto">
+                        {lastAutoSavedAt && (
+                          <span className="auto-save-status">
+                            Saved: {lastAutoSavedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        )}
+                        
+                        <button 
+                          className={c("brutalist-button-sm", { "active": showCopilot })}
+                          onClick={() => setShowCopilot(!showCopilot)} 
+                          title={showCopilot ? 'Hide Copilot' : 'Show AI Copilot'}
+                        >
+                          <Lightbulb size={14} />
+                          <span>Copilot</span>
+                        </button>
+
+                        <div className="font-selector-container">
+                          <TypeIcon size={14} className="font-icon" />
+                          <select
+                            className="font-selector-brutalist"
+                            value={font}
+                            onChange={e => setFont(e.target.value)}
+                            title="Select document font"
+                          >
+                            {FONT_OPTIONS.map(fontName => (
+                              <option key={fontName} value={fontName}>
+                                {fontName}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
                     </>
                   )}
@@ -3138,41 +3233,29 @@ Format your response in Markdown.`;
                 {documentContent !== PLACEHOLDER_DOC && (
                   <div className="document-actions exclude-from-pdf">
                     <button
-                      className="share-button"
+                      className="brutalist-button-sm share-button"
                       onClick={() => setShowShareModal(true)}
                       title="Share Project"
-                      style={{
-                        background: 'rgba(0, 243, 255, 0.1)',
-                        border: '1px solid rgba(0, 243, 255, 0.3)',
-                        color: 'var(--theme-accent)',
-                        padding: '6px 12px',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        marginRight: '8px'
-                      }}
                     >
                       <Share2 size={14} />
-                      Share
+                      <span>Share</span>
                     </button>
                     <button
-                      className="pdf-button"
+                      className="brutalist-button-sm"
                       onClick={() => handleDownloadPDF(renderedViewRef, user.topic || 'soloscribe-document')}
                       disabled={pdfStatus !== 'idle'}
                       title="Download PDF"
                     >
-                      <span className="icon">picture_as_pdf</span>
+                      <Download size={14} />
+                      <span>PDF</span>
                     </button>
                     <button
-                      className="copy-button"
+                      className="brutalist-button-sm"
                       onClick={() => handleCopyToClipboard(documentContent)}
                       title="Copy to clipboard"
                     >
-                      <span className="icon">content_copy</span>
+                      <Copy size={14} />
+                      <span>Copy</span>
                     </button>
                   </div>
                 )}
@@ -3201,86 +3284,92 @@ Format your response in Markdown.`;
         )}
 
         {mainTab === 'transcript' && (
-          <div className="transcript-content">
-            <div className="document-actions exclude-from-pdf mb-4">
+          <div className="transcript-content p-6">
+            <div className="flex gap-4 mb-6">
               <button 
-                className="pdf-button flex items-center gap-2"
+                className="brutalist-button flex items-center gap-2 px-4 py-2 text-xs"
                 onClick={handleGetAccurateTranscript}
                 disabled={isGeneratingAccurateTranscript || audioLog.length === 0}
                 title="Generate a more accurate transcript from audio"
               >
-                <span className="icon">auto_fix_high</span>
-                <span>{isGeneratingAccurateTranscript ? 'Analyzing Audio...' : 'Accurate Transcript'}</span>
+                <Wand2 size={16} />
+                <span>{isGeneratingAccurateTranscript ? 'ANALYZING_AUDIO...' : 'ACCURATE_TRANSCRIPT'}</span>
               </button>
               {accurateTranscript && (
                 <button 
-                  className="copy-button"
+                  className="brutalist-button px-4 py-2 text-xs"
                   onClick={() => handleCopyToClipboard(accurateTranscript)}
                   title="Copy accurate transcript"
                 >
-                  <span className="icon">content_copy</span>
+                  <Copy size={16} />
                 </button>
               )}
             </div>
 
-            {isGeneratingAccurateTranscript ? (
-              <MinutesLoadingAnimation />
-            ) : accurateTranscript ? (
-              <div className="accurate-transcript-view prose-view">
-                <div className="flex items-center justify-between mb-6 pb-4 border-b border-[rgba(0,243,255,0.2)]">
-                  <h4 className="text-sm font-semibold text-[var(--theme-accent)] uppercase tracking-wider font-[var(--font-display)]">Accurate Version</h4>
+            <div className="border-4 border-black p-8 bg-black/40 overflow-y-auto max-h-[600px]">
+              {isGeneratingAccurateTranscript ? (
+                <MinutesLoadingAnimation />
+              ) : accurateTranscript ? (
+                <div className="accurate-transcript-view prose-view">
+                  <div className="flex items-center justify-between mb-6 pb-4 border-b border-theme-accent/20">
+                    <h4 className="font-display text-xs text-theme-accent uppercase tracking-widest">ACCURATE_VERSION_SYNTHESIS</h4>
+                    <button 
+                      className="brutalist-button px-3 py-1.5 text-[10px]"
+                      onClick={handleReplaceTranscript}
+                    >
+                      <Clock size={14} className="inline mr-1" />
+                      REPLACE_LIVE_STREAM
+                    </button>
+                  </div>
+                  <div className="accurate-content-body" dangerouslySetInnerHTML={{ __html: marked.parse(accurateTranscript) }} />
                   <button 
-                    className="flex items-center gap-2 px-3 py-1.5 bg-[rgba(0,243,255,0.1)] text-[var(--theme-accent)] text-xs font-medium rounded-lg hover:bg-[rgba(0,243,255,0.2)] transition-all shadow-[0_0_10px_rgba(0,243,255,0.2)] border border-[rgba(0,243,255,0.3)] hover:shadow-[0_0_15px_rgba(0,243,255,0.4)] hover:text-white"
-                    onClick={handleReplaceTranscript}
+                    className="text-[10px] font-mono text-theme-accent mt-8 hover:text-white transition-all flex items-center gap-1 uppercase tracking-tighter"
+                    onClick={() => setAccurateTranscript('')}
                   >
-                    <span className="icon text-sm">swap_horiz</span>
-                    Replace Live Transcript
+                    <X size={12} />
+                    BACK_TO_LIVE_TRANSCRIPT
                   </button>
                 </div>
-                <div className="accurate-content-body" dangerouslySetInnerHTML={{ __html: marked.parse(accurateTranscript) }} />
-                <button 
-                  className="text-xs text-[var(--theme-accent)] mt-8 hover:text-white hover:shadow-[0_0_5px_rgba(0,243,255,0.8)] transition-all flex items-center gap-1"
-                  onClick={() => setAccurateTranscript('')}
-                >
-                  <span className="icon text-sm">arrow_back</span>
-                  Back to live transcript
-                </button>
-              </div>
-            ) : transcript.length > 0 ? (
-              transcript.map((entry, index) => (
-                <p key={index} className="transcript-entry">
-                  <strong>{entry.speaker}:</strong> {entry.text}
-                </p>
-              ))
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full text-gray-400 opacity-50">
-                <span className="icon text-4xl mb-2">forum</span>
-                <p>No transcript available yet.</p>
-              </div>
-            )}
+              ) : transcript.length > 0 ? (
+                <div className="flex flex-col gap-4">
+                  {transcript.map((entry, index) => (
+                    <div key={index} className="flex flex-col gap-1">
+                      <div className="font-mono text-[10px] uppercase text-theme-accent opacity-70">{entry.speaker}</div>
+                      <div className="font-mono text-sm leading-relaxed">{entry.text}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full opacity-30 font-mono text-sm gap-4 py-20">
+                  <MessageSquare size={48} />
+                  <p>NO_TRANSCRIPT_DETECTED.</p>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
         {mainTab === 'minutes' && (
-          <div className="document-editor-container">
-            <div className="document-actions exclude-from-pdf">
+          <div className="minutes-view p-6">
+            <div className="flex gap-4 mb-6">
               <button
-                className="pdf-button"
+                className="brutalist-button flex items-center gap-2 px-4 py-2 text-xs"
                 onClick={() => handleDownloadPDF(minutesViewRef, `${user.topic || 'soloscribe'}_minutes`)}
                 disabled={pdfStatus !== 'idle'}
                 title="Download PDF"
               >
-                <span className="icon">picture_as_pdf</span>
+                <Download size={16} />
+                DOWNLOAD_PDF
               </button>
               <button
-                className="copy-button"
+                className="brutalist-button px-4 py-2 text-xs"
                 onClick={() => handleCopyToClipboard(correctedTranscript)}
                 title="Copy to clipboard"
               >
-                <span className="icon">content_copy</span>
+                <Copy size={16} />
               </button>
             </div>
-            <div ref={minutesViewRef} className="document-content prose-view">
+            <div ref={minutesViewRef} className="document-content prose-view border-4 border-black p-8 bg-black/40">
               {isCorrectingTranscript ? (
                 <MinutesLoadingAnimation />
               ) : (
@@ -3296,38 +3385,50 @@ Format your response in Markdown.`;
 
         {mainTab === 'audio-log' && (
           <div className="audio-log-view">
-            <div className="audio-log-controls">
-               <button onClick={handleSaveAudioLog} disabled={audioLog.length === 0}>
-                  Save Audio Log
+            <div className="audio-log-controls mb-6">
+               <button 
+                 onClick={handleSaveAudioLog} 
+                 disabled={audioLog.length === 0}
+                 className="brutalist-button flex items-center gap-2 px-4 py-2 text-xs"
+               >
+                  <Save size={16} />
+                  SAVE_AUDIO_LOG
                 </button>
             </div>
-            <div className="audio-log-content">
-              <div className="audio-log-header">
-                <div>Timestamp</div>
-                <div>Speaker</div>
-                <div>Duration</div>
-                <div className="audio-log-playback">Playback</div>
+            <div className="audio-log-content border-4 border-black bg-black/40 overflow-hidden">
+              <div className="audio-log-header grid grid-cols-4 gap-4 p-4 border-b-2 border-theme-accent font-mono text-[10px] uppercase opacity-50">
+                <div>TIMESTAMP</div>
+                <div>SPEAKER</div>
+                <div>DURATION</div>
+                <div className="text-right">PLAYBACK</div>
               </div>
-              {audioLog.length > 0 ? (
-                audioLog.map((entry, index) => (
-                  <div key={index} className="audio-log-entry">
-                    <div>{entry.timestamp.toLocaleTimeString()}</div>
-                    <div>{entry.speaker}</div>
-                    <div>{getAudioDuration(entry.blob)}</div>
-                    <div className="audio-log-playback">
-                      <button className="play-audio-button" onClick={() => toggleAudioPlayback(index, entry.blob)}>
-                        <span className="icon">
-                          {playingAudio?.index === index ? 'pause_circle' : 'play_circle'}
-                        </span>
-                      </button>
+              <div className="max-h-[500px] overflow-y-auto">
+                {audioLog.length > 0 ? (
+                  audioLog.map((entry, index) => (
+                    <div key={index} className="audio-log-entry grid grid-cols-4 gap-4 p-4 border-b border-white/5 items-center hover:bg-white/5 transition-colors">
+                      <div className="font-mono text-xs">{entry.timestamp.toLocaleTimeString()}</div>
+                      <div className="font-mono text-xs text-theme-accent">{entry.speaker}</div>
+                      <div className="font-mono text-xs opacity-70">{getAudioDuration(entry.blob)}</div>
+                      <div className="flex justify-end">
+                        <button 
+                          className="brutalist-button p-2" 
+                          onClick={() => toggleAudioPlayback(index, entry.blob)}
+                        >
+                          {playingAudio?.index === index ? (
+                            <PauseCircle size={18} />
+                          ) : (
+                            <PlayCircle size={18} />
+                          )}
+                        </button>
+                      </div>
                     </div>
+                  ))
+                ) : (
+                  <div className="audio-log-empty p-10 text-center opacity-50 font-mono text-sm">
+                    <p>NO_AUDIO_RECORDED_IN_THIS_SESSION. INITIALIZE_STREAM.</p>
                   </div>
-                ))
-              ) : (
-                <div className="audio-log-empty">
-                  <p>No audio has been recorded in this session yet.</p>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -3354,64 +3455,45 @@ Format your response in Markdown.`;
       </div>
 
       {showHistoryModal && (
-        <Modal onClose={() => setShowHistoryModal(false)}>
-          <div style={{ padding: '20px', maxHeight: '70vh', overflowY: 'auto' }}>
-            <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '8px', color: 'var(--theme-accent)' }}>Document Version History</h2>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <p style={{ fontSize: '14px', opacity: 0.7 }}>
-                Select a previous version to restore your document.
-              </p>
+        <Modal onClose={() => setShowHistoryModal(false)} title="VERSION_HISTORY_LOG">
+          <div className="modalContent">
+            <div className="flex justify-between items-center mb-6">
+              <div className="grid-item-meta">DOCUMENT_SNAPSHOT_REPOSITORY</div>
               <button 
                 onClick={() => handleCreateVersion()}
-                className="olive-button"
-                style={{ fontSize: '12px', padding: '8px 16px' }}
+                className="brutalist-button px-4 py-2 text-xs"
               >
-                Take Snapshot
+                TAKE_SNAPSHOT
               </button>
             </div>
 
             {isLoadingVersions ? (
-              <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
+              <div className="flex justify-center p-10">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-theme-accent"></div>
               </div>
             ) : projectVersions.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px', opacity: 0.5 }}>
-                No versions found.
+              <div className="text-center p-10 opacity-50 font-mono text-sm">
+                NO_VERSIONS_FOUND. INITIALIZE_SNAPSHOT_STREAM.
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div className="flex flex-col gap-3">
                 {projectVersions.map((version) => (
                   <div 
                     key={version.docId}
-                    style={{
-                      padding: '16px',
-                      borderRadius: '12px',
-                      border: '1px solid var(--theme-surface)',
-                      backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center'
-                    }}
+                    className="grid-item"
+                    onClick={() => handleRestoreVersion(version)}
                   >
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: '14px' }}>{version.label}</div>
-                      <div style={{ fontSize: '12px', opacity: 0.5 }}>
-                        {version.createdAt?.toDate().toLocaleString() || 'Just now'}
+                    <div className="flex justify-between items-center w-full">
+                      <div>
+                        <div className="grid-item-title">{version.label || `SNAPSHOT_${version.docId.slice(0, 8)}`}</div>
+                        <div className="grid-item-meta">
+                          SYNC_TIME: {version.createdAt?.toDate().toLocaleString() || 'TIMESTAMP_PENDING'}
+                        </div>
                       </div>
+                      <button className="brutalist-button px-3 py-1 text-xs">
+                        RESTORE
+                      </button>
                     </div>
-                    <button 
-                      onClick={() => handleRestoreVersion(version)}
-                      style={{
-                        padding: '6px 12px',
-                        borderRadius: '6px',
-                        backgroundColor: 'var(--theme-accent)',
-                        color: '#000',
-                        fontSize: '12px',
-                        fontWeight: 600
-                      }}
-                    >
-                      Restore
-                    </button>
                   </div>
                 ))}
               </div>
@@ -3421,36 +3503,21 @@ Format your response in Markdown.`;
       )}
 
       {showTemplatesModal && (
-        <Modal onClose={() => setShowTemplatesModal(false)}>
-          <div style={{ padding: '20px', maxHeight: '70vh', overflowY: 'auto' }}>
-            <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '8px', color: 'var(--theme-accent)' }}>Document Templates</h2>
-            <p style={{ fontSize: '14px', opacity: 0.7, marginBottom: '20px' }}>
-              Choose a template to kickstart your documentation.
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px' }}>
+        <Modal onClose={() => setShowTemplatesModal(false)} title="DOCUMENT_TEMPLATES">
+          <div className="modalContent">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {DOCUMENT_TEMPLATES.map((template) => (
                 <div 
                   key={template.id}
-                  style={{
-                    padding: '20px',
-                    borderRadius: '16px',
-                    border: '1px solid var(--theme-surface)',
-                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '12px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
-                  className="hover:border-theme-accent hover:bg-[rgba(0,243,255,0.05)]"
+                  className="grid-item"
                   onClick={() => handleSelectTemplate(template)}
                 >
-                  <div style={{ fontWeight: 600, fontSize: '16px', color: 'var(--theme-accent)' }}>{template.name}</div>
-                  <div style={{ fontSize: '13px', opacity: 0.6, lineHeight: '1.4' }}>
+                  <div className="grid-item-title">{template.name}</div>
+                  <div className="grid-item-desc">
                     {template.description}
                   </div>
-                  <div style={{ marginTop: 'auto', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.4 }}>
-                    Click to apply
+                  <div className="grid-item-meta">
+                    ACTION: CLICK_TO_APPLY
                   </div>
                 </div>
               ))}
@@ -3460,70 +3527,51 @@ Format your response in Markdown.`;
       )}
 
       {showDashboardModal && (
-        <Modal onClose={() => setShowDashboardModal(false)}>
-          <div style={{ padding: '20px', maxHeight: '70vh', overflowY: 'auto' }}>
-            <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '8px', color: 'var(--theme-accent)' }}>Project Dashboard</h2>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <p style={{ fontSize: '14px', opacity: 0.7 }}>
-                Manage your startup projects and workspaces.
-              </p>
+        <Modal onClose={() => setShowDashboardModal(false)} title="PROJECT_DASHBOARD">
+          <div className="modalContent">
+            <div className="flex justify-between items-center mb-6">
+              <div className="grid-item-meta">WORKSPACE_MANAGEMENT_INTERFACE</div>
               <button 
                 onClick={handleCreateNewProject}
-                className="olive-button"
-                style={{ fontSize: '12px', padding: '8px 16px' }}
+                className="brutalist-button px-4 py-2 text-xs"
               >
-                New Project
+                NEW_PROJECT
               </button>
             </div>
 
             {isLoadingProjects ? (
-              <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
+              <div className="flex justify-center p-10">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-theme-accent"></div>
               </div>
             ) : userProjects.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px', opacity: 0.5 }}>
-                No projects found. Create your first one!
+              <div className="text-center p-10 opacity-50 font-mono text-sm">
+                NO_PROJECTS_FOUND. INITIALIZE_FIRST_WORKSPACE.
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div className="flex flex-col gap-3">
                 {userProjects.map((project) => (
                   <div 
                     key={project.id}
-                    style={{
-                      padding: '16px',
-                      borderRadius: '12px',
-                      border: project.id === currentProjectId ? '1px solid var(--theme-accent)' : '1px solid var(--theme-surface)',
-                      backgroundColor: project.id === currentProjectId ? 'rgba(0, 243, 255, 0.05)' : 'rgba(255, 255, 255, 0.05)',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center'
-                    }}
+                    className={c("grid-item", { "border-white": project.id === currentProjectId })}
+                    onClick={() => handleSwitchProject(project.id)}
                   >
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: '14px', color: project.id === currentProjectId ? 'var(--theme-accent)' : 'inherit' }}>
-                        {project.name}
-                        {project.id === currentProjectId && <span style={{ marginLeft: '8px', fontSize: '10px', backgroundColor: 'var(--theme-accent)', color: '#000', padding: '2px 6px', borderRadius: '4px', verticalAlign: 'middle' }}>Active</span>}
+                    <div className="flex justify-between items-center w-full">
+                      <div>
+                        <div className={c("grid-item-title", { "text-white": project.id === currentProjectId })}>
+                          {project.name}
+                          {project.id === currentProjectId && <span className="ml-2 text-[10px] bg-white text-black px-1.5 py-0.5 uppercase">ACTIVE</span>}
+                        </div>
+                        <div className="grid-item-meta">
+                          LAST_SYNC: {project.updatedAt?.toDate().toLocaleString() || 'TIMESTAMP_PENDING'}
+                        </div>
                       </div>
-                      <div style={{ fontSize: '12px', opacity: 0.5 }}>
-                        Last updated: {project.updatedAt?.toDate().toLocaleString() || 'Just now'}
-                      </div>
+                      <button 
+                        disabled={project.id === currentProjectId}
+                        className={c("brutalist-button px-3 py-1 text-xs", { "opacity-50 cursor-not-allowed": project.id === currentProjectId })}
+                      >
+                        {project.id === currentProjectId ? 'CURRENT' : 'OPEN'}
+                      </button>
                     </div>
-                    <button 
-                      onClick={() => handleSwitchProject(project.id)}
-                      disabled={project.id === currentProjectId}
-                      style={{
-                        padding: '6px 12px',
-                        borderRadius: '6px',
-                        backgroundColor: project.id === currentProjectId ? 'transparent' : 'var(--theme-accent)',
-                        color: project.id === currentProjectId ? 'var(--theme-accent)' : '#000',
-                        border: project.id === currentProjectId ? '1px solid var(--theme-accent)' : 'none',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        opacity: project.id === currentProjectId ? 0.5 : 1
-                      }}
-                    >
-                      {project.id === currentProjectId ? 'Current' : 'Open'}
-                    </button>
                   </div>
                 ))}
               </div>
@@ -3534,78 +3582,82 @@ Format your response in Markdown.`;
 
       {showSlashMenu && (
         <div 
+          className="slash-menu border-4 border-black bg-theme-surface shadow-[8px_8px_0_0_#000] z-[3000] min-w-[240px]"
           style={{ 
-            position: 'fixed', 
             top: slashMenuPos.top, 
             left: slashMenuPos.left, 
-            zIndex: 1000,
-            backgroundColor: '#1a1a1a',
-            border: '1px solid var(--theme-surface)',
-            borderRadius: '12px',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
-            width: '220px',
-            padding: '8px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '4px'
           }}
         >
-          <div style={{ padding: '8px', fontSize: '10px', textTransform: 'uppercase', opacity: 0.4, letterSpacing: '0.05em' }}>Commands</div>
-          <button className="slash-item" onClick={() => handleSlashCommand('template')}>
-            <span className="material-symbols-outlined">description</span> Templates
-          </button>
-          <button className="slash-item" onClick={() => handleSlashCommand('history')}>
-            <span className="material-symbols-outlined">history</span> Version History
-          </button>
-          <button className="slash-item" onClick={() => handleSlashCommand('dashboard')}>
-            <span className="material-symbols-outlined">dashboard</span> Dashboard
-          </button>
-          <button className="slash-item" onClick={() => handleSlashCommand('save')}>
-            <span className="material-symbols-outlined">cloud_upload</span> Save to Cloud
-          </button>
-          <div style={{ height: '1px', backgroundColor: 'rgba(255,255,255,0.1)', margin: '4px 0' }}></div>
-          <div style={{ padding: '8px', fontSize: '10px', textTransform: 'uppercase', opacity: 0.4, letterSpacing: '0.05em' }}>Formatting</div>
-          <button className="slash-item" onClick={() => handleSlashCommand('h1')}>
-            <span className="material-symbols-outlined">format_h1</span> Heading 1
-          </button>
-          <button className="slash-item" onClick={() => handleSlashCommand('h2')}>
-            <span className="material-symbols-outlined">format_h2</span> Heading 2
-          </button>
-          <button className="slash-item" onClick={() => handleSlashCommand('list')}>
-            <span className="material-symbols-outlined">format_list_bulleted</span> Bullet List
-          </button>
-          <button className="slash-item" onClick={() => handleSlashCommand('bold')}>
-            <span className="material-symbols-outlined">format_bold</span> Bold Text
-          </button>
-          <button className="slash-item" onClick={() => handleSlashCommand('collapse')}>
-            <span className="material-symbols-outlined">expand_more</span> Collapsible Section
-          </button>
-          <button className="slash-item" onClick={() => handleSlashCommand('clear')}>
-            <span className="material-symbols-outlined">delete</span> Clear Document
-          </button>
+          <div className="slash-menu-label font-display text-[10px] uppercase tracking-widest p-3 bg-black text-theme-accent border-b-2 border-theme-accent">SYSTEM_COMMANDS</div>
+          <div className="p-1">
+            <button className="slash-item flex items-center gap-3 w-full p-2 font-mono text-xs hover:bg-theme-accent hover:text-black transition-colors" onClick={() => handleSlashCommand('template')}>
+              <FileText size={16} /> TEMPLATES
+            </button>
+            <button className="slash-item flex items-center gap-3 w-full p-2 font-mono text-xs hover:bg-theme-accent hover:text-black transition-colors" onClick={() => handleSlashCommand('history')}>
+              <History size={16} /> VERSION_HISTORY
+            </button>
+            <button className="slash-item flex items-center gap-3 w-full p-2 font-mono text-xs hover:bg-theme-accent hover:text-black transition-colors" onClick={() => handleSlashCommand('dashboard')}>
+              <LayoutDashboard size={16} /> DASHBOARD
+            </button>
+            <button className="slash-item flex items-center gap-3 w-full p-2 font-mono text-xs hover:bg-theme-accent hover:text-black transition-colors" onClick={() => handleSlashCommand('save')}>
+              <CloudUpload size={16} /> SAVE_TO_CLOUD
+            </button>
+          </div>
+          <div className="slash-divider border-t-2 border-black my-1"></div>
+          <div className="slash-menu-label font-display text-[10px] uppercase tracking-widest p-3 bg-black text-theme-accent-secondary border-b-2 border-theme-accent-secondary">FORMATTING_MODULES</div>
+          <div className="p-1">
+            <button className="slash-item flex items-center gap-3 w-full p-2 font-mono text-xs hover:bg-theme-accent-secondary hover:text-black transition-colors" onClick={() => handleSlashCommand('h1')}>
+              <Heading1 size={16} /> HEADING_1
+            </button>
+            <button className="slash-item flex items-center gap-3 w-full p-2 font-mono text-xs hover:bg-theme-accent-secondary hover:text-black transition-colors" onClick={() => handleSlashCommand('h2')}>
+              <Heading2 size={16} /> HEADING_2
+            </button>
+            <button className="slash-item flex items-center gap-3 w-full p-2 font-mono text-xs hover:bg-theme-accent-secondary hover:text-black transition-colors" onClick={() => handleSlashCommand('list')}>
+              <List size={16} /> BULLET_LIST
+            </button>
+            <button className="slash-item flex items-center gap-3 w-full p-2 font-mono text-xs hover:bg-theme-accent-secondary hover:text-black transition-colors" onClick={() => handleSlashCommand('bold')}>
+              <Bold size={16} /> BOLD_TEXT
+            </button>
+            <button className="slash-item flex items-center gap-3 w-full p-2 font-mono text-xs hover:bg-theme-accent-secondary hover:text-black transition-colors" onClick={() => handleSlashCommand('collapse')}>
+              <ChevronDown size={16} /> COLLAPSIBLE_SECTION
+            </button>
+            <button className="slash-item flex items-center gap-3 w-full p-2 font-mono text-xs hover:bg-red-500 hover:text-white transition-colors" onClick={() => handleSlashCommand('clear')}>
+              <Trash2 size={16} /> CLEAR_DOCUMENT
+            </button>
+          </div>
         </div>
       )}
 
       {showChatHistory && (
-        <div className="chat-history-sidebar">
-          <div className="chat-history-header">
-            <h3>Chat History</h3>
-            <button className="close-button" onClick={() => setShowChatHistory(false)}>
-              <span className="icon">close</span>
+        <div className="chat-history-sidebar border-l-4 border-black bg-theme-surface shadow-[-8px_0_0_0_#000] z-[2000]">
+          <div className="chat-history-header flex justify-between items-center p-6 border-b-4 border-black bg-black">
+            <h3 className="font-display text-sm tracking-widest uppercase text-theme-accent">CHAT_HISTORY_STREAM</h3>
+            <button 
+              className="brutalist-button p-2" 
+              onClick={() => setShowChatHistory(false)}
+            >
+              <X size={18} />
             </button>
           </div>
-          <div className="chat-history-messages">
+          <div className="chat-history-messages p-6 flex flex-col gap-6 overflow-y-auto h-[calc(100%-80px)]">
             {transcript.length > 0 ? (
               transcript.map((entry, index) => (
-                <div key={index} className={`chat-message ${entry.speaker === user.name ? 'user-message' : 'agent-message'}`}>
-                  <div className="message-speaker">{entry.speaker}</div>
-                  <div className="message-text">{entry.text}</div>
+                <div key={index} className={`flex flex-col gap-2 ${entry.speaker === user.name ? 'items-end' : 'items-start'}`}>
+                  <div className="font-mono text-[10px] uppercase opacity-50">{entry.speaker}</div>
+                  <div className={c(
+                    "p-4 border-2 font-mono text-sm max-w-[90%]",
+                    entry.speaker === user.name 
+                      ? "bg-theme-accent-secondary/10 border-theme-accent-secondary text-white shadow-[4px_4px_0_0_rgba(255,0,255,0.3)]" 
+                      : "bg-theme-accent/10 border-theme-accent text-white shadow-[-4px_4px_0_0_rgba(0,243,255,0.3)]"
+                  )}>
+                    {entry.text}
+                  </div>
                 </div>
               ))
             ) : (
-              <div className="chat-history-empty">
-                <span className="icon">forum</span>
-                <p>No messages yet.</p>
+              <div className="chat-history-empty flex flex-col items-center justify-center h-full opacity-30 font-mono text-sm gap-4">
+                <MessageSquare size={48} />
+                <p>NO_MESSAGES_DETECTED.</p>
               </div>
             )}
           </div>

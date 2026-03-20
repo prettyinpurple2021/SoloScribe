@@ -153,10 +153,9 @@ export default function UserSettings() {
   };
 
   return (
-    <Modal onClose={() => setShowUserConfig(false)}>
-      <div className="userSettings jazzy">
-        <h2>Configuration</h2>
-        <p className="config-description">Tell us about yourself and what you'd like to write today.</p>
+    <Modal onClose={() => setShowUserConfig(false)} title="System Configuration">
+      <div className="userSettings">
+        <p className="config-description">Initialize documentation parameters. Define identity and objective.</p>
 
         <form
           onSubmit={e => {
@@ -167,10 +166,11 @@ export default function UserSettings() {
         >
           <div className="settings-grid">
             <div>
-              <p>Your name</p>
+              <p className="input-label">Your name</p>
               <input
                 type="text"
                 name="name"
+                className="brutalist-input"
                 value={name}
                 onChange={e => setName(e.target.value)}
                 placeholder="What do you like to be called?"
@@ -178,10 +178,11 @@ export default function UserSettings() {
             </div>
 
             <div>
-              <p>Topic</p>
+              <p className="input-label">Topic</p>
               <input
                 type="text"
                 name="topic"
+                className="brutalist-input"
                 value={topic}
                 onChange={e => setTopic(e.target.value)}
                 placeholder="A business plan, pitch deck, marketing strategy, lean canvas, etc."
@@ -191,7 +192,7 @@ export default function UserSettings() {
 
           <div className="settings-grid">
             <div>
-              <p>Document Font</p>
+              <p className="input-label">Document Font</p>
               <CustomDropdown
                 value={font}
                 options={FONT_OPTIONS}
@@ -201,7 +202,7 @@ export default function UserSettings() {
             </div>
 
             <div>
-              <p>Live API Model</p>
+              <p className="input-label">Live API Model</p>
               <CustomDropdown
                 value={liveApiModel === 'gemini-2.5-flash-native-audio-preview-12-2025' ? '12-2025' : '09-2025 (Default)'}
                 options={['12-2025', '09-2025 (Default)']}
@@ -231,6 +232,7 @@ export default function UserSettings() {
               <textarea
                 rows={3}
                 name="info"
+                className="brutalist-textarea"
                 value={info}
                 onChange={e => setInfo(e.target.value)}
                 placeholder="e.g., names, facts, style preferences"
@@ -303,7 +305,7 @@ export default function UserSettings() {
             </div>
           )}
 
-          <button className="button primary" style={{ marginTop: '20px' }}>Let’s go!</button>
+          <button className="brutalist-button" style={{ marginTop: '20px', width: '100%' }}>Initialize Session</button>
           
           <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1px solid rgba(255, 255, 255, 0.1)', display: 'flex', justifyContent: 'center', gap: '24px' }}>
             <button 

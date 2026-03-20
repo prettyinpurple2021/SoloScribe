@@ -18,9 +18,8 @@ export default function HelpModal() {
   }
 
   return (
-    <Modal onClose={onClose} className="help-modal-container">
+    <Modal onClose={onClose} className="help-modal-container" title="Operational Manual">
       <div className="help-modal-content">
-        <h2>How to Use SoloScribe</h2>
 
         <div className="help-section">
           <h3>Getting Started</h3>

@@ -119,13 +119,12 @@ export default function DebugModal() {
   const reversedPerfLogs = useMemo(() => [...perfLogs].reverse(), [perfLogs]);
 
   return (
-    <Modal onClose={() => setShowDebugModal(false)} className="debug-modal-container">
+    <Modal onClose={() => setShowDebugModal(false)} className="debug-modal-container" title="System Debug Log">
       <div className="debug-modal">
         <div className="debug-header">
           <div className="debug-header-top">
-            <h2>Interaction Log (Last 50)</h2>
             <div className="debug-actions">
-              <button onClick={handleCopyLogs} className="copy-logs-button">{copyButtonText}</button>
+              <button onClick={handleCopyLogs} className="brutalist-button">{copyButtonText}</button>
             </div>
           </div>
           <div className="debug-stats">

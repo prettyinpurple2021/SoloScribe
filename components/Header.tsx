@@ -22,7 +22,10 @@ import {
   LineChart,
   Map,
   FilePlus,
-  Folder
+  Folder,
+  History,
+  Bug,
+  Settings
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -135,21 +138,9 @@ export default function Header() {
     <header>
       <div className="roomInfo">
         <button 
-          className={c('workspace-toggle', { active: showProjectSidebar })}
+          className={c('workspace-toggle userSettingsButton', { active: showProjectSidebar })}
           onClick={() => setShowProjectSidebar(!showProjectSidebar)}
           title="Open Workspace"
-          style={{
-            background: 'none',
-            border: 'none',
-            color: showProjectSidebar ? 'var(--theme-accent)' : 'rgba(255,255,255,0.5)',
-            cursor: 'pointer',
-            padding: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'all 0.2s ease',
-            marginRight: '10px'
-          }}
         >
           <Folder size={20} />
         </button>
@@ -160,12 +151,13 @@ export default function Header() {
               setShowRoomList(!showRoomList);
             }}
             title="Switch Agent"
+            style={{ background: 'none', border: 'none', padding: 0 }}
           >
             <h1 className={c({ active: showRoomList })}>
               {current.name.split(' (')[0]}
               {isSuperUser && (
                 <span
-                  className="icon edit-agent-icon"
+                  className="edit-agent-icon"
                   onClick={e => {
                     e.stopPropagation();
                     setShowAgentEdit(true);
@@ -173,11 +165,12 @@ export default function Header() {
                   role="button"
                   tabIndex={0}
                   title="Edit agent"
+                  style={{ marginLeft: '8px', display: 'flex', alignItems: 'center' }}
                 >
-                  edit
+                  <Edit3 size={16} />
                 </span>
               )}
-              <span className="icon">arrow_drop_down</span>
+              <ChevronDown size={20} style={{ marginLeft: '4px' }} />
             </h1>
           </button>
         </div>
@@ -425,25 +418,17 @@ export default function Header() {
             </button>
             
             {showPromptMenu && (
-              <div className="header-dropdown-menu prompt-dropdown-menu" style={{ width: '400px', padding: '12px', border: '1px solid var(--theme-accent)', boxShadow: '0 0 10px rgba(0, 255, 255, 0.1)' }}>
+              <div className="header-dropdown-menu prompt-dropdown-menu" style={{ width: '400px', padding: '12px' }}>
                 <div style={{ position: 'relative', marginBottom: '12px' }}>
                   <textarea
                     value={tempPrompt}
                     onChange={(e) => setTempPrompt(e.target.value)}
                     placeholder="Enter system prompt..."
+                    className="brutalist-textarea"
                     style={{
                       width: '100%',
                       height: '200px',
-                      padding: '12px',
-                      borderRadius: '4px',
-                      border: '1px solid var(--theme-accent)',
-                      backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                      color: 'var(--theme-accent)',
                       fontSize: '13px',
-                      resize: 'vertical',
-                      fontFamily: 'var(--font-mono)',
-                      outline: 'none',
-                      boxShadow: 'inset 0 0 5px rgba(0, 255, 255, 0.1)',
                       lineHeight: '1.5'
                     }}
                   />
@@ -470,15 +455,12 @@ export default function Header() {
                         setTempPrompt(current.personality);
                         setShowPromptMenu(false);
                       }}
+                      className="brutalist-button"
                       style={{
                         padding: '6px 12px',
-                        borderRadius: '4px',
                         backgroundColor: 'transparent',
-                        border: '1px solid var(--theme-surface)',
                         color: 'var(--theme-text)',
-                        cursor: 'pointer',
                         fontSize: '12px',
-                        fontFamily: 'var(--font-mono)'
                       }}
                     >
                       ABORT
@@ -490,17 +472,10 @@ export default function Header() {
                         // Disconnect to force the new prompt to take effect on next connection
                         disconnect();
                       }}
+                      className="brutalist-button"
                       style={{
                         padding: '6px 16px',
-                        borderRadius: '4px',
-                        backgroundColor: 'var(--theme-accent)',
-                        color: '#000',
-                        border: 'none',
-                        cursor: 'pointer',
                         fontSize: '12px',
-                        fontWeight: 600,
-                        fontFamily: 'var(--font-mono)',
-                        boxShadow: '0 0 10px var(--theme-accent)'
                       }}
                     >
                       SAVE & RESTART
@@ -526,20 +501,18 @@ export default function Header() {
           </button>
           
           {showConfirmNew && (
-            <div className="header-dropdown-menu" style={{ right: 0, width: '220px', padding: '16px' }}>
+            <div className="header-dropdown-menu" style={{ right: 0, left: 'auto', width: '220px', padding: '16px' }}>
               <p style={{ fontSize: '13px', marginBottom: '16px', color: 'var(--theme-text)', lineHeight: '1.4' }}>
                 Create a new document? This will clear the current content and transcript.
               </p>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                 <button
                   onClick={() => setShowConfirmNew(false)}
+                  className="brutalist-button"
                   style={{
                     padding: '6px 12px',
-                    borderRadius: '6px',
                     backgroundColor: 'transparent',
-                    border: '1px solid var(--theme-surface)',
                     color: 'var(--theme-text)',
-                    cursor: 'pointer',
                     fontSize: '12px'
                   }}
                 >
@@ -551,15 +524,10 @@ export default function Header() {
                     resetUser();
                     setShowConfirmNew(false);
                   }}
+                  className="brutalist-button"
                   style={{
                     padding: '6px 12px',
-                    borderRadius: '6px',
-                    backgroundColor: 'var(--theme-accent)',
-                    color: '#000',
-                    border: 'none',
-                    cursor: 'pointer',
                     fontSize: '12px',
-                    fontWeight: 600
                   }}
                 >
                   Create New
@@ -590,7 +558,7 @@ export default function Header() {
           onClick={() => setShowChatHistory(!showChatHistory)}
           title="Toggle Chat History"
         >
-          <span className="icon">history</span>
+          <History size={20} />
         </button>
         {/* Displays the number of times the model has edited the document */}
         <div className="change-counter" title="Number of edits by the model">
@@ -603,7 +571,7 @@ export default function Header() {
             onClick={() => setShowDebugModal(true)}
             title="Debug Log"
           >
-            <span className="icon">bug_report</span>
+            <Bug size={20} />
           </button>
         )}
         <button
@@ -611,7 +579,7 @@ export default function Header() {
           onClick={() => setShowUserConfig(!showUserConfig)}
           title="Settings"
         >
-          <span className="icon">tune</span>
+          <Settings size={20} />
         </button>
       </div>
     </header>

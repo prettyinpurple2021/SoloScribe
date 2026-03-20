@@ -174,43 +174,25 @@ export const ProjectSidebar: React.FC = () => {
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="sidebar-container"
             style={{
               position: 'fixed',
               top: 0,
               left: 0,
               bottom: 0,
               width: '320px',
-              backgroundColor: 'var(--theme-surface)',
-              borderRight: '1px solid rgba(0, 243, 255, 0.2)',
               zIndex: 1001,
-              display: 'flex',
-              flexDirection: 'column',
-              boxShadow: '10px 0 30px rgba(0,0,0,0.5)',
             }}
           >
             {/* Header */}
-            <div style={{ 
-              padding: '20px', 
-              borderBottom: '1px solid rgba(0, 243, 255, 0.1)',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              background: 'rgba(0, 243, 255, 0.05)'
-            }}>
+            <div className="sidebar-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <Folder size={20} color="var(--theme-accent)" />
-                <h2 style={{ 
-                  margin: 0, 
-                  fontSize: '18px', 
-                  fontFamily: 'var(--font-display)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '1px',
-                  color: 'var(--theme-accent)'
-                }}>Workspace</h2>
+                <h2>Workspace</h2>
               </div>
               <button 
                 onClick={() => setShowProjectSidebar(false)}
-                style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}
+                className="project-action-btn"
               >
                 <X size={20} />
               </button>
@@ -226,42 +208,25 @@ export const ProjectSidebar: React.FC = () => {
                 <Search size={14} style={{ position: 'absolute', left: '10px', color: 'rgba(255,255,255,0.4)' }} />
                 <input 
                   type="text"
-                  placeholder="Search projects..."
+                  placeholder="SEARCH PROJECTS..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 8px 8px 32px',
-                    backgroundColor: 'rgba(0,0,0,0.3)',
-                    border: '1px solid rgba(0, 243, 255, 0.2)',
-                    borderRadius: '6px',
-                    color: 'white',
-                    fontSize: '13px'
-                  }}
+                  className="brutalist-input"
+                  style={{ paddingLeft: '32px' }}
                 />
               </div>
             </div>
 
             {/* Project List */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '10px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', padding: '0 5px' }}>
-                <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold' }}>Your Documents</span>
+            <div className="sidebar-content">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', padding: '0 5px' }}>
+                <span className="brutalist-label" style={{ margin: 0 }}>Your Documents</span>
                 <button 
                   onClick={() => setIsCreating(true)}
-                  style={{ 
-                    background: 'rgba(0, 243, 255, 0.1)', 
-                    border: '1px solid rgba(0, 243, 255, 0.3)', 
-                    color: 'var(--theme-accent)',
-                    borderRadius: '4px',
-                    padding: '2px 8px',
-                    fontSize: '11px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
+                  className="brutalist-button"
+                  style={{ padding: '4px 12px', fontSize: '11px' }}
                 >
-                  <Plus size={12} /> New
+                  <Plus size={12} /> NEW
                 </button>
               </div>
 
@@ -269,86 +234,44 @@ export const ProjectSidebar: React.FC = () => {
                 <motion.div 
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  style={{ 
-                    padding: '10px', 
-                    backgroundColor: 'rgba(0, 243, 255, 0.05)', 
-                    borderRadius: '8px',
-                    marginBottom: '10px',
-                    border: '1px solid rgba(0, 243, 255, 0.2)'
-                  }}
+                  className="brutalist-card"
+                  style={{ marginBottom: '1rem', padding: '1rem' }}
                 >
                   <input 
                     autoFocus
                     type="text"
-                    placeholder="Project name..."
+                    placeholder="PROJECT NAME..."
                     value={newProjectName}
                     onChange={(e) => setNewProjectName(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleCreateProject()}
-                    style={{
-                      width: '100%',
-                      padding: '8px',
-                      backgroundColor: 'rgba(0,0,0,0.5)',
-                      border: '1px solid rgba(0, 243, 255, 0.4)',
-                      borderRadius: '4px',
-                      color: 'white',
-                      marginBottom: '8px',
-                      fontSize: '13px'
-                    }}
+                    className="brutalist-input"
+                    style={{ marginBottom: '0.75rem' }}
                   />
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button 
                       onClick={handleCreateProject}
-                      style={{ 
-                        flex: 1, 
-                        padding: '6px', 
-                        backgroundColor: 'var(--theme-accent)', 
-                        color: 'black', 
-                        border: 'none', 
-                        borderRadius: '4px', 
-                        fontSize: '12px', 
-                        fontWeight: 'bold',
-                        cursor: 'pointer'
-                      }}
+                      className="brutalist-button primary"
+                      style={{ flex: 1, padding: '8px' }}
                     >
-                      Create
+                      CREATE
                     </button>
                     <button 
                       onClick={() => setIsCreating(false)}
-                      style={{ 
-                        padding: '6px 10px', 
-                        backgroundColor: 'rgba(255,255,255,0.1)', 
-                        color: 'white', 
-                        border: 'none', 
-                        borderRadius: '4px', 
-                        fontSize: '12px',
-                        cursor: 'pointer'
-                      }}
+                      className="brutalist-button"
+                      style={{ padding: '8px 12px' }}
                     >
-                      Cancel
+                      CANCEL
                     </button>
                   </div>
                 </motion.div>
               )}
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
                 {filteredProjects.map((project) => (
                   <div 
                     key={project.id}
                     onClick={() => handleSelectProject(project)}
-                    style={{
-                      padding: '10px 12px',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      backgroundColor: currentProjectId === project.id ? 'rgba(0, 243, 255, 0.15)' : 'transparent',
-                      border: currentProjectId === project.id ? '1px solid rgba(0, 243, 255, 0.3)' : '1px solid transparent',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      transition: 'all 0.2s ease',
-                      position: 'relative',
-                      group: 'true'
-                    } as any}
-                    className="project-item"
+                    className={`project-item ${currentProjectId === project.id ? 'active' : ''}`}
                   >
                     <FileText size={18} color={currentProjectId === project.id ? 'var(--theme-accent)' : 'rgba(255,255,255,0.4)'} />
                     
@@ -361,43 +284,38 @@ export const ProjectSidebar: React.FC = () => {
                           onBlur={(e) => handleSaveEdit(e as any, project.id)}
                           onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit(e as any, project.id)}
                           onClick={(e) => e.stopPropagation()}
-                          style={{
-                            width: '100%',
-                            background: 'rgba(0,0,0,0.5)',
-                            border: '1px solid var(--theme-accent)',
-                            color: 'white',
-                            padding: '2px 4px',
-                            borderRadius: '4px',
-                            fontSize: '13px'
-                          }}
+                          className="brutalist-input"
+                          style={{ padding: '2px 8px' }}
                         />
                       ) : (
                         <div style={{ 
                           fontSize: '13px', 
-                          fontWeight: currentProjectId === project.id ? '600' : '400',
-                          color: currentProjectId === project.id ? 'white' : 'rgba(255,255,255,0.8)',
+                          fontWeight: currentProjectId === project.id ? '700' : '400',
+                          color: currentProjectId === project.id ? 'var(--theme-accent)' : 'rgba(255,255,255,0.8)',
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
-                          textOverflow: 'ellipsis'
+                          textOverflow: 'ellipsis',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px'
                         }}>
                           {project.name}
                         </div>
                       )}
-                      <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', marginTop: '2px' }}>
-                        {project.updatedAt?.toDate ? new Date(project.updatedAt.toDate()).toLocaleDateString() : 'Just now'}
+                      <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', marginTop: '2px', fontFamily: 'var(--font-mono)' }}>
+                        {project.updatedAt?.toDate ? new Date(project.updatedAt.toDate()).toLocaleDateString() : 'JUST NOW'}
                       </div>
                     </div>
 
-                    <div className="project-actions" style={{ display: 'flex', gap: '4px' }}>
+                    <div className="project-actions">
                       <button 
                         onClick={(e) => handleStartEdit(e, project)}
-                        style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', padding: '4px' }}
+                        className="project-action-btn"
                       >
                         <Edit3 size={14} />
                       </button>
                       <button 
                         onClick={(e) => handleDeleteProject(e, project.id)}
-                        style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', padding: '4px' }}
+                        className="project-action-btn"
                       >
                         <Trash2 size={14} />
                       </button>
@@ -408,21 +326,15 @@ export const ProjectSidebar: React.FC = () => {
                 {filteredProjects.length === 0 && !isCreating && (
                   <div style={{ textAlign: 'center', padding: '40px 20px', color: 'rgba(255,255,255,0.3)' }}>
                     <Folder size={32} style={{ marginBottom: '10px', opacity: 0.2 }} />
-                    <p style={{ fontSize: '12px' }}>No projects found. Create your first startup document!</p>
+                    <p style={{ fontSize: '12px', fontFamily: 'var(--font-mono)' }}>NO PROJECTS FOUND. INITIALIZE NEW STARTUP DOCUMENT.</p>
                   </div>
                 )}
               </div>
             </div>
 
             {/* Footer */}
-            <div style={{ 
-              padding: '15px', 
-              borderTop: '1px solid rgba(0, 243, 255, 0.1)',
-              fontSize: '10px',
-              color: 'rgba(255,255,255,0.3)',
-              textAlign: 'center'
-            }}>
-              SoloScribe Workspace v1.0
+            <div className="sidebar-footer">
+              SOLOSCRIBE_WORKSPACE_V1.0 // SYSTEM_READY
             </div>
           </motion.div>
         </>

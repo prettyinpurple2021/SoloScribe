@@ -60,30 +60,30 @@ export default function EditAgent() {
   }
 
   return (
-    <Modal onClose={() => onClose()} className="agent-edit-modal">
+    <Modal onClose={() => onClose()} className="agent-edit-modal" title="Agent Configuration">
       <form
         className="edit-agent-form"
         onSubmit={handleSubmit}
       >
         <div className="agent-edit-header">
           <div className="config-field name-field">
-            <label>Name</label>
+            <label className="input-label">Name</label>
             <input
               type="text"
               placeholder="Name"
               value={name}
               onChange={e => setName(e.target.value)}
               ref={nameInput}
-              className="header-input"
+              className="brutalist-input"
               autoFocus
             />
           </div>
           <div className="config-field voice-field">
-            <label>Voice</label>
+            <label className="input-label">Voice</label>
             <select
               value={voice}
               onChange={e => setVoice(e.target.value as INTERLOCUTOR_VOICE)}
-              className="header-input"
+              className="brutalist-select"
             >
               {INTERLOCUTOR_VOICES.map(v => (
                 <option key={v} value={v}>
@@ -95,12 +95,12 @@ export default function EditAgent() {
           <div className="header-actions">
             <button 
               type="button" 
-              className="button secondary cancel-button"
+              className="brutalist-button secondary"
               onClick={onClose}
             >
               Cancel
             </button>
-            <button type="submit" className="button primary done-button">
+            <button type="submit" className="brutalist-button">
               Done
             </button>
           </div>
@@ -108,12 +108,13 @@ export default function EditAgent() {
 
         <div className="agent-personality">
           <div className="personality-header">
-            <label>Personality</label>
+            <label className="input-label">Personality</label>
             <span className="char-counter">{personality.length} characters</span>
           </div>
           <textarea
             value={personality}
             onChange={e => setPersonality(e.target.value)}
+            className="brutalist-textarea"
             placeholder="How should this assistant act? What is its purpose?"
           />
         </div>

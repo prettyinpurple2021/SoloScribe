@@ -156,30 +156,30 @@ export default function WelcomeScreen() {
               className="welcome-content"
             >
               <div className="welcome-header">
-                <h1 className="welcome-title">SOLOSCRIBE</h1>
-                <p className="welcome-subtitle">
-                  Your AI co-founder and ideation partner
+                <h1 className="welcome-title" style={{ fontSize: '8vw', letterSpacing: '-0.05em', fontWeight: 900, textTransform: 'uppercase', lineHeight: 0.8 }}>SOLOSCRIBE</h1>
+                <p className="welcome-subtitle" style={{ fontFamily: 'var(--font-mono)', fontSize: '1rem', marginTop: '20px', opacity: 0.8, textTransform: 'uppercase', letterSpacing: '0.2em' }}>
+                  Documentation Orchestration Protocol v5.5
                 </p>
               </div>
 
               {user ? (
-                <div className="flex flex-col gap-4 items-center">
-                  <button onClick={() => setStep(0)} className="start-button glass-button">
-                    <span>What's new?</span>
+                <div className="flex flex-col gap-6 items-center">
+                  <button onClick={() => setStep(0)} className="brutalist-button" style={{ padding: '20px 40px', fontSize: '1.2rem' }}>
+                    <span>INITIALIZE ONBOARDING</span>
                     <Sparkles size={20} className="ml-2" />
                   </button>
-                  <button onClick={handleClose} className="text-sm opacity-60 hover:opacity-100 transition-opacity">
-                    Skip to session
+                  <button onClick={handleClose} className="text-sm opacity-60 hover:opacity-100 transition-opacity font-mono uppercase tracking-widest">
+                    BYPASS TO SESSION
                   </button>
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center' }}>
-                  <button onClick={signIn} className="start-button glass-button" style={{ backgroundColor: 'var(--theme-accent)', color: '#000' }}>
-                    <LogIn size={20} className="arrow-icon" style={{ marginRight: '8px' }} />
-                    <span>Sign up / Log in with Google</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center' }}>
+                  <button onClick={signIn} className="brutalist-button" style={{ padding: '20px 40px', fontSize: '1.1rem' }}>
+                    <LogIn size={20} style={{ marginRight: '12px' }} />
+                    <span>AUTHENTICATE WITH GOOGLE</span>
                   </button>
-                  <p style={{ fontSize: '0.85rem', opacity: 0.7, marginTop: '8px' }}>
-                    You must be logged in to use Soloscribe.
+                  <p style={{ fontSize: '0.75rem', opacity: 0.5, marginTop: '12px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                    ACTIVE AUTHENTICATION REQUIRED FOR SYSTEM ACCESS
                   </p>
                 </div>
               )}
@@ -207,48 +207,48 @@ export default function WelcomeScreen() {
               exit={{ opacity: 0, x: -50 }}
               className="onboarding-card"
               style={{
-                maxWidth: '500px',
-                padding: '40px',
-                background: 'rgba(255, 255, 255, 0.03)',
-                backdropFilter: 'blur(20px)',
-                borderRadius: '24px',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
+                maxWidth: '600px',
+                padding: '48px',
+                background: 'var(--theme-surface)',
+                border: 'var(--border-width) solid var(--theme-accent)',
+                boxShadow: 'var(--hard-shadow)',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 textAlign: 'center',
-                gap: '24px'
+                gap: '32px',
+                position: 'relative'
               }}
             >
               <div 
                 className="onboarding-icon-container"
                 style={{ 
                   color: ONBOARDING_STEPS[step].color,
-                  filter: `drop-shadow(0 0 20px ${ONBOARDING_STEPS[step].color}44)`
+                  filter: `drop-shadow(0 0 15px ${ONBOARDING_STEPS[step].color})`
                 }}
               >
                 {ONBOARDING_STEPS[step].icon}
               </div>
               
               <div>
-                <h2 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '12px', letterSpacing: '-0.02em' }}>
+                <h2 style={{ fontSize: '2.5rem', fontWeight: 900, marginBottom: '16px', letterSpacing: '-0.04em', textTransform: 'uppercase' }}>
                   {ONBOARDING_STEPS[step].title}
                 </h2>
-                <p style={{ fontSize: '1.1rem', opacity: 0.8, lineHeight: 1.6 }}>
+                <p style={{ fontSize: '1.1rem', opacity: 0.8, lineHeight: 1.6, fontFamily: 'var(--font-body)' }}>
                   {ONBOARDING_STEPS[step].description}
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 mt-4">
+              <div className="flex items-center gap-3 mt-4">
                 {ONBOARDING_STEPS.map((_, i) => (
                   <div 
                     key={i}
                     style={{
-                      width: i === step ? '24px' : '8px',
-                      height: '8px',
-                      borderRadius: '4px',
-                      backgroundColor: i === step ? ONBOARDING_STEPS[step].color : 'rgba(255, 255, 255, 0.2)',
-                      transition: 'all 0.3s ease'
+                      width: i === step ? '32px' : '12px',
+                      height: '12px',
+                      backgroundColor: i === step ? ONBOARDING_STEPS[step].color : 'rgba(255, 255, 255, 0.1)',
+                      border: i === step ? 'none' : '1px solid rgba(255, 255, 255, 0.3)',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                     }}
                   />
                 ))}
@@ -257,33 +257,32 @@ export default function WelcomeScreen() {
               <div className="flex justify-between w-full mt-8">
                 <button 
                   onClick={prevStep}
-                  className="flex items-center gap-2 opacity-60 hover:opacity-100 transition-opacity"
+                  className="flex items-center gap-2 opacity-60 hover:opacity-100 transition-opacity font-mono uppercase tracking-widest text-xs"
                 >
-                  <ChevronLeft size={20} />
-                  <span>Back</span>
+                  <ChevronLeft size={16} />
+                  <span>PREVIOUS</span>
                 </button>
                 
                 <button 
                   onClick={nextStep}
-                  className="start-button glass-button"
+                  className="brutalist-button"
                   style={{ 
-                    padding: '12px 24px', 
+                    padding: '12px 32px', 
                     fontSize: '1rem',
                     backgroundColor: ONBOARDING_STEPS[step].color,
                     color: '#000',
-                    border: 'none'
                   }}
                 >
-                  <span>{step === ONBOARDING_STEPS.length - 1 ? 'Get Started' : 'Next'}</span>
+                  <span>{step === ONBOARDING_STEPS.length - 1 ? 'INITIALIZE' : 'NEXT'}</span>
                   <ChevronRight size={20} className="ml-2" />
                 </button>
               </div>
 
               <button 
                 onClick={skipOnboarding}
-                className="absolute top-4 right-6 text-sm opacity-40 hover:opacity-100 transition-opacity"
+                className="absolute top-4 right-6 text-xs opacity-40 hover:opacity-100 transition-opacity font-mono uppercase tracking-widest"
               >
-                Skip
+                BYPASS
               </button>
             </motion.div>
           )}
