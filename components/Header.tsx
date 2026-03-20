@@ -19,7 +19,10 @@ import {
   LogIn,
   Wrench,
   ShieldAlert,
-  LineChart
+  LineChart,
+  Map,
+  FilePlus,
+  Folder
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -44,8 +47,11 @@ export default function Header() {
     setOutputModality,
     showChatHistory,
     setShowChatHistory,
+    resetDocument,
+    showProjectSidebar,
+    setShowProjectSidebar,
   } = useUI();
-  const { name } = useUser();
+  const { name, resetUser } = useUser();
   const { current, setCurrent, availablePresets, update: updateAgent } = useAgent();
   const { disconnect } = useLiveAPIContext();
   const { user, signIn, signOut } = useAuth();
@@ -55,11 +61,13 @@ export default function Header() {
   const [showOutputMenu, setShowOutputMenu] = useState(false);
   const [showViewMenu, setShowViewMenu] = useState(false);
   const [showPromptMenu, setShowPromptMenu] = useState(false);
+  const [showConfirmNew, setShowConfirmNew] = useState(false);
   const [tempPrompt, setTempPrompt] = useState(current.personality);
   
   const outputMenuRef = useRef<HTMLDivElement>(null);
   const viewMenuRef = useRef<HTMLDivElement>(null);
   const promptMenuRef = useRef<HTMLDivElement>(null);
+  const confirmNewRef = useRef<HTMLDivElement>(null);
 
   // Close dropdowns when clicking outside.
   useEffect(() => {
@@ -73,6 +81,9 @@ export default function Header() {
       }
       if (promptMenuRef.current && !promptMenuRef.current.contains(e.target as Node)) {
         setShowPromptMenu(false);
+      }
+      if (confirmNewRef.current && !confirmNewRef.current.contains(e.target as Node)) {
+        setShowConfirmNew(false);
       }
     };
     addEventListener('click', closeDropdowns);
@@ -113,6 +124,7 @@ export default function Header() {
       case 'tools': return 'AI Tools';
       case 'validation': return 'Validation Engine';
       case 'projections': return 'Projections';
+      case 'roadmap': return 'Roadmap';
       default: return 'View';
     }
   };
@@ -122,12 +134,32 @@ export default function Header() {
   return (
     <header>
       <div className="roomInfo">
+        <button 
+          className={c('workspace-toggle', { active: showProjectSidebar })}
+          onClick={() => setShowProjectSidebar(!showProjectSidebar)}
+          title="Open Workspace"
+          style={{
+            background: 'none',
+            border: 'none',
+            color: showProjectSidebar ? 'var(--theme-accent)' : 'rgba(255,255,255,0.5)',
+            cursor: 'pointer',
+            padding: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.2s ease',
+            marginRight: '10px'
+          }}
+        >
+          <Folder size={20} />
+        </button>
         <div className="roomName">
           <button
             onClick={e => {
               e.stopPropagation();
               setShowRoomList(!showRoomList);
             }}
+            title="Switch Agent"
           >
             <h1 className={c({ active: showRoomList })}>
               {current.name.split(' (')[0]}
@@ -180,6 +212,7 @@ export default function Header() {
                 e.stopPropagation();
                 setShowOutputMenu(!showOutputMenu);
               }}
+              title="Select output modality (Audio, Text, or Both)"
             >
               <div className="trigger-icon mobile-only">
                 {outputModality === 'audio' && <Volume2 size={16} />}
@@ -245,6 +278,7 @@ export default function Header() {
                 e.stopPropagation();
                 setShowViewMenu(!showViewMenu);
               }}
+              title="Change current view"
             >
               <div className="trigger-icon mobile-only">
                 {mainTab === 'document' && documentTab === 'rendered' && <Eye size={16} />}
@@ -256,6 +290,7 @@ export default function Header() {
                 {mainTab === 'tools' && <Wrench size={16} />}
                 {mainTab === 'validation' && <ShieldAlert size={16} />}
                 {mainTab === 'projections' && <LineChart size={16} />}
+                {mainTab === 'roadmap' && <Map size={16} />}
               </div>
               <span className="menu-label">{getViewLabel()}</span>
               <ChevronDown size={14} className={c('chevron', { open: showViewMenu })} />
@@ -355,6 +390,16 @@ export default function Header() {
                   <LineChart size={16} />
                   <span>Projections</span>
                 </button>
+                <button 
+                  className={c('menu-item', { active: mainTab === 'roadmap' })}
+                  onClick={() => {
+                    setMainTab('roadmap');
+                    setShowViewMenu(false);
+                  }}
+                >
+                  <Map size={16} />
+                  <span>Roadmap</span>
+                </button>
               </div>
             )}
           </div>
@@ -370,6 +415,7 @@ export default function Header() {
                 e.stopPropagation();
                 setShowPromptMenu(!showPromptMenu);
               }}
+              title="Edit the agent's system prompt"
             >
               <div className="trigger-icon mobile-only">
                 <Edit3 size={16} />
@@ -379,62 +425,87 @@ export default function Header() {
             </button>
             
             {showPromptMenu && (
-              <div className="header-dropdown-menu prompt-dropdown-menu" style={{ width: '350px', padding: '12px' }}>
-                <textarea
-                  value={tempPrompt}
-                  onChange={(e) => setTempPrompt(e.target.value)}
-                  style={{
-                    width: '100%',
-                    height: '150px',
-                    padding: '8px',
-                    borderRadius: '8px',
-                    border: '1px solid var(--theme-surface)',
-                    backgroundColor: 'var(--theme-bg)',
-                    color: 'var(--theme-text)',
-                    fontSize: '13px',
-                    resize: 'vertical',
-                    marginBottom: '8px',
-                    fontFamily: 'inherit'
-                  }}
-                />
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                  <button
-                    onClick={() => {
-                      setTempPrompt(current.personality);
-                      setShowPromptMenu(false);
-                    }}
+              <div className="header-dropdown-menu prompt-dropdown-menu" style={{ width: '400px', padding: '12px', border: '1px solid var(--theme-accent)', boxShadow: '0 0 10px rgba(0, 255, 255, 0.1)' }}>
+                <div style={{ position: 'relative', marginBottom: '12px' }}>
+                  <textarea
+                    value={tempPrompt}
+                    onChange={(e) => setTempPrompt(e.target.value)}
+                    placeholder="Enter system prompt..."
                     style={{
-                      padding: '6px 12px',
-                      borderRadius: '6px',
-                      backgroundColor: 'transparent',
-                      border: '1px solid var(--theme-surface)',
-                      color: 'var(--theme-text)',
-                      cursor: 'pointer',
-                      fontSize: '13px'
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => {
-                      updateAgent(current.id, { personality: tempPrompt });
-                      setShowPromptMenu(false);
-                      // Disconnect to force the new prompt to take effect on next connection
-                      disconnect();
-                    }}
-                    style={{
-                      padding: '6px 12px',
-                      borderRadius: '6px',
-                      backgroundColor: 'var(--theme-accent)',
-                      color: '#000',
-                      border: 'none',
-                      cursor: 'pointer',
+                      width: '100%',
+                      height: '200px',
+                      padding: '12px',
+                      borderRadius: '4px',
+                      border: '1px solid var(--theme-accent)',
+                      backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                      color: 'var(--theme-accent)',
                       fontSize: '13px',
-                      fontWeight: 600
+                      resize: 'vertical',
+                      fontFamily: 'var(--font-mono)',
+                      outline: 'none',
+                      boxShadow: 'inset 0 0 5px rgba(0, 255, 255, 0.1)',
+                      lineHeight: '1.5'
                     }}
-                  >
-                    Save & Restart
-                  </button>
+                  />
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '8px',
+                    right: '12px',
+                    fontSize: '10px',
+                    color: 'var(--theme-accent)',
+                    opacity: 0.7,
+                    fontFamily: 'var(--font-mono)',
+                    pointerEvents: 'none'
+                  }}>
+                    {tempPrompt.length.toLocaleString()} chars
+                  </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--theme-text)', opacity: 0.5, fontFamily: 'var(--font-mono)' }}>
+                    SYSTEM_PROMPT_V2.0
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={() => {
+                        setTempPrompt(current.personality);
+                        setShowPromptMenu(false);
+                      }}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '4px',
+                        backgroundColor: 'transparent',
+                        border: '1px solid var(--theme-surface)',
+                        color: 'var(--theme-text)',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontFamily: 'var(--font-mono)'
+                      }}
+                    >
+                      ABORT
+                    </button>
+                    <button
+                      onClick={() => {
+                        updateAgent(current.id, { personality: tempPrompt });
+                        setShowPromptMenu(false);
+                        // Disconnect to force the new prompt to take effect on next connection
+                        disconnect();
+                      }}
+                      style={{
+                        padding: '6px 16px',
+                        borderRadius: '4px',
+                        backgroundColor: 'var(--theme-accent)',
+                        color: '#000',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        fontFamily: 'var(--font-mono)',
+                        boxShadow: '0 0 10px var(--theme-accent)'
+                      }}
+                    >
+                      SAVE & RESTART
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -443,6 +514,60 @@ export default function Header() {
       </div>
 
       <div className="header-controls">
+        <div className="header-menu-wrapper" ref={confirmNewRef}>
+          <button
+            className={c('header-menu-trigger', { active: showConfirmNew })}
+            onClick={() => setShowConfirmNew(!showConfirmNew)}
+            title="New Document"
+            style={{ height: '32px', padding: '0 10px', gap: '6px' }}
+          >
+            <FilePlus size={16} />
+            <span className="menu-label">New</span>
+          </button>
+          
+          {showConfirmNew && (
+            <div className="header-dropdown-menu" style={{ right: 0, width: '220px', padding: '16px' }}>
+              <p style={{ fontSize: '13px', marginBottom: '16px', color: 'var(--theme-text)', lineHeight: '1.4' }}>
+                Create a new document? This will clear the current content and transcript.
+              </p>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                <button
+                  onClick={() => setShowConfirmNew(false)}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    backgroundColor: 'transparent',
+                    border: '1px solid var(--theme-surface)',
+                    color: 'var(--theme-text)',
+                    cursor: 'pointer',
+                    fontSize: '12px'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    resetDocument();
+                    resetUser();
+                    setShowConfirmNew(false);
+                  }}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    backgroundColor: 'var(--theme-accent)',
+                    color: '#000',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: 600
+                  }}
+                >
+                  Create New
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
         {user ? (
           <button
             className="userSettingsButton"
@@ -484,6 +609,7 @@ export default function Header() {
         <button
           className="userSettingsButton"
           onClick={() => setShowUserConfig(!showUserConfig)}
+          title="Settings"
         >
           <span className="icon">tune</span>
         </button>

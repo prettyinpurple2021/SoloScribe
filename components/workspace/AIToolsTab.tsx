@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { generateSpeech, generateVideo, animateImage } from '../../../lib/ai-tools';
+import { generateSpeech, generateVideo, animateImage } from '../../lib/ai-tools';
 import { Play, Video, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export const AIToolsTab: React.FC = () => {
   const [speechText, setSpeechText] = useState('');
@@ -23,9 +24,10 @@ export const AIToolsTab: React.FC = () => {
     try {
       const url = await generateSpeech(speechText);
       setSpeechUrl(url);
+      toast.success('Speech generated successfully!');
     } catch (error) {
       console.error(error);
-      alert('Failed to generate speech.');
+      toast.error('Failed to generate speech.');
     } finally {
       setIsGeneratingSpeech(false);
     }
@@ -37,9 +39,10 @@ export const AIToolsTab: React.FC = () => {
     try {
       const url = await generateVideo(videoPrompt);
       setVideoUrl(url);
+      toast.success('Video generated successfully!');
     } catch (error) {
       console.error(error);
-      alert('Failed to generate video.');
+      toast.error('Failed to generate video.');
     } finally {
       setIsGeneratingVideo(false);
     }
@@ -64,9 +67,10 @@ export const AIToolsTab: React.FC = () => {
     try {
       const url = await animateImage(animatePrompt, animateImageBase64, animateMimeType);
       setAnimatedVideoUrl(url);
+      toast.success('Image animated successfully!');
     } catch (error) {
       console.error(error);
-      alert('Failed to animate image.');
+      toast.error('Failed to animate image.');
     } finally {
       setIsAnimatingImage(false);
     }

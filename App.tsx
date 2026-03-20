@@ -21,11 +21,12 @@
 import AgentEdit from './components/AgentEdit';
 import ControlTray from './components/console/control-tray/ControlTray';
 import DebugModal from './components/DebugModal';
-import ErrorScreen from './components/demo/ErrorScreen';
-import KeynoteCompanion from './components/demo/keynote-companion/KeynoteCompanion';
+import ErrorScreen from './components/ErrorScreen';
+import KeynoteCompanion from './components/workspace/KeynoteCompanion';
 import Header from './components/Header';
 import UserSettings from './components/UserSettings';
 import WelcomeScreen from './components/WelcomeScreen';
+import { ProjectSidebar } from './components/workspace/ProjectSidebar';
 import { LiveAPIProvider, useLiveAPIContext } from './contexts/LiveAPIContext';
 import { useAgent, useUI } from './lib/state';
 // Fix: Import React to resolve "Cannot find namespace 'React'" error.
@@ -34,8 +35,10 @@ import { themes } from './lib/themes';
 import FloatingAvatar from './components/FloatingAvatar';
 import HelpModal from './components/HelpModal';
 import LegalDisclaimer from './components/LegalDisclaimer';
-import { useAuth } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PublicInterview } from './components/PublicInterview';
+import { Toaster } from 'sonner';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 const getApiKey = () => {
   if (typeof window !== 'undefined' && window.process?.env?.API_KEY && window.process.env.API_KEY !== '{{API_KEY}}') {
@@ -61,6 +64,9 @@ const AUDIO_OUTPUT_DETECTION_THRESHOLD = 0.05;
 // preventing the talking animation from stopping abruptly between words.
 const TALKING_STATE_COOLDOWN_MS = 2000;
 
+import { BrowserRouter as Router, Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
+import { PublicProjectView } from './components/workspace/PublicProjectView';
+
 /**
  * Renders the main content of the application, including the header, modals,
  * the draggable agent avatar, the primary app area (KeynoteCompanion), and the control tray.
@@ -72,6 +78,7 @@ function AppContent() {
   return (
     <>
       <ErrorScreen />
+      <ProjectSidebar />
       <Header />
 
       <FloatingAvatar />
@@ -99,16 +106,22 @@ function AppContent() {
  * Main application component. It checks for the required API key, sets up the
  * global theme, and provides the LiveAPI context to its children.
  */
-function App() {
+function AppRoutes() {
   const [hasKey, setHasKey] = useState<boolean | null>(null);
-  const { showWelcomeScreen, setShowWelcomeScreen, theme, font } = useUI();
+  const { showWelcomeScreen, setShowWelcomeScreen, hasCompletedOnboarding, theme, font } = useUI();
   const { user, loading } = useAuth();
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    if (!loading && !user) {
-      setShowWelcomeScreen(true);
+    // Show welcome screen if user is not logged in OR if they haven't completed onboarding
+    if (!loading) {
+      if (!user || !hasCompletedOnboarding) {
+        setShowWelcomeScreen(true);
+      } else {
+        setShowWelcomeScreen(false);
+      }
     }
-  }, [user, loading, setShowWelcomeScreen]);
+  }, [user, loading, hasCompletedOnboarding, setShowWelcomeScreen]);
 
   useEffect(() => {
     const checkKey = async () => {
@@ -170,21 +183,38 @@ function App() {
   }
 
   const currentApiKey = getApiKey() as string;
-
-  const urlParams = new URLSearchParams(window.location.search);
-  const interviewId = urlParams.get('interview');
+  const interviewId = searchParams.get('interview');
 
   if (interviewId) {
     return <PublicInterview interviewId={interviewId} />;
   }
 
   return (
-    <div className="App">
-      {showWelcomeScreen && <WelcomeScreen />}
-      <LiveAPIProvider apiKey={currentApiKey}>
-        <AppContent />
-      </LiveAPIProvider>
-    </div>
+    <Routes>
+      <Route path="/share/:shareId" element={<PublicProjectView />} />
+      <Route path="/" element={
+        <div className="App">
+          <Toaster position="top-center" theme="dark" />
+          {showWelcomeScreen && <WelcomeScreen />}
+          <LiveAPIProvider apiKey={currentApiKey}>
+            <AppContent />
+          </LiveAPIProvider>
+        </div>
+      } />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
+function App() {
+  return (
+    <ErrorBoundary>
+      <AuthProvider>
+        <Router>
+          <AppRoutes />
+        </Router>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

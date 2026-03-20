@@ -64,6 +64,7 @@ export const useUser = create<
     addPdfFile: (file: PdfFile) => void;
     removePdfFile: (name: string) => void;
     clearPdfFiles: () => void;
+    resetUser: () => void;
   } & User
 >(set => ({
   name: '',
@@ -78,6 +79,7 @@ export const useUser = create<
   addPdfFile: file => set(state => ({ pdfFiles: [...state.pdfFiles, file] })),
   removePdfFile: name => set(state => ({ pdfFiles: state.pdfFiles.filter(f => f.name !== name) })),
   clearPdfFiles: () => set({ pdfFiles: [] }),
+  resetUser: () => set({ info: '', topic: '', pdfFiles: [] }),
 }));
 
 /**
@@ -166,9 +168,32 @@ export type TranscriptEntry = {
   text: string;
 };
 
+export type Project = {
+  id: string;
+  name: string;
+  documentContent: string;
+  transcript: TranscriptEntry[];
+  updatedAt: any;
+  createdAt: any;
+  userId?: string;
+  isPublic?: boolean;
+  shareId?: string;
+};
+
+export type Feedback = {
+  id: string;
+  projectId: string;
+  ownerId: string;
+  content: string;
+  authorName: string;
+  createdAt: any;
+};
+
 export const useUI = create<{
   showWelcomeScreen: boolean;
   setShowWelcomeScreen: (show: boolean) => void;
+  hasCompletedOnboarding: boolean;
+  setHasCompletedOnboarding: (completed: boolean) => void;
   showUserConfig: boolean;
   setShowUserConfig: (show: boolean) => void;
   showAgentEdit: boolean;
@@ -183,6 +208,8 @@ export const useUI = create<{
   setShowChatHistory: (show: boolean) => void;
   showCopilot: boolean;
   setShowCopilot: (show: boolean) => void;
+  showProjectSidebar: boolean;
+  setShowProjectSidebar: (show: boolean) => void;
   theme: string;
   setTheme: (themeName: string) => void;
   font: string;
@@ -197,8 +224,8 @@ export const useUI = create<{
   incrementChangeCount: () => void;
   agentState: string | null;
   setAgentState: (state: string | null) => void;
-  mainTab: 'document' | 'transcript' | 'minutes' | 'audio-log' | 'chatbot' | 'tools' | 'validation' | 'projections';
-  setMainTab: (tab: 'document' | 'transcript' | 'minutes' | 'audio-log' | 'chatbot' | 'tools' | 'validation' | 'projections') => void;
+  mainTab: 'document' | 'transcript' | 'minutes' | 'audio-log' | 'chatbot' | 'tools' | 'validation' | 'projections' | 'roadmap';
+  setMainTab: (tab: 'document' | 'transcript' | 'minutes' | 'audio-log' | 'chatbot' | 'tools' | 'validation' | 'projections' | 'roadmap') => void;
   documentTab: 'editor' | 'rendered';
   setDocumentTab: (tab: 'editor' | 'rendered') => void;
   speechBubbleText: string | null;
@@ -213,66 +240,88 @@ export const useUI = create<{
   setLiveApiModel: (model: string) => void;
   transcript: TranscriptEntry[];
   setTranscript: (transcript: TranscriptEntry[] | ((prev: TranscriptEntry[]) => TranscriptEntry[])) => void;
-}>(set => ({
-  showWelcomeScreen: true,
-  setShowWelcomeScreen: (show: boolean) => set({ showWelcomeScreen: show }),
-  showUserConfig: false,
-  setShowUserConfig: (show: boolean) => set({ showUserConfig: show }),
-  showAgentEdit: false,
-  setShowAgentEdit: (show: boolean) => set({ showAgentEdit: show }),
-  showDebugModal: false,
-  setShowDebugModal: (show: boolean) => set({ showDebugModal: show }),
-  showHelpModal: false,
-  setShowHelpModal: (show: boolean) => set({ showHelpModal: show }),
-  showDisclaimer: false,
-  setShowDisclaimer: (show: boolean) => set({ showDisclaimer: show }),
-  showChatHistory: false,
-  setShowChatHistory: (show: boolean) => set({ showChatHistory: show }),
-  showCopilot: false,
-  setShowCopilot: (show: boolean) => set({ showCopilot: show }),
-  theme: themes[0].name,
-  setTheme: (themeName: string) => set({ theme: themeName }),
-  font: 'Rajdhani',
-  setFont: (fontName: string) => set({ font: fontName }),
-  suppressRedundantLogs: false, // Default to OFF
-  setSuppressRedundantLogs: (suppress: boolean) =>
-    set({ suppressRedundantLogs: suppress }),
-  suppressStaleAgentResponses: false, // Default to OFF to prevent double-speaking
-  setSuppressStaleAgentResponses: (suppress: boolean) =>
-    set({ suppressStaleAgentResponses: suppress }),
-  suppressPostFlushAudio: true, // Default to ON
-  setSuppressPostFlushAudio: (suppress: boolean) =>
-    set({ suppressPostFlushAudio: suppress }),
-  changeCount: 0,
-  incrementChangeCount: () =>
-    set(state => ({ changeCount: state.changeCount + 1 })),
-  agentState: null,
-  setAgentState: (state: string | null) => set({ agentState: state }),
-  mainTab: 'document',
-  setMainTab: (tab: 'document' | 'transcript' | 'minutes' | 'audio-log' | 'chatbot' | 'tools' | 'validation' | 'projections') => set({ mainTab: tab }),
-  documentTab: 'rendered',
-  setDocumentTab: (tab: 'editor' | 'rendered') => set({ documentTab: tab }),
-  speechBubbleText: null,
-  setSpeechBubbleText: (text: string | null) => set({ speechBubbleText: text }),
-  documentContent: PLACEHOLDER_DOC,
-  setDocumentContent: (content: string | ((prev: string) => string)) =>
-    set(state => ({
-      documentContent:
-        typeof content === 'function' ? content(state.documentContent) : content,
-    })),
-  outputModality: 'audio',
-  setOutputModality: (modality: 'audio' | 'text' | 'both') => set({ outputModality: modality }),
-  useSearch: true,
-  setUseSearch: (useSearch: boolean) => set({ useSearch }),
-  liveApiModel: 'gemini-2.5-flash-native-audio-preview-09-2025',
-  setLiveApiModel: (model: string) => set({ liveApiModel: model }),
-  transcript: [],
-  setTranscript: (transcript: TranscriptEntry[] | ((prev: TranscriptEntry[]) => TranscriptEntry[])) =>
-    set(state => ({
-      transcript:
-        typeof transcript === 'function' ? transcript(state.transcript) : transcript,
-    })),
-}));
+  resetDocument: () => void;
+  currentProjectId: string | null;
+  setCurrentProjectId: (id: string | null) => void;
+  projects: Project[];
+  setProjects: (projects: Project[]) => void;
+}>()(
+  persist(
+    (set) => ({
+      showWelcomeScreen: true,
+      setShowWelcomeScreen: (show: boolean) => set({ showWelcomeScreen: show }),
+      hasCompletedOnboarding: false,
+      setHasCompletedOnboarding: (completed: boolean) => set({ hasCompletedOnboarding: completed }),
+      showUserConfig: false,
+      setShowUserConfig: (show: boolean) => set({ showUserConfig: show }),
+      showAgentEdit: false,
+      setShowAgentEdit: (show: boolean) => set({ showAgentEdit: show }),
+      showDebugModal: false,
+      setShowDebugModal: (show: boolean) => set({ showDebugModal: show }),
+      showHelpModal: false,
+      setShowHelpModal: (show: boolean) => set({ showHelpModal: show }),
+      showDisclaimer: false,
+      setShowDisclaimer: (show: boolean) => set({ showDisclaimer: show }),
+      showChatHistory: false,
+      setShowChatHistory: (show: boolean) => set({ showChatHistory: show }),
+      showCopilot: false,
+      setShowCopilot: (show: boolean) => set({ showCopilot: show }),
+      showProjectSidebar: false,
+      setShowProjectSidebar: (show: boolean) => set({ showProjectSidebar: show }),
+      theme: themes[0].name,
+      setTheme: (themeName: string) => set({ theme: themeName }),
+      font: 'Rajdhani',
+      setFont: (fontName: string) => set({ font: fontName }),
+      suppressRedundantLogs: false,
+      setSuppressRedundantLogs: (suppress: boolean) => set({ suppressRedundantLogs: suppress }),
+      suppressStaleAgentResponses: false,
+      setSuppressStaleAgentResponses: (suppress: boolean) => set({ suppressStaleAgentResponses: suppress }),
+      suppressPostFlushAudio: true,
+      setSuppressPostFlushAudio: (suppress: boolean) => set({ suppressPostFlushAudio: suppress }),
+      changeCount: 0,
+      incrementChangeCount: () => set(state => ({ changeCount: state.changeCount + 1 })),
+      agentState: null,
+      setAgentState: (state: string | null) => set({ agentState: state }),
+      mainTab: 'document',
+      setMainTab: (tab) => set({ mainTab: tab }),
+      documentTab: 'rendered',
+      setDocumentTab: (tab) => set({ documentTab: tab }),
+      speechBubbleText: null,
+      setSpeechBubbleText: (text) => set({ speechBubbleText: text }),
+      documentContent: PLACEHOLDER_DOC,
+      setDocumentContent: (content) =>
+        set(state => ({
+          documentContent: typeof content === 'function' ? content(state.documentContent) : content,
+        })),
+      outputModality: 'audio',
+      setOutputModality: (modality) => set({ outputModality: modality }),
+      useSearch: true,
+      setUseSearch: (useSearch) => set({ useSearch }),
+      liveApiModel: 'gemini-2.5-flash-native-audio-preview-09-2025',
+      setLiveApiModel: (model) => set({ liveApiModel: model }),
+      transcript: [],
+      setTranscript: (transcript) =>
+        set(state => ({
+          transcript: typeof transcript === 'function' ? transcript(state.transcript) : transcript,
+        })),
+      resetDocument: () => set({ documentContent: PLACEHOLDER_DOC, transcript: [], changeCount: 0, currentProjectId: null }),
+      currentProjectId: null,
+      setCurrentProjectId: (id) => set({ currentProjectId: id }),
+      projects: [],
+      setProjects: (projects) => set({ projects }),
+    }),
+    {
+      name: 'ui-storage',
+      partialize: (state) => ({
+        hasCompletedOnboarding: state.hasCompletedOnboarding,
+        theme: state.theme,
+        font: state.font,
+        outputModality: state.outputModality,
+        currentProjectId: state.currentProjectId,
+      }),
+    }
+  )
+);
 
 /**
  * `useLogStore` Store

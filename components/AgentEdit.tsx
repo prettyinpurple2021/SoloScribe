@@ -10,6 +10,7 @@ import {
 } from '../lib/presets/agents';
 import Modal from './Modal';
 import { useAgent, useUI } from '../lib/state';
+import { toast } from 'sonner';
 
 /**
  * A modal component for editing the properties of the currently active agent.
@@ -20,7 +21,7 @@ export default function EditAgent() {
   // Fetches the current agent's data and the function to update it from the Zustand store.
   const agent = useAgent(state => state.current);
   const updateAgent = useAgent(state => state.update);
-  const nameInput = useRef(null);
+  const nameInput = useRef<HTMLInputElement>(null);
   // Fetches the function to control the visibility of this modal from the UI store.
   const { setShowAgentEdit } = useUI();
 
@@ -41,7 +42,20 @@ export default function EditAgent() {
    */
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    updateAgent(agent.id, { name, voice, personality });
+    
+    if (!name.trim()) {
+      toast.error('Agent name cannot be empty');
+      nameInput.current?.focus();
+      return;
+    }
+
+    updateAgent(agent.id, { 
+      name: name.trim(), 
+      voice, 
+      personality: personality.trim() 
+    });
+    
+    toast.success(`${name} updated successfully`);
     onClose();
   }
 
@@ -61,6 +75,7 @@ export default function EditAgent() {
               onChange={e => setName(e.target.value)}
               ref={nameInput}
               className="header-input"
+              autoFocus
             />
           </div>
           <div className="config-field voice-field">
@@ -77,9 +92,18 @@ export default function EditAgent() {
               ))}
             </select>
           </div>
-          <button type="submit" className="button primary done-button">
-            Done
-          </button>
+          <div className="header-actions">
+            <button 
+              type="button" 
+              className="button secondary cancel-button"
+              onClick={onClose}
+            >
+              Cancel
+            </button>
+            <button type="submit" className="button primary done-button">
+              Done
+            </button>
+          </div>
         </div>
 
         <div className="agent-personality">

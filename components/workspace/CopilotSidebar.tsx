@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useUI } from '../../../lib/state';
-import { thinkDeeply } from '../../../lib/ai-tools';
+import { useUI } from '../../lib/state';
+import { thinkDeeply } from '../../lib/ai-tools';
 import { Loader2, Lightbulb, Sparkles } from 'lucide-react';
 import { marked } from 'marked';
 

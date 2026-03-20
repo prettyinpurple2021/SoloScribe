@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useUI } from '../../../lib/state';
-import { thinkDeeply } from '../../../lib/ai-tools';
+import { useUI, useUser } from '../../lib/state';
+import { thinkDeeply } from '../../lib/ai-tools';
 import { Send } from 'lucide-react';
 
 export const ChatbotTab: React.FC = () => {
+  const { setDocumentContent, setMainTab, setTranscript, documentContent } = useUI();
+  const { name, info, topic } = useUser();
   const [messages, setMessages] = useState<{ role: 'user' | 'agent'; text: string }[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -26,11 +28,18 @@ export const ChatbotTab: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // We use thinkDeeply because it uses gemini-3.1-pro-preview
-      // But we should probably pass the chat history.
-      // For simplicity, we'll just pass the current query with a bit of context.
-      const context = messages.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.text}`).join('\n');
-      const prompt = `${context}\nUser: ${userMessage}\nAssistant:`;
+      const chatHistory = messages.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.text}`).join('\n');
+      const systemContext = `You are a strategic AI co-founder. 
+User Name: ${name || 'User'}
+User Background: ${info || 'None'}
+Current Topic: ${topic || 'Not specified'}
+Current Document State:
+---
+${documentContent}
+---
+Use this context to provide highly relevant and strategic advice.`;
+
+      const prompt = `${systemContext}\n\nChat History:\n${chatHistory}\nUser: ${userMessage}\nAssistant:`;
       
       const response = await thinkDeeply(prompt);
       setMessages(prev => [...prev, { role: 'agent', text: response }]);

@@ -26,9 +26,9 @@ import * as htmlToImage from 'html-to-image';
 import { diffChars } from 'diff';
 import { jsPDF } from 'jspdf';
 
-import { useLiveAPIContext } from '../../../contexts/LiveAPIContext';
-import { createSystemInstructions } from '../../../lib/prompts';
-import { FONT_OPTIONS, PLACEHOLDER_DOC } from '../../../lib/constants';
+import { useLiveAPIContext } from '../../contexts/LiveAPIContext';
+import { createSystemInstructions } from '../../lib/prompts';
+import { FONT_OPTIONS, PLACEHOLDER_DOC, DOCUMENT_TEMPLATES } from '../../lib/constants';
 import {
   useAgent,
   useInsertStore,
@@ -37,19 +37,25 @@ import {
   useUI,
   useUser,
   Insert,
-} from '../../../lib/state';
-import { pcmToWav, combineArrayBuffers } from '../../../lib/utils';
-import Modal from '../../Modal';
+  Project,
+} from '../../lib/state';
+import { pcmToWav, combineArrayBuffers } from '../../lib/utils';
+import Modal from '../Modal';
 import FunctionPlotter from './FunctionPlotter';
 import { ChatbotTab } from './ChatbotTab';
 import { AIToolsTab } from './AIToolsTab';
 import { ValidationEngineTab } from './ValidationEngineTab';
 import { ProjectionsTab } from './ProjectionsTab';
+import { RoadmapTab } from './RoadmapTab';
 import { CopilotSidebar } from './CopilotSidebar';
-import { MinutesLoadingAnimation } from '../../MinutesLoadingAnimation';
-import { useAuth } from '../../../contexts/AuthContext';
-import { db, handleFirestoreError, OperationType } from '../../../firebase';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { MinutesLoadingAnimation } from '../MinutesLoadingAnimation';
+import { useAuth } from '../../contexts/AuthContext';
+import { db, handleFirestoreError, OperationType } from '../../firebase';
+import { doc, setDoc, getDoc, serverTimestamp, collection, addDoc, query, orderBy, getDocs } from 'firebase/firestore';
+import { toast } from 'sonner';
+import { thinkDeeply } from '../../lib/ai-tools';
+import { Share2, Sparkles } from 'lucide-react';
+import { ShareModal } from './ShareModal';
 
 // Defines the shape for an entry in the text-based conversation transcript.
 type TranscriptEntry = {
@@ -545,11 +551,23 @@ const DocumentRenderer = memo(
     const { html, embeds } = useMemo(() => {
       if (!content) return { html: '', embeds: [] };
 
-      const embeds: { type: string; id: string; width: string | null; prompt: string | null; part: string }[] = [];
+      const embeds: { type: string; id: string; width: string | null; prompt: string | null; part: string; title?: string; body?: string }[] = [];
       
       // "Smart" Content Splitter: Manual scan to find matching closing bracket
       // while ignoring brackets inside quotes.
       let processedContent = content;
+
+      // Handle [collapse] blocks first
+      const collapseRegex = /\[collapse\s+title=(["'])((?:\\\1|.)*?)\1\]([\s\S]*?)\[\/collapse\]/g;
+      let collapseMatch;
+      while ((collapseMatch = collapseRegex.exec(content)) !== null) {
+        const id = `collapse_${embeds.length}`;
+        const title = collapseMatch[2];
+        const body = collapseMatch[3];
+        embeds.push({ type: 'collapse', id, width: null, prompt: null, part: collapseMatch[0], title, body });
+        processedContent = processedContent.replace(collapseMatch[0], `<div id="soloscribe-embed-${id}" class="soloscribe-embed-placeholder"></div>`);
+      }
+
       const tagRegex = /\[(illustration|graph)\s/g;
       let match;
       const foundTags: { start: number; end: number; type: string; fullMatch: string }[] = [];
@@ -625,7 +643,16 @@ const DocumentRenderer = memo(
         <MathJaxRenderer htmlContent={html} />
         {embeds.map((embed) => (
           <EmbedPortal key={embed.id} id={embed.id} content={content}>
-            {embed.type === 'illustration' ? (() => {
+            {embed.type === 'collapse' ? (
+              <details className="collapsible-section">
+                <summary>{embed.title}</summary>
+                <div 
+                  dangerouslySetInnerHTML={{ 
+                    __html: marked.parse(embed.body || '', { breaks: true, gfm: true }) as string 
+                  }} 
+                />
+              </details>
+            ) : embed.type === 'illustration' ? (() => {
               const insert = inserts.find(ins => ins.id === embed.id);
               if (!insert) {
                 return (
@@ -699,6 +726,52 @@ const DocumentRenderer = memo(
 );
 
 /**
+ * A component to render highlighted Markdown text in the background of a textarea.
+ */
+const MarkdownHighlighter = ({ text, font, backdropRef }: { text: string; font: string; backdropRef: React.RefObject<HTMLDivElement | null> }) => {
+  const lines = text.split('\n');
+  
+  return (
+    <div className="markdown-backdrop" style={{ fontFamily: font }} ref={backdropRef}>
+      {lines.map((line, i) => {
+        let lineClass = '';
+        let content: React.ReactNode = line;
+
+        if (line.startsWith('# ')) {
+          lineClass = 'md-h1';
+        } else if (line.startsWith('## ')) {
+          lineClass = 'md-h2';
+        } else if (line.trim().startsWith('- ')) {
+          lineClass = 'md-list';
+        }
+
+        // Bold highlighting: **text**
+        const parts = line.split(/(\*\*.*?\*\*)/g);
+        if (parts.length > 1) {
+          content = parts.map((part, j) => {
+            if (part.startsWith('**') && part.endsWith('**')) {
+              return <span key={j} className="md-bold">{part}</span>;
+            }
+            return part;
+          });
+        }
+
+        return (
+          <div key={i} className={c('md-line', lineClass)}>
+            {(() => {
+              if (line.startsWith('[') && line.endsWith(']')) {
+                return <span className="md-tag">{line}</span>;
+              }
+              return content;
+            })() || <br />}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+/**
  * The primary component that orchestrates the collaborative writing experience.
  * It manages the document state, handles all communication with the Live API,
  * processes transcriptions and tool calls, and renders the tabbed interface
@@ -730,6 +803,10 @@ export default function KeynoteCompanion() {
     setShowCopilot,
     transcript,
     setTranscript,
+    currentProjectId,
+    setCurrentProjectId,
+    projects: userProjects,
+    setProjects: setUserProjects,
   } = useUI();
 
   // Update muted state when outputModality changes
@@ -747,6 +824,20 @@ export default function KeynoteCompanion() {
   const [isGeneratingAccurateTranscript, setIsGeneratingAccurateTranscript] = useState(false);
   const [copyButtonText, setCopyButtonText] = useState('Copy');
   const [pdfStatus, setPdfStatus] = useState<'idle' | 'preparing' | 'generating'>('idle');
+  const [isThinking, setIsThinking] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const backdropRef = useRef<HTMLDivElement>(null);
+
+  const handleEditorScroll = () => {
+    if (textareaRef.current && backdropRef.current) {
+      backdropRef.current.scrollTop = textareaRef.current.scrollTop;
+    }
+  };
+
+  // Sync scroll when content changes
+  useEffect(() => {
+    handleEditorScroll();
+  }, [documentContent]);
   const [playingAudio, setPlayingAudio] = useState<{
     index: number;
     element: HTMLAudioElement;
@@ -755,15 +846,83 @@ export default function KeynoteCompanion() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [showMobileToolbar, setShowMobileToolbar] = useState(false);
   const [isSavingToCloud, setIsSavingToCloud] = useState(false);
+  const [lastAutoSavedAt, setLastAutoSavedAt] = useState<Date | null>(null);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [showTemplatesModal, setShowTemplatesModal] = useState(false);
+  const [showDashboardModal, setShowDashboardModal] = useState(false);
+  const [showSlashMenu, setShowSlashMenu] = useState(false);
+  const [slashMenuPos, setSlashMenuPos] = useState({ top: 0, left: 0 });
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(false);
+  const [projectVersions, setProjectVersions] = useState<any[]>([]);
+  const [isLoadingVersions, setIsLoadingVersions] = useState(false);
   const { user: authUser } = useAuth();
+  const lastLoadedProjectIdRef = useRef<string | null>(null);
+
+  // Load project from cloud on login or project change
+  useEffect(() => {
+    if (!authUser || !currentProjectId) {
+      return;
+    }
+    
+    if (lastLoadedProjectIdRef.current === currentProjectId) return;
+
+    const loadProject = async () => {
+      const projectId = currentProjectId;
+      const projectRef = doc(db, 'users', authUser.uid, 'projects', projectId);
+      try {
+        const projectSnap = await getDoc(projectRef);
+        if (projectSnap.exists()) {
+          const data = projectSnap.data();
+          setDocumentContent(data.documentContent);
+          setTranscript(data.transcript || []);
+          toast.success(`Project "${data.name}" loaded.`);
+        }
+        lastLoadedProjectIdRef.current = projectId;
+      } catch (error) {
+        console.error('Error loading project:', error);
+      }
+    };
+    
+    loadProject();
+  }, [authUser, setDocumentContent, setTranscript, currentProjectId]);
+
+  // Auto-save functionality
+  useEffect(() => {
+    if (!authUser || !currentProjectId) return;
+
+    // Don't auto-save if content is just the placeholder
+    if (documentContent === PLACEHOLDER_DOC && transcript.length === 0) return;
+
+    const timer = setTimeout(async () => {
+      const projectId = currentProjectId;
+      const projectRef = doc(db, 'users', authUser.uid, 'projects', projectId);
+      
+      try {
+        await setDoc(projectRef, {
+          id: projectId,
+          userId: authUser.uid,
+          documentContent,
+          transcript,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+        
+        setLastAutoSavedAt(new Date());
+      } catch (error) {
+        console.error('Auto-save error:', error);
+      }
+    }, 5000); // Auto-save after 5 seconds of inactivity
+
+    return () => clearTimeout(timer);
+  }, [documentContent, transcript, authUser, currentProjectId]);
   
   const handleSaveToCloud = async () => {
     if (!authUser) {
-      alert('Please sign in to save your project to the cloud.');
+      toast.error('Please sign in to save your project to the cloud.');
       return;
     }
     setIsSavingToCloud(true);
-    const projectId = 'default-project'; // In a real app, this could be dynamic
+    const projectId = currentProjectId;
     const path = `users/${authUser.uid}/projects/${projectId}`;
     try {
       const projectRef = doc(db, 'users', authUser.uid, 'projects', projectId);
@@ -773,16 +932,16 @@ export default function KeynoteCompanion() {
         await setDoc(projectRef, {
           id: projectId,
           userId: authUser.uid,
-          name: 'My Startup Workspace',
           documentContent,
           transcript,
           updatedAt: serverTimestamp(),
         }, { merge: true });
       } else {
+        const projectName = window.prompt('Enter project name:', 'My Startup Workspace') || 'Untitled Project';
         await setDoc(projectRef, {
           id: projectId,
           userId: authUser.uid,
-          name: 'My Startup Workspace',
+          name: projectName,
           documentContent,
           transcript,
           updatedAt: serverTimestamp(),
@@ -790,13 +949,192 @@ export default function KeynoteCompanion() {
         });
       }
       
-      alert('Project saved to cloud successfully!');
+      // Automatically create a version snapshot on manual save
+      await handleCreateVersion(`Manual Save - ${new Date().toLocaleString()}`);
+      
+      toast.success('Project saved to cloud successfully!');
     } catch (error) {
       console.error('Error saving to cloud:', error);
-      alert('Failed to save project to cloud.');
+      toast.error('Failed to save project to cloud.');
       handleFirestoreError(error, OperationType.WRITE, path);
     } finally {
       setIsSavingToCloud(false);
+    }
+  };
+
+  const handleCreateVersion = async (label?: string) => {
+    if (!authUser) return;
+    const projectId = currentProjectId;
+    const versionsRef = collection(db, 'users', authUser.uid, 'projects', projectId, 'versions');
+    try {
+      await addDoc(versionsRef, {
+        id: `v_${Date.now()}`,
+        documentContent,
+        createdAt: serverTimestamp(),
+        label: label || `Snapshot ${new Date().toLocaleString()}`,
+      });
+    } catch (error) {
+      console.error('Error creating version:', error);
+    }
+  };
+
+  const fetchVersions = async () => {
+    if (!authUser) return;
+    setIsLoadingVersions(true);
+    const projectId = currentProjectId;
+    const versionsRef = collection(db, 'users', authUser.uid, 'projects', projectId, 'versions');
+    const q = query(versionsRef, orderBy('createdAt', 'desc'));
+    try {
+      const querySnapshot = await getDocs(q);
+      const versions = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setProjectVersions(versions);
+    } catch (error) {
+      console.error('Error fetching versions:', error);
+      toast.error('Failed to load version history.');
+    } finally {
+      setIsLoadingVersions(false);
+    }
+  };
+
+  const handleRestoreVersion = (version: any) => {
+    setDocumentContent(version.documentContent);
+    setShowHistoryModal(false);
+    toast.success('Document restored to selected version.');
+  };
+
+  const fetchProjects = async () => {
+    if (!authUser) return;
+    setIsLoadingProjects(true);
+    const projectsRef = collection(db, 'users', authUser.uid, 'projects');
+    const q = query(projectsRef, orderBy('updatedAt', 'desc'));
+    try {
+      const querySnapshot = await getDocs(q);
+      const projects = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Project[];
+      setUserProjects(projects);
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+      toast.error('Failed to load projects.');
+    } finally {
+      setIsLoadingProjects(false);
+    }
+  };
+
+  const handleSwitchProject = async (projectId: string) => {
+    setCurrentProjectId(projectId);
+    lastLoadedProjectIdRef.current = null; // Trigger reload
+    setShowDashboardModal(false);
+  };
+
+  const handleCreateNewProject = async () => {
+    const name = window.prompt('Enter new project name:');
+    if (!name) return;
+
+    const newProjectId = `project_${Date.now()}`;
+    const projectRef = doc(db, 'users', authUser.uid, 'projects', newProjectId);
+    
+    try {
+      await setDoc(projectRef, {
+        id: newProjectId,
+        userId: authUser.uid,
+        name,
+        documentContent: PLACEHOLDER_DOC,
+        transcript: [],
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      
+      setCurrentProjectId(newProjectId);
+      setDocumentContent(PLACEHOLDER_DOC);
+      setTranscript([]);
+      setShowDashboardModal(false);
+      toast.success(`Project "${name}" created.`);
+    } catch (error) {
+      console.error('Error creating project:', error);
+      toast.error('Failed to create project.');
+    }
+  };
+
+  const handleSelectTemplate = (template: any) => {
+    if (documentContent !== PLACEHOLDER_DOC && documentContent.trim() !== '') {
+      if (!window.confirm('This will replace your current document content. Continue?')) {
+        return;
+      }
+    }
+    setDocumentContent(template.content);
+    setShowTemplatesModal(false);
+    toast.success(`Template "${template.name}" applied.`);
+  };
+
+  const handleSlashCommand = (command: string) => {
+    setShowSlashMenu(false);
+    
+    // Remove the slash from content
+    const lastSlashIndex = documentContent.lastIndexOf('/');
+    const newContent = documentContent.substring(0, lastSlashIndex);
+    
+    switch (command) {
+      case 'template':
+        setShowTemplatesModal(true);
+        break;
+      case 'history':
+        fetchVersions();
+        setShowHistoryModal(true);
+        break;
+      case 'dashboard':
+        fetchProjects();
+        setShowDashboardModal(true);
+        break;
+      case 'clear':
+        handleClear();
+        break;
+      case 'save':
+        handleSaveToCloud();
+        break;
+      case 'h1':
+        setDocumentContent(newContent + '# ');
+        break;
+      case 'h2':
+        setDocumentContent(newContent + '## ');
+        break;
+      case 'list':
+        setDocumentContent(newContent + '- ');
+        break;
+      case 'bold':
+        setDocumentContent(newContent + '**bold text**');
+        break;
+      case 'collapse':
+        setDocumentContent(newContent + '\n[collapse title="Section Title"]\nContent goes here...\n[/collapse]\n');
+        break;
+      default:
+        break;
+    }
+  };
+
+  const onEditorKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === '/') {
+      // Basic positioning logic - in a real app we'd use a more precise method
+      const textarea = e.currentTarget;
+      const { selectionStart } = textarea;
+      
+      // Only show if at start of line or after space
+      const charBefore = documentContent[selectionStart - 1];
+      if (!charBefore || charBefore === '\n' || charBefore === ' ') {
+        const rect = textarea.getBoundingClientRect();
+        // Approximate position
+        setSlashMenuPos({ 
+          top: rect.top + 40, 
+          left: rect.left + 20 
+        });
+        setShowSlashMenu(true);
+      }
+    } else if (e.key === 'Escape') {
+      setShowSlashMenu(false);
     }
   };
 
@@ -1727,7 +2065,7 @@ ${recentTranscript}`;
               setAgentState('Generating Image');
               const { prompt } = fc.args;
               if (typeof prompt === 'string') {
-                const { generateImage } = await import('../../../lib/ai-tools');
+                const { generateImage } = await import('../../lib/ai-tools');
                 const imageUrl = await generateImage(prompt);
                 result = { imageUrl };
               }
@@ -1737,7 +2075,7 @@ ${recentTranscript}`;
               setAgentState('Generating Video');
               const { prompt } = fc.args;
               if (typeof prompt === 'string') {
-                const { generateVideo } = await import('../../../lib/ai-tools');
+                const { generateVideo } = await import('../../lib/ai-tools');
                 const videoUrl = await generateVideo(prompt);
                 result = { videoUrl };
               }
@@ -1747,7 +2085,7 @@ ${recentTranscript}`;
               setAgentState('Thinking Deeply');
               const { query } = fc.args;
               if (typeof query === 'string') {
-                const { thinkDeeply } = await import('../../../lib/ai-tools');
+                const { thinkDeeply } = await import('../../lib/ai-tools');
                 const thoughts = await thinkDeeply(query);
                 result = { thoughts };
               }
@@ -1757,7 +2095,7 @@ ${recentTranscript}`;
               setAgentState('Searching Web');
               const { query } = fc.args;
               if (typeof query === 'string') {
-                const { searchWeb } = await import('../../../lib/ai-tools');
+                const { searchWeb } = await import('../../lib/ai-tools');
                 const searchResults = await searchWeb(query);
                 result = { searchResults };
               }
@@ -2164,7 +2502,7 @@ ${recentTranscript}`;
   const handleGetAccurateTranscript = async () => {
     const aiClient = getAiClient();
     if (!aiClient || audioLog.length === 0) {
-      alert("No audio data available to transcribe. Please ensure you've spoken with your co-founder first.");
+      toast.error("No audio data available to transcribe. Please ensure you've spoken with your co-founder first.");
       return;
     }
     setIsGeneratingAccurateTranscript(true);
@@ -2253,9 +2591,10 @@ ${recentTranscript}`;
       }
       
       setAccurateTranscript(response.text);
+      toast.success('Accurate transcript generated successfully!');
     } catch (error) {
       console.error('Error generating accurate transcript:', error);
-      alert('Failed to generate accurate transcript. The audio might be too long or there was a connection issue.');
+      toast.error('Failed to generate accurate transcript. The audio might be too long or there was a connection issue.');
     } finally {
       setIsGeneratingAccurateTranscript(false);
     }
@@ -2282,8 +2621,9 @@ ${recentTranscript}`;
     if (newTranscript.length > 0) {
       setTranscript(newTranscript);
       setAccurateTranscript('');
+      toast.success('Transcript replaced successfully!');
     } else {
-      alert('Could not parse the accurate transcript structure.');
+      toast.error('Could not parse the accurate transcript structure.');
     }
   };
 
@@ -2556,6 +2896,41 @@ ${recentTranscript}`;
     }
   };
 
+  const handleStrategicReview = async () => {
+    if (!documentContent.trim()) {
+      toast.error('Please add some content to your document first.');
+      return;
+    }
+
+    setIsThinking(true);
+    setMainTab('chatbot');
+    toast.info('AI Co-founder is reviewing your document...');
+
+    try {
+      const context = `User Name: ${user.name || 'User'}
+User Background: ${user.info || 'None'}
+Current Topic: ${user.topic || 'Not specified'}
+Current Document Content:
+---
+${documentContent}
+---`;
+
+      const prompt = `${context}\n\nAct as a strategic AI co-founder. Review the current document content provided above. 
+Identify potential weaknesses, missing elements, or strategic opportunities. 
+Provide 3-5 actionable suggestions to improve the document and the overall business strategy. 
+Format your response in Markdown.`;
+
+      const review = await thinkDeeply(prompt);
+      setTranscript(prev => [...prev, { speaker: 'Agent', text: review }]);
+      toast.success('Strategic review complete! Check the Chatbot tab.');
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to perform strategic review.');
+    } finally {
+      setIsThinking(false);
+    }
+  };
+
   const handleSaveAudioLog = async () => {
     const blobs = audioLog.map(entry => entry.blob);
     const combinedBlob = new Blob(blobs);
@@ -2569,6 +2944,19 @@ ${recentTranscript}`;
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadMarkdown = () => {
+    const blob = new Blob([documentContent], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${currentProjectId}_${new Date().toISOString()}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success('Markdown file downloaded.');
   };
 
   return (
@@ -2606,7 +2994,24 @@ ${recentTranscript}`;
                             <button onClick={() => { handleClear(); setShowMobileToolbar(false); }}>
                               <span className="material-symbols-outlined">delete</span> Clear
                             </button>
-                            <button onClick={() => { handleSaveToCloud(); setShowMobileToolbar(false); }} disabled={isSavingToCloud} style={{ color: '#1a73e8' }}>
+                            <div style={{ height: '1px', backgroundColor: 'rgba(255,255,255,0.1)', margin: '4px 0' }}></div>
+                            <button onClick={() => { handleSlashCommand('h1'); setShowMobileToolbar(false); }}>
+                              <span className="material-symbols-outlined">format_h1</span> H1
+                            </button>
+                            <button onClick={() => { handleSlashCommand('h2'); setShowMobileToolbar(false); }}>
+                              <span className="material-symbols-outlined">format_h2</span> H2
+                            </button>
+                            <button onClick={() => { handleSlashCommand('list'); setShowMobileToolbar(false); }}>
+                              <span className="material-symbols-outlined">format_list_bulleted</span> List
+                            </button>
+                            <button onClick={() => { handleSlashCommand('bold'); setShowMobileToolbar(false); }}>
+                              <span className="material-symbols-outlined">format_bold</span> Bold
+                            </button>
+                            <button onClick={() => { handleSlashCommand('collapse'); setShowMobileToolbar(false); }}>
+                              <span className="material-symbols-outlined">expand_more</span> Collapsible
+                            </button>
+                            <div style={{ height: '1px', backgroundColor: 'rgba(255,255,255,0.1)', margin: '4px 0' }}></div>
+                            <button onClick={() => { handleSaveToCloud(); setShowMobileToolbar(false); }} disabled={isSavingToCloud}>
                               <span className="material-symbols-outlined">cloud_upload</span> {isSavingToCloud ? 'Saving...' : 'Save to Cloud'}
                             </button>
                           </div>
@@ -2618,12 +3023,79 @@ ${recentTranscript}`;
                       <button onClick={handleUndo} disabled={documentHistory.length === 0}>Undo</button>
                       <button onClick={handleRedo} disabled={redoHistory.length === 0}>Redo</button>
                       <button onClick={handleClear}>Clear</button>
-                      <button onClick={handleSaveToCloud} disabled={isSavingToCloud} style={{ marginLeft: '10px', backgroundColor: '#e8f0fe', color: '#1a73e8', border: '1px solid #1a73e8' }}>
-                        {isSavingToCloud ? 'Saving...' : 'Save to Cloud'}
+                      <div style={{ width: '1px', height: '20px', backgroundColor: 'rgba(255,255,255,0.1)', margin: '0 10px' }}></div>
+                      <button onClick={() => handleSlashCommand('h1')} title="Heading 1">H1</button>
+                      <button onClick={() => handleSlashCommand('h2')} title="Heading 2">H2</button>
+                      <button onClick={() => handleSlashCommand('list')} title="Bullet List">List</button>
+                      <button onClick={() => handleSlashCommand('bold')} title="Bold">Bold</button>
+                      <button onClick={() => handleSlashCommand('collapse')} title="Collapsible Section">Collapse</button>
+                      <button 
+                        onClick={handleStrategicReview} 
+                        style={{ 
+                          backgroundColor: 'rgba(0, 243, 255, 0.1)', 
+                          color: 'var(--theme-accent)',
+                          border: '1px solid rgba(0, 243, 255, 0.3)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '5px'
+                        }}
+                        title="Get AI Strategic Review"
+                      >
+                        <Sparkles size={14} /> Strategic Review
+                      </button>
+                      <div style={{ width: '1px', height: '20px', backgroundColor: 'rgba(255,255,255,0.1)', margin: '0 10px' }}></div>
+                      <button 
+                        onClick={() => {
+                          fetchVersions();
+                          setShowHistoryModal(true);
+                        }}
+                        style={{ marginLeft: '10px' }}
+                      >
+                        History
                       </button>
                       <button 
+                        onClick={() => setShowTemplatesModal(true)}
+                        style={{ marginLeft: '10px' }}
+                      >
+                        Templates
+                      </button>
+                      <button 
+                        onClick={() => {
+                          fetchProjects();
+                          setShowDashboardModal(true);
+                        }}
+                        style={{ marginLeft: '10px' }}
+                      >
+                        Dashboard
+                      </button>
+                      <button 
+                        onClick={handleDownloadMarkdown}
+                        style={{ marginLeft: '10px' }}
+                      >
+                        Export MD
+                      </button>
+                      <button 
+                        onClick={handleSaveToCloud} 
+                        disabled={isSavingToCloud} 
+                        style={{ marginLeft: '10px' }}
+                      >
+                        {isSavingToCloud ? 'Saving...' : 'Save to Cloud'}
+                      </button>
+                      {lastAutoSavedAt && (
+                        <span style={{ marginLeft: '10px', fontSize: '11px', opacity: 0.5, fontStyle: 'italic' }}>
+                          Last auto-saved: {lastAutoSavedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      )}
+                      <button 
                         onClick={() => setShowCopilot(!showCopilot)} 
-                        style={{ marginLeft: '10px', backgroundColor: showCopilot ? 'rgba(0, 243, 255, 0.2)' : 'transparent', color: 'var(--theme-accent)', border: '1px solid var(--theme-accent)', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        style={{ 
+                          marginLeft: '10px', 
+                          backgroundColor: showCopilot ? 'rgba(0, 243, 255, 0.2)' : 'transparent', 
+                          border: showCopilot ? '1px solid var(--theme-accent)' : undefined,
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '4px' 
+                        }}
                       >
                         <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>lightbulb</span>
                         {showCopilot ? 'Hide Copilot' : 'AI Copilot'}
@@ -2645,12 +3117,19 @@ ${recentTranscript}`;
                     </>
                   )}
                 </div>
-                <textarea
-                  className="document-textarea"
-                  value={documentContent}
-                  onChange={handleDocumentChange}
-                  placeholder="Start writing..."
-                />
+                <div className="document-editor-container">
+                  <MarkdownHighlighter text={documentContent} font={font} backdropRef={backdropRef} />
+                  <textarea
+                    ref={textareaRef}
+                    className="document-textarea"
+                    style={{ fontFamily: font }}
+                    value={documentContent}
+                    onChange={handleDocumentChange}
+                    onKeyDown={onEditorKeyDown}
+                    onScroll={handleEditorScroll}
+                    placeholder="Start writing..."
+                  />
+                </div>
               </>
             )}
 
@@ -2658,6 +3137,28 @@ ${recentTranscript}`;
               <>
                 {documentContent !== PLACEHOLDER_DOC && (
                   <div className="document-actions exclude-from-pdf">
+                    <button
+                      className="share-button"
+                      onClick={() => setShowShareModal(true)}
+                      title="Share Project"
+                      style={{
+                        background: 'rgba(0, 243, 255, 0.1)',
+                        border: '1px solid rgba(0, 243, 255, 0.3)',
+                        color: 'var(--theme-accent)',
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        marginRight: '8px'
+                      }}
+                    >
+                      <Share2 size={14} />
+                      Share
+                    </button>
                     <button
                       className="pdf-button"
                       onClick={() => handleDownloadPDF(renderedViewRef, user.topic || 'soloscribe-document')}
@@ -2846,7 +3347,244 @@ ${recentTranscript}`;
         {mainTab === 'projections' && (
           <ProjectionsTab />
         )}
+        
+        {mainTab === 'roadmap' && (
+          <RoadmapTab />
+        )}
       </div>
+
+      {showHistoryModal && (
+        <Modal onClose={() => setShowHistoryModal(false)}>
+          <div style={{ padding: '20px', maxHeight: '70vh', overflowY: 'auto' }}>
+            <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '8px', color: 'var(--theme-accent)' }}>Document Version History</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <p style={{ fontSize: '14px', opacity: 0.7 }}>
+                Select a previous version to restore your document.
+              </p>
+              <button 
+                onClick={() => handleCreateVersion()}
+                className="olive-button"
+                style={{ fontSize: '12px', padding: '8px 16px' }}
+              >
+                Take Snapshot
+              </button>
+            </div>
+
+            {isLoadingVersions ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-theme-accent"></div>
+              </div>
+            ) : projectVersions.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px', opacity: 0.5 }}>
+                No versions found.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {projectVersions.map((version) => (
+                  <div 
+                    key={version.docId}
+                    style={{
+                      padding: '16px',
+                      borderRadius: '12px',
+                      border: '1px solid var(--theme-surface)',
+                      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '14px' }}>{version.label}</div>
+                      <div style={{ fontSize: '12px', opacity: 0.5 }}>
+                        {version.createdAt?.toDate().toLocaleString() || 'Just now'}
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => handleRestoreVersion(version)}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        backgroundColor: 'var(--theme-accent)',
+                        color: '#000',
+                        fontSize: '12px',
+                        fontWeight: 600
+                      }}
+                    >
+                      Restore
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </Modal>
+      )}
+
+      {showTemplatesModal && (
+        <Modal onClose={() => setShowTemplatesModal(false)}>
+          <div style={{ padding: '20px', maxHeight: '70vh', overflowY: 'auto' }}>
+            <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '8px', color: 'var(--theme-accent)' }}>Document Templates</h2>
+            <p style={{ fontSize: '14px', opacity: 0.7, marginBottom: '20px' }}>
+              Choose a template to kickstart your documentation.
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px' }}>
+              {DOCUMENT_TEMPLATES.map((template) => (
+                <div 
+                  key={template.id}
+                  style={{
+                    padding: '20px',
+                    borderRadius: '16px',
+                    border: '1px solid var(--theme-surface)',
+                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  className="hover:border-theme-accent hover:bg-[rgba(0,243,255,0.05)]"
+                  onClick={() => handleSelectTemplate(template)}
+                >
+                  <div style={{ fontWeight: 600, fontSize: '16px', color: 'var(--theme-accent)' }}>{template.name}</div>
+                  <div style={{ fontSize: '13px', opacity: 0.6, lineHeight: '1.4' }}>
+                    {template.description}
+                  </div>
+                  <div style={{ marginTop: 'auto', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.4 }}>
+                    Click to apply
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {showDashboardModal && (
+        <Modal onClose={() => setShowDashboardModal(false)}>
+          <div style={{ padding: '20px', maxHeight: '70vh', overflowY: 'auto' }}>
+            <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '8px', color: 'var(--theme-accent)' }}>Project Dashboard</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <p style={{ fontSize: '14px', opacity: 0.7 }}>
+                Manage your startup projects and workspaces.
+              </p>
+              <button 
+                onClick={handleCreateNewProject}
+                className="olive-button"
+                style={{ fontSize: '12px', padding: '8px 16px' }}
+              >
+                New Project
+              </button>
+            </div>
+
+            {isLoadingProjects ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-theme-accent"></div>
+              </div>
+            ) : userProjects.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px', opacity: 0.5 }}>
+                No projects found. Create your first one!
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {userProjects.map((project) => (
+                  <div 
+                    key={project.id}
+                    style={{
+                      padding: '16px',
+                      borderRadius: '12px',
+                      border: project.id === currentProjectId ? '1px solid var(--theme-accent)' : '1px solid var(--theme-surface)',
+                      backgroundColor: project.id === currentProjectId ? 'rgba(0, 243, 255, 0.05)' : 'rgba(255, 255, 255, 0.05)',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '14px', color: project.id === currentProjectId ? 'var(--theme-accent)' : 'inherit' }}>
+                        {project.name}
+                        {project.id === currentProjectId && <span style={{ marginLeft: '8px', fontSize: '10px', backgroundColor: 'var(--theme-accent)', color: '#000', padding: '2px 6px', borderRadius: '4px', verticalAlign: 'middle' }}>Active</span>}
+                      </div>
+                      <div style={{ fontSize: '12px', opacity: 0.5 }}>
+                        Last updated: {project.updatedAt?.toDate().toLocaleString() || 'Just now'}
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => handleSwitchProject(project.id)}
+                      disabled={project.id === currentProjectId}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        backgroundColor: project.id === currentProjectId ? 'transparent' : 'var(--theme-accent)',
+                        color: project.id === currentProjectId ? 'var(--theme-accent)' : '#000',
+                        border: project.id === currentProjectId ? '1px solid var(--theme-accent)' : 'none',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        opacity: project.id === currentProjectId ? 0.5 : 1
+                      }}
+                    >
+                      {project.id === currentProjectId ? 'Current' : 'Open'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </Modal>
+      )}
+
+      {showSlashMenu && (
+        <div 
+          style={{ 
+            position: 'fixed', 
+            top: slashMenuPos.top, 
+            left: slashMenuPos.left, 
+            zIndex: 1000,
+            backgroundColor: '#1a1a1a',
+            border: '1px solid var(--theme-surface)',
+            borderRadius: '12px',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+            width: '220px',
+            padding: '8px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '4px'
+          }}
+        >
+          <div style={{ padding: '8px', fontSize: '10px', textTransform: 'uppercase', opacity: 0.4, letterSpacing: '0.05em' }}>Commands</div>
+          <button className="slash-item" onClick={() => handleSlashCommand('template')}>
+            <span className="material-symbols-outlined">description</span> Templates
+          </button>
+          <button className="slash-item" onClick={() => handleSlashCommand('history')}>
+            <span className="material-symbols-outlined">history</span> Version History
+          </button>
+          <button className="slash-item" onClick={() => handleSlashCommand('dashboard')}>
+            <span className="material-symbols-outlined">dashboard</span> Dashboard
+          </button>
+          <button className="slash-item" onClick={() => handleSlashCommand('save')}>
+            <span className="material-symbols-outlined">cloud_upload</span> Save to Cloud
+          </button>
+          <div style={{ height: '1px', backgroundColor: 'rgba(255,255,255,0.1)', margin: '4px 0' }}></div>
+          <div style={{ padding: '8px', fontSize: '10px', textTransform: 'uppercase', opacity: 0.4, letterSpacing: '0.05em' }}>Formatting</div>
+          <button className="slash-item" onClick={() => handleSlashCommand('h1')}>
+            <span className="material-symbols-outlined">format_h1</span> Heading 1
+          </button>
+          <button className="slash-item" onClick={() => handleSlashCommand('h2')}>
+            <span className="material-symbols-outlined">format_h2</span> Heading 2
+          </button>
+          <button className="slash-item" onClick={() => handleSlashCommand('list')}>
+            <span className="material-symbols-outlined">format_list_bulleted</span> Bullet List
+          </button>
+          <button className="slash-item" onClick={() => handleSlashCommand('bold')}>
+            <span className="material-symbols-outlined">format_bold</span> Bold Text
+          </button>
+          <button className="slash-item" onClick={() => handleSlashCommand('collapse')}>
+            <span className="material-symbols-outlined">expand_more</span> Collapsible Section
+          </button>
+          <button className="slash-item" onClick={() => handleSlashCommand('clear')}>
+            <span className="material-symbols-outlined">delete</span> Clear Document
+          </button>
+        </div>
+      )}
 
       {showChatHistory && (
         <div className="chat-history-sidebar">
@@ -2872,6 +3610,15 @@ ${recentTranscript}`;
             )}
           </div>
         </div>
+      )}
+
+      {/* Share Modal */}
+      {currentProjectId && (
+        <ShareModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          project={userProjects.find(p => p.id === currentProjectId) || null}
+        />
       )}
     </div>
   );

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useUI } from '../../../lib/state';
-import { thinkDeeply } from '../../../lib/ai-tools';
+import { useUI } from '../../lib/state';
+import { thinkDeeply } from '../../lib/ai-tools';
 import { Users, Loader2, Plus, Link as LinkIcon, MessageSquare } from 'lucide-react';
 import { marked } from 'marked';
-import { useAuth } from '../../../contexts/AuthContext';
-import { db } from '../../../firebase';
+import { useAuth } from '../../contexts/AuthContext';
+import { db } from '../../firebase';
 import { collection, doc, setDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
+import { toast } from 'sonner';
 
 export const ValidationEngineTab: React.FC = () => {
   const { documentContent } = useUI();
@@ -53,11 +54,11 @@ export const ValidationEngineTab: React.FC = () => {
 
   const handleCreateCampaign = async () => {
     if (!user) {
-      alert("Please sign in to create an interview campaign.");
+      toast.error("Please sign in to create an interview campaign.");
       return;
     }
     if (!newCampaign.title || !newCampaign.goal || !newCampaign.questions) {
-      alert("Please fill in all fields.");
+      toast.error("Please fill in all fields.");
       return;
     }
 
@@ -78,9 +79,10 @@ export const ValidationEngineTab: React.FC = () => {
       setShowCreateCampaign(false);
       setNewCampaign({ title: '', goal: '', questions: '' });
       fetchCampaigns();
+      toast.success("Campaign created successfully!");
     } catch (error) {
       console.error("Error creating campaign:", error);
-      alert("Failed to create campaign.");
+      toast.error("Failed to create campaign.");
     } finally {
       setIsLoading(false);
     }
@@ -116,7 +118,7 @@ export const ValidationEngineTab: React.FC = () => {
   const copyLink = (id: string) => {
     const url = `${window.location.origin}/?interview=${id}`;
     navigator.clipboard.writeText(url);
-    alert('Interview link copied to clipboard! Share this on social media or with potential users.');
+    toast.success('Interview link copied to clipboard! Share this on social media or with potential users.');
   };
 
   return (

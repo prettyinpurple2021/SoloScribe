@@ -2,52 +2,121 @@
   "entities": {
     "User": {
       "title": "User",
-      "description": "A user of the application",
+      "description": "User profile and current working document state.",
       "type": "object",
       "properties": {
         "uid": { "type": "string" },
         "email": { "type": "string" },
         "displayName": { "type": "string" },
         "photoURL": { "type": "string" },
-        "role": { "type": "string", "enum": ["admin", "user"] },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["uid", "email", "role", "createdAt"]
+        "role": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "info": { "type": "string" },
+        "topic": { "type": "string" },
+        "format": { "type": "string" },
+        "documentContent": { "type": "string" },
+        "transcript": { "type": "array" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
     },
     "Project": {
       "title": "Project",
-      "description": "A user's startup project workspace",
+      "description": "A saved project for a user.",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
         "userId": { "type": "string" },
         "name": { "type": "string" },
         "documentContent": { "type": "string" },
-        "transcript": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "speaker": { "type": "string" },
-              "text": { "type": "string" }
-            },
-            "required": ["speaker", "text"]
-          }
-        },
+        "transcript": { "type": "array" },
+        "isPublic": { "type": "boolean", "description": "Whether the project is shared publicly" },
+        "shareId": { "type": "string", "description": "Unique ID for public sharing" },
         "updatedAt": { "type": "string", "format": "date-time" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["id", "userId", "name", "documentContent", "updatedAt", "createdAt"]
+      "required": ["id", "userId", "name", "documentContent", "transcript", "updatedAt"]
+    },
+    "Feedback": {
+      "title": "Feedback",
+      "description": "Feedback left by public users on a shared project",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "projectId": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "content": { "type": "string" },
+        "authorName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "projectId", "ownerId", "content"]
+    },
+    "Interview": {
+      "title": "Interview",
+      "description": "An interview campaign created by a user.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "goal": { "type": "string" },
+        "questions": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "title", "goal", "questions", "createdAt"]
+    },
+    "InterviewResponse": {
+      "title": "InterviewResponse",
+      "description": "A response to an interview campaign submitted by a public user.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "transcript": { "type": "array" },
+        "summary": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "transcript", "summary", "createdAt"]
+    },
+    "Version": {
+      "title": "Version",
+      "description": "A snapshot of a project's document content.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "documentContent": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "label": { "type": "string" }
+      },
+      "required": ["id", "documentContent", "createdAt"]
     }
   },
   "firestore": {
     "/users/{userId}": {
       "schema": { "$ref": "#/entities/User" },
-      "description": "User profiles"
+      "description": "Stores user profile and current session data."
     },
     "/users/{userId}/projects/{projectId}": {
       "schema": { "$ref": "#/entities/Project" },
-      "description": "User's saved projects"
+      "description": "Stores saved projects for a user."
+    },
+    "/users/{userId}/projects/{projectId}/versions/{versionId}": {
+      "schema": { "$ref": "#/entities/Version" },
+      "description": "Stores snapshots of a project's document content."
+    },
+    "/interviews/{interviewId}": {
+      "schema": { "$ref": "#/entities/Interview" },
+      "description": "Stores interview campaigns created by users."
+    },
+    "/interviews/{interviewId}/responses/{responseId}": {
+      "schema": { "$ref": "#/entities/InterviewResponse" },
+      "description": "Stores public responses to an interview campaign."
+    },
+    "/public_projects/{shareId}": {
+      "schema": { "$ref": "#/entities/Project" },
+      "description": "Publicly shared projects (read-only or feedback-enabled)"
+    },
+    "/projects/{projectId}/feedback/{feedbackId}": {
+      "schema": { "$ref": "#/entities/Feedback" },
+      "description": "Feedback on specific projects"
     }
   }
 }

@@ -6,7 +6,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useLiveAPIContext } from '../contexts/LiveAPIContext';
 import { useAgent, useUI } from '../lib/state';
-import BasicFace from './demo/basic-face/BasicFace';
+import BasicFace from './avatar/BasicFace';
 import cn from 'classnames';
 
 // Minimum volume level that indicates audio output is occurring.

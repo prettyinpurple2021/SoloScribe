@@ -233,6 +233,7 @@ function ControlTray({ children }: ControlTrayProps) {
             talking: isUserSpeaking && !muted && connected && !isConnecting,
           })}
           onClick={() => setMuted(!muted)}
+          title={muted ? "Unmute microphone" : "Mute microphone"}
         >
           {!muted ? (
             <span className="material-symbols-outlined filled">mic</span>
@@ -260,6 +261,7 @@ function ControlTray({ children }: ControlTrayProps) {
               }
             }}
             disabled={isConnecting}
+            title={connected ? "Disconnect agent" : "Connect agent"}
           >
             <span className="material-symbols-outlined filled">
               {isConnecting ? 'sync' : connected ? 'pause' : 'play_arrow'}

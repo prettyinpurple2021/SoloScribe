@@ -8,7 +8,8 @@ import { Theme, themes } from '../lib/themes';
 import { FONT_OPTIONS, PLACEHOLDER_DOC } from '../lib/constants';
 import React, { useState, useRef } from 'react';
 import * as pdfjs from 'pdfjs-dist';
-import { FileUp, X, FileText, Loader2, ChevronDown } from 'lucide-react';
+import { FileUp, X, FileText, Loader2, ChevronDown, Sparkles } from 'lucide-react';
+import { toast } from 'sonner';
 
 // Set up PDF.js worker
 // Using unpkg as it's often more reliable for specific versioned assets
@@ -88,7 +89,7 @@ export default function UserSettings() {
   const { name, info, topic, format, setName, setInfo, setTopic, setFormat, pdfFiles, addPdfFile, removePdfFile } =
     useUser();
   // Hooks to manage UI state (modal visibility, current theme)
-  const { setShowUserConfig, font, setFont, useSearch, setUseSearch, liveApiModel, setLiveApiModel, documentContent } = useUI();
+  const { setShowUserConfig, font, setFont, useSearch, setUseSearch, liveApiModel, setLiveApiModel, documentContent, setHasCompletedOnboarding, setShowWelcomeScreen } = useUI();
   // Hooks to manage agent state (needed for updating agent color on theme change)
   const { current: agent, update: updateAgent } = useAgent();
 
@@ -102,6 +103,17 @@ export default function UserSettings() {
   function updateClient() {
     setShowUserConfig(false);
   }
+
+  const handleReplayOnboarding = () => {
+    setHasCompletedOnboarding(false);
+    setShowWelcomeScreen(true);
+    setShowUserConfig(false);
+  };
+
+  const handleEditAgent = () => {
+    setShowUserConfig(false);
+    useUI.getState().setShowAgentEdit(true);
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -133,7 +145,7 @@ export default function UserSettings() {
       }
     } catch (error) {
       console.error('Error parsing PDF:', error);
-      alert('Failed to parse PDF. Please try again.');
+      toast.error('Failed to parse PDF. Please try again.');
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -292,6 +304,25 @@ export default function UserSettings() {
           )}
 
           <button className="button primary" style={{ marginTop: '20px' }}>Let’s go!</button>
+          
+          <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1px solid rgba(255, 255, 255, 0.1)', display: 'flex', justifyContent: 'center', gap: '24px' }}>
+            <button 
+              type="button" 
+              onClick={handleEditAgent}
+              className="flex items-center gap-2 text-sm opacity-60 hover:opacity-100 transition-opacity"
+            >
+              <Sparkles size={16} />
+              <span>Edit Agent</span>
+            </button>
+            <button 
+              type="button" 
+              onClick={handleReplayOnboarding}
+              className="flex items-center gap-2 text-sm opacity-60 hover:opacity-100 transition-opacity"
+            >
+              <Sparkles size={16} />
+              <span>Replay Onboarding</span>
+            </button>
+          </div>
         </form>
       </div>
     </Modal>

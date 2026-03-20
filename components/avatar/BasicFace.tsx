@@ -6,10 +6,10 @@ import { RefObject, useEffect, useState, useRef } from 'react';
 
 import { renderBasicFace } from './basic-face-render';
 
-import useFace from '../../../hooks/demo/use-face';
-import useHover from '../../../hooks/demo/use-hover';
-import useTilt from '../../../hooks/demo/use-tilt';
-import { useLiveAPIContext } from '../../../contexts/LiveAPIContext';
+import useFace from '../../hooks/animation/use-face';
+import useHover from '../../hooks/animation/use-hover';
+import useTilt from '../../hooks/animation/use-tilt';
+import { useLiveAPIContext } from '../../contexts/LiveAPIContext';
 
 type BasicFaceProps = {
   /** The canvas element on which to render the face. */
