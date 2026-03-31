@@ -129,25 +129,25 @@ export const ValidationEngineTab: React.FC = () => {
       <div style={{ display: 'flex', gap: '15px', marginBottom: '30px', borderBottom: '1px solid #eee', paddingBottom: '15px', flexWrap: 'wrap' }}>
         <button
           onClick={() => setActiveTool('interviews')}
-          style={{ padding: '10px 20px', borderRadius: '20px', backgroundColor: activeTool === 'interviews' ? '#e8f0fe' : 'transparent', color: activeTool === 'interviews' ? '#1a73e8' : '#666', border: 'none', cursor: 'pointer', fontWeight: activeTool === 'interviews' ? 'bold' : 'normal' }}
+          style={{ padding: '10px 20px', borderRadius: '0px', backgroundColor: activeTool === 'interviews' ? 'var(--theme-accent)' : 'transparent', color: activeTool === 'interviews' ? 'var(--theme-bg)' : 'var(--theme-text)', border: '2px solid var(--theme-text)', cursor: 'pointer', fontWeight: 'bold', fontFamily: 'var(--font-mono)', fontSize: '12px' }}
         >
           AI Interview Campaigns
         </button>
         <button
           onClick={() => { setActiveTool('hypothesis-tester'); setResult(null); }}
-          style={{ padding: '10px 20px', borderRadius: '20px', backgroundColor: activeTool === 'hypothesis-tester' ? '#e8f0fe' : 'transparent', color: activeTool === 'hypothesis-tester' ? '#1a73e8' : '#666', border: 'none', cursor: 'pointer', fontWeight: activeTool === 'hypothesis-tester' ? 'bold' : 'normal' }}
+          style={{ padding: '10px 20px', borderRadius: '0px', backgroundColor: activeTool === 'hypothesis-tester' ? 'var(--theme-accent)' : 'transparent', color: activeTool === 'hypothesis-tester' ? 'var(--theme-bg)' : 'var(--theme-text)', border: '2px solid var(--theme-text)', cursor: 'pointer', fontWeight: 'bold', fontFamily: 'var(--font-mono)', fontSize: '12px' }}
         >
           Hypothesis Tester
         </button>
         <button
           onClick={() => runValidation('plan-reviewer')}
-          style={{ padding: '10px 20px', borderRadius: '20px', backgroundColor: activeTool === 'plan-reviewer' ? '#e8f0fe' : 'transparent', color: activeTool === 'plan-reviewer' ? '#1a73e8' : '#666', border: 'none', cursor: 'pointer', fontWeight: activeTool === 'plan-reviewer' ? 'bold' : 'normal' }}
+          style={{ padding: '10px 20px', borderRadius: '0px', backgroundColor: activeTool === 'plan-reviewer' ? 'var(--theme-accent)' : 'transparent', color: activeTool === 'plan-reviewer' ? 'var(--theme-bg)' : 'var(--theme-text)', border: '2px solid var(--theme-text)', cursor: 'pointer', fontWeight: 'bold', fontFamily: 'var(--font-mono)', fontSize: '12px' }}
         >
           Business Plan Reviewer
         </button>
         <button
           onClick={() => runValidation('mom-test')}
-          style={{ padding: '10px 20px', borderRadius: '20px', backgroundColor: activeTool === 'mom-test' ? '#e8f0fe' : 'transparent', color: activeTool === 'mom-test' ? '#1a73e8' : '#666', border: 'none', cursor: 'pointer', fontWeight: activeTool === 'mom-test' ? 'bold' : 'normal' }}
+          style={{ padding: '10px 20px', borderRadius: '0px', backgroundColor: activeTool === 'mom-test' ? 'var(--theme-accent)' : 'transparent', color: activeTool === 'mom-test' ? 'var(--theme-bg)' : 'var(--theme-text)', border: '2px solid var(--theme-text)', cursor: 'pointer', fontWeight: 'bold', fontFamily: 'var(--font-mono)', fontSize: '12px' }}
         >
           The Mom Test
         </button>
@@ -159,7 +159,8 @@ export const ValidationEngineTab: React.FC = () => {
             <h3>Your Interview Campaigns</h3>
             <button 
               onClick={() => setShowCreateCampaign(!showCreateCampaign)}
-              style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 16px', backgroundColor: '#1a73e8', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+              className="brutalist-button"
+              style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 16px' }}
             >
               <Plus size={16} /> New Campaign
             </button>
@@ -172,44 +173,47 @@ export const ValidationEngineTab: React.FC = () => {
           )}
 
           {showCreateCampaign && user && (
-            <div style={{ backgroundColor: '#f8f9fa', padding: '20px', borderRadius: '8px', marginBottom: '20px', border: '1px solid #ddd' }}>
-              <h4>Create New AI Interview Campaign</h4>
-              <p style={{ fontSize: '12px', color: '#666', marginBottom: '15px' }}>Create a custom AI interviewer. Share the link, and the AI will conduct real interviews with people and report back to you.</p>
+            <div style={{ backgroundColor: 'var(--theme-surface)', padding: '20px', borderRadius: '0px', marginBottom: '20px', border: '3px solid var(--theme-text)', boxShadow: '8px 8px 0px var(--theme-text)' }}>
+              <h4 style={{ fontFamily: 'var(--font-display)', textTransform: 'uppercase' }}>Create New AI Interview Campaign</h4>
+              <p style={{ fontSize: '12px', color: 'var(--theme-text)', marginBottom: '15px', fontFamily: 'var(--font-mono)', opacity: 0.7 }}>Create a custom AI interviewer. Share the link, and the AI will conduct real interviews with people and report back to you.</p>
               
               <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 'bold' }}>Campaign Title</label>
+                <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 'bold', fontFamily: 'var(--font-display)' }}>Campaign Title</label>
                 <input 
                   type="text" 
                   value={newCampaign.title}
                   onChange={e => setNewCampaign({...newCampaign, title: e.target.value})}
                   placeholder="e.g., Freelancer Pain Points Interview"
-                  style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ccc' }}
+                  className="brutalist-input"
+                  style={{ width: '100%' }}
                 />
               </div>
               
               <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 'bold' }}>Interview Goal</label>
+                <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 'bold', fontFamily: 'var(--font-display)' }}>Interview Goal</label>
                 <textarea 
                   value={newCampaign.goal}
                   onChange={e => setNewCampaign({...newCampaign, goal: e.target.value})}
                   placeholder="What are you trying to learn? e.g., I want to understand the biggest challenges freelancers face when managing their invoices."
-                  style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ccc', minHeight: '80px' }}
+                  className="brutalist-textarea"
+                  style={{ width: '100%', minHeight: '80px' }}
                 />
               </div>
 
               <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 'bold' }}>Key Questions for the AI to Ask</label>
+                <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 'bold', fontFamily: 'var(--font-display)' }}>Key Questions for the AI to Ask</label>
                 <textarea 
                   value={newCampaign.questions}
                   onChange={e => setNewCampaign({...newCampaign, questions: e.target.value})}
                   placeholder="1. How do you currently track your invoices?&#10;2. What is the most frustrating part of getting paid?&#10;3. Have you ever paid for a tool to solve this?"
-                  style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ccc', minHeight: '100px' }}
+                  className="brutalist-textarea"
+                  style={{ width: '100%', minHeight: '100px' }}
                 />
               </div>
 
               <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                <button onClick={() => setShowCreateCampaign(false)} style={{ padding: '8px 16px', backgroundColor: 'transparent', border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer' }}>Cancel</button>
-                <button onClick={handleCreateCampaign} disabled={isLoading} style={{ padding: '8px 16px', backgroundColor: '#1a73e8', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+                <button onClick={() => setShowCreateCampaign(false)} className="brutalist-button-outline">Cancel</button>
+                <button onClick={handleCreateCampaign} disabled={isLoading} className={`brutalist-button ${isLoading ? '' : 'primary'}`}>
                   {isLoading ? 'Creating...' : 'Create Campaign'}
                 </button>
               </div>

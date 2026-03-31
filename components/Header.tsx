@@ -13,6 +13,7 @@ import {
   Edit3, 
   MessageSquare, 
   ClipboardList, 
+  CheckSquare,
   Volume2,
   ChevronDown,
   LogOut,
@@ -128,6 +129,7 @@ export default function Header() {
       case 'validation': return 'Validation Engine';
       case 'projections': return 'Projections';
       case 'roadmap': return 'Roadmap';
+      case 'tasks': return 'Tasks';
       default: return 'View';
     }
   };
@@ -284,6 +286,7 @@ export default function Header() {
                 {mainTab === 'validation' && <ShieldAlert size={16} />}
                 {mainTab === 'projections' && <LineChart size={16} />}
                 {mainTab === 'roadmap' && <Map size={16} />}
+                {mainTab === 'tasks' && <CheckSquare size={16} />}
               </div>
               <span className="menu-label">{getViewLabel()}</span>
               <ChevronDown size={14} className={c('chevron', { open: showViewMenu })} />
@@ -393,6 +396,16 @@ export default function Header() {
                   <Map size={16} />
                   <span>Roadmap</span>
                 </button>
+                <button 
+                  className={c('menu-item', { active: mainTab === 'tasks' })}
+                  onClick={() => {
+                    setMainTab('tasks');
+                    setShowViewMenu(false);
+                  }}
+                >
+                  <CheckSquare size={16} />
+                  <span>Tasks</span>
+                </button>
               </div>
             )}
           </div>
@@ -455,11 +468,9 @@ export default function Header() {
                         setTempPrompt(current.personality);
                         setShowPromptMenu(false);
                       }}
-                      className="brutalist-button"
+                      className="brutalist-button-outline"
                       style={{
                         padding: '6px 12px',
-                        backgroundColor: 'transparent',
-                        color: 'var(--theme-text)',
                         fontSize: '12px',
                       }}
                     >
@@ -494,7 +505,6 @@ export default function Header() {
             className={c('header-menu-trigger', { active: showConfirmNew })}
             onClick={() => setShowConfirmNew(!showConfirmNew)}
             title="New Document"
-            style={{ height: '32px', padding: '0 10px', gap: '6px' }}
           >
             <FilePlus size={16} />
             <span className="menu-label">New</span>
@@ -508,11 +518,9 @@ export default function Header() {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                 <button
                   onClick={() => setShowConfirmNew(false)}
-                  className="brutalist-button"
+                  className="brutalist-button-outline"
                   style={{
                     padding: '6px 12px',
-                    backgroundColor: 'transparent',
-                    color: 'var(--theme-text)',
                     fontSize: '12px'
                   }}
                 >

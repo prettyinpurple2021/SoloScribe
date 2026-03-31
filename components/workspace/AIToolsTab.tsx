@@ -78,86 +78,94 @@ export const AIToolsTab: React.FC = () => {
 
   return (
     <div className="ai-tools-tab" style={{ padding: '20px', overflowY: 'auto', height: '100%' }}>
-      <h2>AI Co-Founder Tools</h2>
-      <p style={{ marginBottom: '20px', color: '#666' }}>Powerful tools to accelerate your startup.</p>
+      <h2 style={{ fontFamily: 'var(--font-display)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '10px' }}>AI Co-Founder Tools</h2>
+      <p style={{ marginBottom: '20px', color: 'var(--theme-text)', opacity: 0.7, fontFamily: 'var(--font-mono)', fontSize: '12px' }}>POWERFUL TOOLS TO ACCELERATE YOUR STARTUP.</p>
 
       {/* Text to Speech */}
-      <div className="tool-section" style={{ marginBottom: '40px', padding: '20px', border: '1px solid #eee', borderRadius: '12px' }}>
-        <h3><Play size={18} style={{ display: 'inline', marginRight: '8px' }} /> Generate Speech (TTS)</h3>
-        <p style={{ fontSize: '14px', color: '#666', marginBottom: '10px' }}>Convert text to high-quality speech using Gemini 2.5 Flash TTS.</p>
+      <div className="tool-section" style={{ marginBottom: '40px', padding: '20px', border: '2px solid var(--theme-accent)', backgroundColor: 'var(--theme-surface)', boxShadow: '4px 4px 0px var(--theme-accent)' }}>
+        <h3 style={{ fontFamily: 'var(--font-display)', textTransform: 'uppercase', marginBottom: '15px' }}><Play size={18} style={{ display: 'inline', marginRight: '8px' }} /> Generate Speech (TTS)</h3>
+        <p style={{ fontSize: '12px', color: 'var(--theme-text)', marginBottom: '15px', fontFamily: 'var(--font-mono)' }}>CONVERT TEXT TO HIGH-QUALITY SPEECH USING GEMINI 2.5 FLASH TTS.</p>
         <textarea
           value={speechText}
           onChange={e => setSpeechText(e.target.value)}
-          placeholder="Enter text to speak..."
-          style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ccc', minHeight: '80px', marginBottom: '10px' }}
+          placeholder="ENTER TEXT TO SPEAK..."
+          className="brutalist-textarea"
+          style={{ width: '100%', minHeight: '80px', marginBottom: '15px' }}
         />
         <button
           onClick={handleGenerateSpeech}
           disabled={isGeneratingSpeech || !speechText.trim()}
-          style={{ padding: '10px 20px', borderRadius: '8px', backgroundColor: '#007bff', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+          className={`brutalist-button ${isGeneratingSpeech || !speechText.trim() ? '' : 'primary'}`}
+          style={{ width: '100%' }}
         >
           {isGeneratingSpeech ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
-          {isGeneratingSpeech ? 'Generating...' : 'Generate Speech'}
+          {isGeneratingSpeech ? 'GENERATING...' : 'GENERATE SPEECH'}
         </button>
         {speechUrl && (
-          <div style={{ marginTop: '15px' }}>
+          <div style={{ marginTop: '20px', border: '2px solid var(--theme-accent)', padding: '10px' }}>
             <audio src={speechUrl} controls style={{ width: '100%' }} />
           </div>
         )}
       </div>
 
       {/* Video Generation */}
-      <div className="tool-section" style={{ marginBottom: '40px', padding: '20px', border: '1px solid #eee', borderRadius: '12px' }}>
-        <h3><Video size={18} style={{ display: 'inline', marginRight: '8px' }} /> Prompt-Based Video Generation</h3>
-        <p style={{ fontSize: '14px', color: '#666', marginBottom: '10px' }}>Generate 16:9 videos using Veo 3.1 Fast Generate.</p>
+      <div className="tool-section" style={{ marginBottom: '40px', padding: '20px', border: '2px solid var(--theme-accent)', backgroundColor: 'var(--theme-surface)', boxShadow: '4px 4px 0px var(--theme-accent)' }}>
+        <h3 style={{ fontFamily: 'var(--font-display)', textTransform: 'uppercase', marginBottom: '15px' }}><Video size={18} style={{ display: 'inline', marginRight: '8px' }} /> Prompt-Based Video Generation</h3>
+        <p style={{ fontSize: '12px', color: 'var(--theme-text)', marginBottom: '15px', fontFamily: 'var(--font-mono)' }}>GENERATE 16:9 VIDEOS USING VEO 3.1 FAST GENERATE.</p>
         <textarea
           value={videoPrompt}
           onChange={e => setVideoPrompt(e.target.value)}
-          placeholder="Describe the video you want to generate..."
-          style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ccc', minHeight: '80px', marginBottom: '10px' }}
+          placeholder="DESCRIBE THE VIDEO YOU WANT TO GENERATE..."
+          className="brutalist-textarea"
+          style={{ width: '100%', minHeight: '80px', marginBottom: '15px' }}
         />
         <button
           onClick={handleGenerateVideo}
           disabled={isGeneratingVideo || !videoPrompt.trim()}
-          style={{ padding: '10px 20px', borderRadius: '8px', backgroundColor: '#007bff', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+          className={`brutalist-button ${isGeneratingVideo || !videoPrompt.trim() ? '' : 'primary'}`}
+          style={{ width: '100%' }}
         >
           {isGeneratingVideo ? <Loader2 size={16} className="animate-spin" /> : <Video size={16} />}
-          {isGeneratingVideo ? 'Generating Video (This may take a few minutes)...' : 'Generate Video'}
+          {isGeneratingVideo ? 'GENERATING VIDEO...' : 'GENERATE VIDEO'}
         </button>
         {videoUrl && (
-          <div style={{ marginTop: '15px' }}>
-            <video src={videoUrl} controls style={{ width: '100%', borderRadius: '8px' }} />
+          <div style={{ marginTop: '20px', border: '2px solid var(--theme-accent)', boxShadow: '4px 4px 0px var(--theme-accent)' }}>
+            <video src={videoUrl} controls style={{ width: '100%', display: 'block' }} />
           </div>
         )}
       </div>
 
       {/* Image Animation */}
-      <div className="tool-section" style={{ marginBottom: '40px', padding: '20px', border: '1px solid #eee', borderRadius: '12px' }}>
-        <h3><ImageIcon size={18} style={{ display: 'inline', marginRight: '8px' }} /> Animate Images with Veo</h3>
-        <p style={{ fontSize: '14px', color: '#666', marginBottom: '10px' }}>Upload an image and describe how to animate it.</p>
+      <div className="tool-section" style={{ marginBottom: '40px', padding: '20px', border: '2px solid var(--theme-accent)', backgroundColor: 'var(--theme-surface)', boxShadow: '4px 4px 0px var(--theme-accent)' }}>
+        <h3 style={{ fontFamily: 'var(--font-display)', textTransform: 'uppercase', marginBottom: '15px' }}><ImageIcon size={18} style={{ display: 'inline', marginRight: '8px' }} /> Animate Images with Veo</h3>
+        <p style={{ fontSize: '12px', color: 'var(--theme-text)', marginBottom: '15px', fontFamily: 'var(--font-mono)' }}>UPLOAD AN IMAGE AND DESCRIBE HOW TO ANIMATE IT.</p>
         
-        <input type="file" accept="image/*" onChange={handleImageUpload} style={{ marginBottom: '10px', display: 'block' }} />
+        <input type="file" accept="image/*" onChange={handleImageUpload} className="brutalist-input" style={{ marginBottom: '15px', width: '100%' }} />
         {animateImageBase64 && (
-          <img src={`data:${animateMimeType};base64,${animateImageBase64}`} alt="Preview" style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '8px', marginBottom: '10px' }} />
+          <div style={{ marginBottom: '15px', border: '2px solid var(--theme-accent)', display: 'inline-block', padding: '4px' }}>
+            <img src={`data:${animateMimeType};base64,${animateImageBase64}`} alt="Preview" style={{ maxWidth: '200px', maxHeight: '200px', display: 'block' }} />
+          </div>
         )}
         
         <textarea
           value={animatePrompt}
           onChange={e => setAnimatePrompt(e.target.value)}
-          placeholder="Describe how to animate the image..."
-          style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ccc', minHeight: '80px', marginBottom: '10px' }}
+          placeholder="DESCRIBE HOW TO ANIMATE THE IMAGE..."
+          className="brutalist-textarea"
+          style={{ width: '100%', minHeight: '80px', marginBottom: '15px' }}
         />
         <button
           onClick={handleAnimateImage}
           disabled={isAnimatingImage || !animatePrompt.trim() || !animateImageBase64}
-          style={{ padding: '10px 20px', borderRadius: '8px', backgroundColor: '#007bff', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+          className={`brutalist-button ${isAnimatingImage || !animatePrompt.trim() || !animateImageBase64 ? '' : 'primary'}`}
+          style={{ width: '100%' }}
         >
           {isAnimatingImage ? <Loader2 size={16} className="animate-spin" /> : <Video size={16} />}
-          {isAnimatingImage ? 'Animating Image (This may take a few minutes)...' : 'Animate Image'}
+          {isAnimatingImage ? 'ANIMATING IMAGE...' : 'ANIMATE IMAGE'}
         </button>
         {animatedVideoUrl && (
-          <div style={{ marginTop: '15px' }}>
-            <video src={animatedVideoUrl} controls style={{ width: '100%', borderRadius: '8px' }} />
+          <div style={{ marginTop: '20px', border: '2px solid var(--theme-accent)', boxShadow: '4px 4px 0px var(--theme-accent)' }}>
+            <video src={animatedVideoUrl} controls style={{ width: '100%', display: 'block' }} />
           </div>
         )}
       </div>

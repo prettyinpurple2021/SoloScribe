@@ -47,6 +47,7 @@ import { AIToolsTab } from './AIToolsTab';
 import { ValidationEngineTab } from './ValidationEngineTab';
 import { ProjectionsTab } from './ProjectionsTab';
 import { RoadmapTab } from './RoadmapTab';
+import TasksTab from './TasksTab';
 import { CopilotSidebar } from './CopilotSidebar';
 import { MinutesLoadingAnimation } from '../MinutesLoadingAnimation';
 import { useAuth } from '../../contexts/AuthContext';
@@ -912,6 +913,9 @@ export default function KeynoteCompanion() {
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
   const [projectVersions, setProjectVersions] = useState<any[]>([]);
   const [isLoadingVersions, setIsLoadingVersions] = useState(false);
+  const [lastVersionSavedAt, setLastVersionSavedAt] = useState<Date | null>(null);
+  const [confirmingVersionId, setConfirmingVersionId] = useState<string | null>(null);
+  const lastSnapshotContentRef = useRef<string>('');
   const { user: authUser } = useAuth();
   const lastLoadedProjectIdRef = useRef<string | null>(null);
 
@@ -971,6 +975,33 @@ export default function KeynoteCompanion() {
 
     return () => clearTimeout(timer);
   }, [documentContent, transcript, authUser, currentProjectId]);
+
+  // Periodic version snapshot functionality
+  useEffect(() => {
+    if (!authUser || !currentProjectId) return;
+    
+    // Don't save versions if content is just the placeholder
+    if (documentContent === PLACEHOLDER_DOC && transcript.length === 0) return;
+
+    // Initialize lastSnapshotContentRef if it's empty
+    if (!lastSnapshotContentRef.current) {
+      lastSnapshotContentRef.current = documentContent;
+    }
+
+    const interval = setInterval(async () => {
+      const now = new Date();
+      const timeSinceLastSave = lastVersionSavedAt ? now.getTime() - lastVersionSavedAt.getTime() : Infinity;
+      
+      // Save a version every 10 minutes if content has changed
+      if (timeSinceLastSave >= 10 * 60 * 1000 && documentContent !== lastSnapshotContentRef.current) {
+        await handleCreateVersion(`Auto-Snapshot - ${now.toLocaleString()}`);
+        setLastVersionSavedAt(now);
+        lastSnapshotContentRef.current = documentContent;
+      }
+    }, 60 * 1000); // Check every minute
+
+    return () => clearInterval(interval);
+  }, [documentContent, transcript, authUser, currentProjectId, lastVersionSavedAt]);
   
   const handleSaveToCloud = async () => {
     if (!authUser) {
@@ -1019,7 +1050,7 @@ export default function KeynoteCompanion() {
   };
 
   const handleCreateVersion = async (label?: string) => {
-    if (!authUser) return;
+    if (!authUser || !currentProjectId) return;
     const projectId = currentProjectId;
     const versionsRef = collection(db, 'users', authUser.uid, 'projects', projectId, 'versions');
     try {
@@ -1029,6 +1060,11 @@ export default function KeynoteCompanion() {
         createdAt: serverTimestamp(),
         label: label || `Snapshot ${new Date().toLocaleString()}`,
       });
+      setLastVersionSavedAt(new Date());
+      lastSnapshotContentRef.current = documentContent;
+      if (showHistoryModal) {
+        await fetchVersions();
+      }
     } catch (error) {
       console.error('Error creating version:', error);
     }
@@ -1055,9 +1091,14 @@ export default function KeynoteCompanion() {
     }
   };
 
+  const handleCloseHistoryModal = () => {
+    setShowHistoryModal(false);
+    setConfirmingVersionId(null);
+  };
+
   const handleRestoreVersion = (version: any) => {
     setDocumentContent(version.documentContent);
-    setShowHistoryModal(false);
+    handleCloseHistoryModal();
     toast.success('Document restored to selected version.');
   };
 
@@ -3452,10 +3493,14 @@ Format your response in Markdown.`;
         {mainTab === 'roadmap' && (
           <RoadmapTab />
         )}
+
+        {mainTab === 'tasks' && (
+          <TasksTab />
+        )}
       </div>
 
       {showHistoryModal && (
-        <Modal onClose={() => setShowHistoryModal(false)} title="VERSION_HISTORY_LOG">
+        <Modal onClose={handleCloseHistoryModal} title="VERSION_HISTORY_LOG">
           <div className="modalContent">
             <div className="flex justify-between items-center mb-6">
               <div className="grid-item-meta">DOCUMENT_SNAPSHOT_REPOSITORY</div>
@@ -3479,19 +3524,28 @@ Format your response in Markdown.`;
               <div className="flex flex-col gap-3">
                 {projectVersions.map((version) => (
                   <div 
-                    key={version.docId}
-                    className="grid-item"
-                    onClick={() => handleRestoreVersion(version)}
+                    key={version.id}
+                    className={c("grid-item", confirmingVersionId === version.id && "border-theme-accent")}
+                    onClick={() => {
+                      if (confirmingVersionId === version.id) {
+                        handleRestoreVersion(version);
+                        setConfirmingVersionId(null);
+                      } else {
+                        setConfirmingVersionId(version.id);
+                      }
+                    }}
                   >
                     <div className="flex justify-between items-center w-full">
                       <div>
-                        <div className="grid-item-title">{version.label || `SNAPSHOT_${version.docId.slice(0, 8)}`}</div>
+                        <div className="grid-item-title">
+                          {confirmingVersionId === version.id ? "CONFIRM_RESTORE?" : (version.label || `SNAPSHOT_${version.id.slice(0, 8)}`)}
+                        </div>
                         <div className="grid-item-meta">
-                          SYNC_TIME: {version.createdAt?.toDate().toLocaleString() || 'TIMESTAMP_PENDING'}
+                          {confirmingVersionId === version.id ? "THIS_WILL_OVERWRITE_CURRENT_STATE" : `SYNC_TIME: ${version.createdAt?.toDate?.().toLocaleString() || 'TIMESTAMP_PENDING'}`}
                         </div>
                       </div>
-                      <button className="brutalist-button px-3 py-1 text-xs">
-                        RESTORE
+                      <button className={c("brutalist-button px-3 py-1 text-xs", confirmingVersionId === version.id && "bg-theme-accent text-black")}>
+                        {confirmingVersionId === version.id ? "YES_RESTORE" : "RESTORE"}
                       </button>
                     </div>
                   </div>

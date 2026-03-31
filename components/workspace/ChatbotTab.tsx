@@ -53,29 +53,41 @@ Use this context to provide highly relevant and strategic advice.`;
 
   return (
     <div className="chatbot-tab" style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '20px' }}>
-      <div className="chat-messages" style={{ flex: 1, overflowY: 'auto', marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <div className="chat-messages" style={{ flex: 1, overflowY: 'auto', marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
         {messages.length === 0 ? (
-          <div style={{ textAlign: 'center', color: '#666', marginTop: '40px' }}>
-            <h3>AI Co-Founder Chat</h3>
-            <p>Ask me anything about your startup, strategy, or ideas.</p>
+          <div style={{ textAlign: 'center', color: 'var(--theme-text)', marginTop: '40px', opacity: 0.8 }}>
+            <h3 style={{ fontFamily: 'var(--font-display)', textTransform: 'uppercase' }}>AI Co-Founder Chat</h3>
+            <p style={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}>ASK ME ANYTHING ABOUT YOUR STARTUP, STRATEGY, OR IDEAS.</p>
           </div>
         ) : (
           messages.map((msg, idx) => (
             <div key={idx} style={{
               alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
-              backgroundColor: msg.role === 'user' ? '#007bff' : '#f1f1f1',
-              color: msg.role === 'user' ? 'white' : 'black',
-              padding: '10px 15px',
-              borderRadius: '15px',
-              maxWidth: '80%'
+              backgroundColor: msg.role === 'user' ? 'var(--theme-accent)' : 'var(--theme-surface)',
+              color: msg.role === 'user' ? 'var(--theme-bg)' : 'var(--theme-text)',
+              padding: '12px 18px',
+              border: '2px solid var(--theme-accent)',
+              boxShadow: msg.role === 'user' ? '-4px 4px 0px rgba(0,0,0,0.2)' : '4px 4px 0px var(--theme-accent)',
+              maxWidth: '85%',
+              fontFamily: 'var(--font-mono)',
+              fontSize: '13px',
+              lineHeight: '1.5'
             }}>
               {msg.text}
             </div>
           ))
         )}
         {isLoading && (
-          <div style={{ alignSelf: 'flex-start', backgroundColor: '#f1f1f1', padding: '10px 15px', borderRadius: '15px' }}>
-            Thinking...
+          <div style={{ 
+            alignSelf: 'flex-start', 
+            backgroundColor: 'var(--theme-surface)', 
+            padding: '10px 15px', 
+            border: '2px solid var(--theme-accent)',
+            fontFamily: 'var(--font-mono)',
+            fontSize: '12px',
+            fontStyle: 'italic'
+          }}>
+            THINKING...
           </div>
         )}
         <div ref={messagesEndRef} />
@@ -87,14 +99,16 @@ Use this context to provide highly relevant and strategic advice.`;
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleSend()}
-          placeholder="Type your message..."
-          style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #ccc' }}
+          placeholder="TYPE YOUR MESSAGE..."
+          className="brutalist-input"
+          style={{ flex: 1 }}
           disabled={isLoading}
         />
         <button
           onClick={handleSend}
           disabled={isLoading || !input.trim()}
-          style={{ padding: '10px 20px', borderRadius: '8px', backgroundColor: '#007bff', color: 'white', border: 'none', cursor: 'pointer' }}
+          className={`brutalist-button ${isLoading || !input.trim() ? '' : 'primary'}`}
+          style={{ padding: '0 20px' }}
         >
           <Send size={18} />
         </button>

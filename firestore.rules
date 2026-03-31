@@ -41,6 +41,20 @@ service cloud.firestore {
     //   - createdAt: timestamp (required)
     //   - label: string (optional)
     //
+    // Collection: users/{userId}/projects/{projectId}/tasks
+    // Document ID: {taskId}
+    // Fields:
+    //   - id: string (required)
+    //   - projectId: string (required)
+    //   - userId: string (required)
+    //   - title: string (required)
+    //   - description: string (optional)
+    //   - dueDate: timestamp (required)
+    //   - completed: boolean (required)
+    //   - notified: boolean (optional)
+    //   - createdAt: timestamp (optional)
+    //   - updatedAt: timestamp (optional)
+    //
     // Collection: interviews
     // Document ID: {interviewId}
     // Fields:
@@ -186,6 +200,22 @@ service cloud.firestore {
              isValidOptionalString('label', 0, 200);
     }
 
+    function isValidTask() {
+      let allowedFields = ['id', 'projectId', 'userId', 'title', 'description', 'dueDate', 'completed', 'notified', 'createdAt', 'updatedAt'];
+      return hasOnlyAllowedFields(allowedFields) &&
+             hasRequiredFields(['id', 'projectId', 'userId', 'title', 'dueDate', 'completed']) &&
+             isValidString('id', 1, 100) &&
+             isValidString('projectId', 1, 100) &&
+             isValidString('userId', 1, 100) &&
+             isValidString('title', 1, 500) &&
+             isValidOptionalString('description', 0, 5000) &&
+             isTimestamp('dueDate') &&
+             request.resource.data.completed is bool &&
+             (!( 'notified' in request.resource.data ) || request.resource.data.notified is bool) &&
+             isOptionalTimestamp('createdAt') &&
+             isOptionalTimestamp('updatedAt');
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
@@ -221,6 +251,14 @@ service cloud.firestore {
           allow read: if isOwner(userId);
           allow create: if isOwner(userId) && isValidVersion();
           allow update, delete: if isOwner(userId) || isAdmin();
+        }
+
+        match /tasks/{taskId} {
+          allow read: if isOwner(userId);
+          allow create: if isOwner(userId) && isValidTask() && request.resource.data.userId == userId && request.resource.data.projectId == projectId;
+          allow update: if isOwner(userId) && isValidTask() && 
+                        areImmutableFieldsUnchanged(['id', 'userId', 'projectId', 'createdAt']);
+          allow delete: if isOwner(userId);
         }
       }
     }

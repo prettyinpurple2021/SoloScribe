@@ -86,7 +86,7 @@ function CustomDropdown({
  */
 export default function UserSettings() {
   // Hooks to manage user-specific data (name, info, topic, etc.)
-  const { name, info, topic, format, setName, setInfo, setTopic, setFormat, pdfFiles, addPdfFile, removePdfFile } =
+  const { name, info, topic, format, setName, setInfo, setTopic, setFormat, contextFiles, addContextFile, removeContextFile } =
     useUser();
   // Hooks to manage UI state (modal visibility, current theme)
   const { setShowUserConfig, font, setFont, useSearch, setUseSearch, liveApiModel, setLiveApiModel, documentContent, setHasCompletedOnboarding, setShowWelcomeScreen } = useUI();
@@ -122,30 +122,45 @@ export default function UserSettings() {
     setIsUploading(true);
     try {
       for (const file of Array.from(files) as File[]) {
-        if (file.type !== 'application/pdf') continue;
+        if (file.type === 'application/pdf') {
+          const arrayBuffer = await file.arrayBuffer();
+          const loadingTask = pdfjs.getDocument({ data: arrayBuffer });
+          const pdf = await loadingTask.promise;
+          
+          let fullText = '';
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items
+              .map((item: any) => item.str)
+              .join(' ');
+            fullText += pageText + '\n';
+          }
 
-        const arrayBuffer = await file.arrayBuffer();
-        const loadingTask = pdfjs.getDocument({ data: arrayBuffer });
-        const pdf = await loadingTask.promise;
-        
-        let fullText = '';
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const textContent = await page.getTextContent();
-          const pageText = textContent.items
-            .map((item: any) => item.str)
-            .join(' ');
-          fullText += pageText + '\n';
+          addContextFile({
+            name: file.name,
+            text: fullText,
+            type: 'pdf'
+          });
+        } else if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
+          const text = await file.text();
+          addContextFile({
+            name: file.name,
+            text,
+            type: 'text'
+          });
+        } else if (file.name.endsWith('.md')) {
+          const text = await file.text();
+          addContextFile({
+            name: file.name,
+            text,
+            type: 'markdown'
+          });
         }
-
-        addPdfFile({
-          name: file.name,
-          text: fullText,
-        });
       }
     } catch (error) {
-      console.error('Error parsing PDF:', error);
-      toast.error('Failed to parse PDF. Please try again.');
+      console.error('Error parsing file:', error);
+      toast.error('Failed to parse file. Please try again.');
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -239,11 +254,11 @@ export default function UserSettings() {
               />
 
               <div className="context-section" style={{ marginTop: '20px' }}>
-                <p>PDF Context</p>
+                <p>Context Documents (.pdf, .txt, .md)</p>
                 <div className="pdf-upload-container">
                   <input
                     type="file"
-                    accept=".pdf"
+                    accept=".pdf,.txt,.md"
                     multiple
                     onChange={handleFileChange}
                     style={{ display: 'none' }}
@@ -260,19 +275,19 @@ export default function UserSettings() {
                     ) : (
                       <FileUp size={18} />
                     )}
-                    <span>{isUploading ? 'Processing...' : 'Upload PDFs'}</span>
+                    <span>{isUploading ? 'Processing...' : 'Upload Files'}</span>
                   </button>
 
-                  {pdfFiles.length > 0 && (
+                  {contextFiles.length > 0 && (
                     <div className="pdf-list">
-                      {pdfFiles.map(file => (
+                      {contextFiles.map(file => (
                         <div key={file.name} className="pdf-item">
                           <FileText size={14} className="pdf-icon" />
                           <span className="pdf-name" title={file.name}>{file.name}</span>
                           <button
                             type="button"
                             className="pdf-remove"
-                            onClick={() => removePdfFile(file.name)}
+                            onClick={() => removeContextFile(file.name)}
                           >
                             <X size={14} />
                           </button>

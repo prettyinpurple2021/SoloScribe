@@ -46,11 +46,10 @@ export default function FloatingAvatar() {
 
   // Set initial position after mount to ensure window.innerWidth is correct
   useEffect(() => {
-    const isMobile = window.innerWidth < 768;
-    // Position it at top-center (or top-center-right on mobile)
+    // Position it at bottom-right
     setPosition({ 
-      x: isMobile ? window.innerWidth / 2 + 40 : window.innerWidth / 2 - 50, 
-      y: 20 
+      x: window.innerWidth - 140, 
+      y: window.innerHeight - 140 
     });
   }, []);
 
@@ -64,26 +63,10 @@ export default function FloatingAvatar() {
         const avatarWidth = 100;
         const avatarHeight = 100;
 
-        // Check if the avatar is off-screen
-        const isOffScreen = 
-          prev.x < -avatarWidth / 2 || 
-          prev.x > window.innerWidth - avatarWidth / 2 ||
-          prev.y < -avatarHeight || 
-          prev.y > window.innerHeight - avatarHeight / 2;
-
-        if (isOffScreen) {
-          const isMobile = window.innerWidth < 768;
-          // Snap back to top-center (or top-center-right on mobile) if pushed off-screen
-          return {
-            x: isMobile ? window.innerWidth / 2 + 40 : window.innerWidth / 2 - 50,
-            y: 20,
-          };
-        }
-
-        // Otherwise, just ensure it stays within reasonable bounds
+        // Ensure it stays within reasonable bounds
         return {
-          x: Math.min(Math.max(0, prev.x), window.innerWidth - avatarWidth),
-          y: Math.min(Math.max(0, prev.y), window.innerHeight - avatarHeight),
+          x: Math.min(Math.max(20, prev.x), window.innerWidth - avatarWidth - 20),
+          y: Math.min(Math.max(20, prev.y), window.innerHeight - avatarHeight - 20),
         };
       });
     };

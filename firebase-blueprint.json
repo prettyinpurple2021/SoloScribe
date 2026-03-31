@@ -87,6 +87,24 @@
         "label": { "type": "string" }
       },
       "required": ["id", "documentContent", "createdAt"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "A task with a due date related to a project.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "projectId": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "dueDate": { "type": "string", "format": "date-time" },
+        "completed": { "type": "boolean" },
+        "notified": { "type": "boolean", "description": "Whether the user has been notified about this task" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "projectId", "userId", "title", "dueDate", "completed"]
     }
   },
   "firestore": {
@@ -101,6 +119,10 @@
     "/users/{userId}/projects/{projectId}/versions/{versionId}": {
       "schema": { "$ref": "#/entities/Version" },
       "description": "Stores snapshots of a project's document content."
+    },
+    "/users/{userId}/projects/{projectId}/tasks/{taskId}": {
+      "schema": { "$ref": "#/entities/Task" },
+      "description": "Stores tasks related to a specific project."
     },
     "/interviews/{interviewId}": {
       "schema": { "$ref": "#/entities/Interview" },

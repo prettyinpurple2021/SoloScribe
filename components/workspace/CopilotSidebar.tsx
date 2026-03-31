@@ -74,17 +74,17 @@ Provide 3 specific, actionable suggestions for improvements or content additions
         </button>
 
         {!documentContent.trim() && (
-          <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '1rem', textAlign: 'center', fontStyle: 'italic', fontFamily: 'var(--font-mono)' }}>
+          <p style={{ fontSize: '12px', color: 'var(--theme-text)', opacity: 0.6, marginTop: '1.5rem', textAlign: 'center', fontStyle: 'italic', fontFamily: 'var(--font-mono)' }}>
             WRITE SOME CONTENT TO INITIALIZE SUGGESTIONS.
           </p>
         )}
 
         {suggestions && (
           <div style={{ marginTop: '2rem' }}>
-            <h4 style={{ fontSize: '14px', marginBottom: '1rem', color: 'var(--theme-accent-secondary)', borderBottom: '2px solid rgba(176, 38, 255, 0.3)', paddingBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '1px', fontFamily: 'var(--font-display)' }}>
+            <h4 style={{ fontSize: '14px', marginBottom: '1rem', color: 'var(--theme-accent)', borderBottom: '2px solid var(--theme-accent)', paddingBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '1px', fontFamily: 'var(--font-display)' }}>
               SUGGESTIONS_LOG
             </h4>
-            <div className="markdown-body copilot-markdown" dangerouslySetInnerHTML={{ __html: marked.parse(suggestions) as string }} />
+            <div className="markdown-body copilot-markdown" style={{ color: 'var(--theme-text)' }} dangerouslySetInnerHTML={{ __html: marked.parse(suggestions) as string }} />
           </div>
         )}
       </div>

@@ -39,6 +39,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PublicInterview } from './components/PublicInterview';
 import { Toaster } from 'sonner';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { NotificationManager } from './components/workspace/NotificationManager';
 
 const getApiKey = () => {
   if (typeof window !== 'undefined' && window.process?.env?.API_KEY && window.process.env.API_KEY !== '{{API_KEY}}') {
@@ -80,6 +81,7 @@ function AppContent() {
       <ErrorScreen />
       <ProjectSidebar />
       <Header />
+      <NotificationManager />
 
       <FloatingAvatar />
 
@@ -92,10 +94,14 @@ function AppContent() {
       <div className="streaming-console">
         <main>
           <div className="main-app-area">
-            <KeynoteCompanion />
+            <ErrorBoundary>
+              <KeynoteCompanion />
+            </ErrorBoundary>
           </div>
 
-          <ControlTray></ControlTray>
+          <ErrorBoundary>
+            <ControlTray></ControlTray>
+          </ErrorBoundary>
         </main>
       </div>
     </>
@@ -194,7 +200,7 @@ function AppRoutes() {
       <Route path="/share/:shareId" element={<PublicProjectView />} />
       <Route path="/" element={
         <div className="App">
-          <Toaster position="top-center" theme="dark" />
+          <Toaster position="top-center" theme="light" />
           {showWelcomeScreen && <WelcomeScreen />}
           <LiveAPIProvider apiKey={currentApiKey}>
             <AppContent />

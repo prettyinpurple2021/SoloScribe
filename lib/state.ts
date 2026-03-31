@@ -42,9 +42,10 @@ import { FONT_OPTIONS, PLACEHOLDER_DOC } from './constants';
  * `useUser` Store
  * Manages all settings and context related to the end-user.
  */
-export type PdfFile = {
+export type ContextFile = {
   name: string;
   text: string;
+  type: 'pdf' | 'text' | 'markdown';
 };
 
 export type User = {
@@ -52,7 +53,7 @@ export type User = {
   info?: string;
   topic?: string;
   format: 'Markdown' | 'HTML';
-  pdfFiles: PdfFile[];
+  contextFiles: ContextFile[];
 };
 
 export const useUser = create<
@@ -61,9 +62,9 @@ export const useUser = create<
     setInfo: (info: string) => void;
     setTopic: (topic: string) => void;
     setFormat: (format: 'Markdown' | 'HTML') => void;
-    addPdfFile: (file: PdfFile) => void;
-    removePdfFile: (name: string) => void;
-    clearPdfFiles: () => void;
+    addContextFile: (file: ContextFile) => void;
+    removeContextFile: (name: string) => void;
+    clearContextFiles: () => void;
     resetUser: () => void;
   } & User
 >(set => ({
@@ -71,15 +72,15 @@ export const useUser = create<
   info: '',
   topic: '',
   format: 'Markdown',
-  pdfFiles: [],
+  contextFiles: [],
   setName: name => set({ name }),
   setInfo: info => set({ info }),
   setTopic: topic => set({ topic }),
   setFormat: format => set({ format }),
-  addPdfFile: file => set(state => ({ pdfFiles: [...state.pdfFiles, file] })),
-  removePdfFile: name => set(state => ({ pdfFiles: state.pdfFiles.filter(f => f.name !== name) })),
-  clearPdfFiles: () => set({ pdfFiles: [] }),
-  resetUser: () => set({ info: '', topic: '', pdfFiles: [] }),
+  addContextFile: file => set(state => ({ contextFiles: [...state.contextFiles, file] })),
+  removeContextFile: name => set(state => ({ contextFiles: state.contextFiles.filter(f => f.name !== name) })),
+  clearContextFiles: () => set({ contextFiles: [] }),
+  resetUser: () => set({ info: '', topic: '', contextFiles: [] }),
 }));
 
 /**
@@ -189,6 +190,25 @@ export type Feedback = {
   createdAt: any;
 };
 
+export type Task = {
+  id: string;
+  projectId: string;
+  userId: string;
+  title: string;
+  description?: string;
+  dueDate: any; // Firestore Timestamp
+  completed: boolean;
+  notified?: boolean;
+  createdAt?: any;
+  updatedAt?: any;
+};
+
+export type NotificationPreferences = {
+  enabled: boolean;
+  browserNotifications: boolean;
+  reminderMinutes: number; // Minutes before due date to notify
+};
+
 export const useUI = create<{
   showWelcomeScreen: boolean;
   setShowWelcomeScreen: (show: boolean) => void;
@@ -224,8 +244,8 @@ export const useUI = create<{
   incrementChangeCount: () => void;
   agentState: string | null;
   setAgentState: (state: string | null) => void;
-  mainTab: 'document' | 'transcript' | 'minutes' | 'audio-log' | 'chatbot' | 'tools' | 'validation' | 'projections' | 'roadmap';
-  setMainTab: (tab: 'document' | 'transcript' | 'minutes' | 'audio-log' | 'chatbot' | 'tools' | 'validation' | 'projections' | 'roadmap') => void;
+  mainTab: 'document' | 'transcript' | 'minutes' | 'audio-log' | 'chatbot' | 'tools' | 'validation' | 'projections' | 'roadmap' | 'tasks';
+  setMainTab: (tab: 'document' | 'transcript' | 'minutes' | 'audio-log' | 'chatbot' | 'tools' | 'validation' | 'projections' | 'roadmap' | 'tasks') => void;
   documentTab: 'editor' | 'rendered';
   setDocumentTab: (tab: 'editor' | 'rendered') => void;
   speechBubbleText: string | null;
@@ -245,6 +265,8 @@ export const useUI = create<{
   setCurrentProjectId: (id: string | null) => void;
   projects: Project[];
   setProjects: (projects: Project[]) => void;
+  notificationPreferences: NotificationPreferences;
+  setNotificationPreferences: (prefs: Partial<NotificationPreferences>) => void;
 }>()(
   persist(
     (set) => ({
@@ -309,6 +331,15 @@ export const useUI = create<{
       setCurrentProjectId: (id) => set({ currentProjectId: id }),
       projects: [],
       setProjects: (projects) => set({ projects }),
+      notificationPreferences: {
+        enabled: true,
+        browserNotifications: false,
+        reminderMinutes: 30,
+      },
+      setNotificationPreferences: (prefs) =>
+        set(state => ({
+          notificationPreferences: { ...state.notificationPreferences, ...prefs },
+        })),
     }),
     {
       name: 'ui-storage',
@@ -318,10 +349,35 @@ export const useUI = create<{
         font: state.font,
         outputModality: state.outputModality,
         currentProjectId: state.currentProjectId,
+        notificationPreferences: state.notificationPreferences,
       }),
     }
   )
 );
+
+/**
+ * `useTaskStore` Store
+ * Manages the state of tasks related to projects.
+ */
+export const useTaskStore = create<{
+  tasks: Task[];
+  setTasks: (tasks: Task[]) => void;
+  addTask: (task: Task) => void;
+  updateTask: (id: string, updates: Partial<Task>) => void;
+  removeTask: (id: string) => void;
+}>((set) => ({
+  tasks: [],
+  setTasks: (tasks) => set({ tasks }),
+  addTask: (task) => set((state) => ({ tasks: [task, ...state.tasks] })),
+  updateTask: (id, updates) =>
+    set((state) => ({
+      tasks: state.tasks.map((t) => (t.id === id ? { ...t, ...updates } : t)),
+    })),
+  removeTask: (id) =>
+    set((state) => ({
+      tasks: state.tasks.filter((t) => t.id !== id),
+    })),
+}));
 
 /**
  * `useLogStore` Store

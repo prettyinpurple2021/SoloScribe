@@ -19,6 +19,6 @@ export type Theme = {
 export const themes: Theme[] = [
   {
     name: 'SoloScribe',
-    colors: ['#050510', 'rgba(10, 10, 25, 0.8)', '#00f3ff', '#e0eaff', 'rgba(15, 15, 35, 0.9)'],
+    colors: ['#F5F5F0', '#FFFFFF', '#00f3ff', '#000000', '#FFFFFF'],
   }
 ];

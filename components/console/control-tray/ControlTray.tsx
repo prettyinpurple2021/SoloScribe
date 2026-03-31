@@ -30,7 +30,8 @@ import {
   Pause, 
   Play, 
   Keyboard, 
-  HelpCircle 
+  HelpCircle,
+  Settings
 } from 'lucide-react';
 import { AudioRecorder } from '../../../lib/audio-recorder';
 
@@ -236,77 +237,102 @@ function ControlTray({ children }: ControlTrayProps) {
       )}
       <div className="control-tray">
         <div className="control-tray-left">
-      </div>
-
-      <div className={cn('button-group')}>
-        <button
-          className={cn('action-button mic-button brutalist-button', {
-            talking: isUserSpeaking && !muted && connected && !isConnecting,
-            muted: muted
-          })}
-          onClick={() => setMuted(!muted)}
-          title={muted ? "Unmute microphone" : "Mute microphone"}
-        >
-          {!muted ? (
-            <Mic size={20} />
-          ) : (
-            <MicOff size={20} />
-          )}
-        </button>
-        {children}
-
-        <div className={cn('connection-button-container', { connected: connected || isConnecting })}>
-          {isUserSpeaking && !connected && !isConnecting && (
-            <span className="agent-off-indicator">SYSTEM_OFFLINE</span>
-          )}
           <button
-            ref={connectButtonRef}
-            className={cn('action-button connect-toggle brutalist-button', { connected: connected && !isConnecting })}
-            onClick={() => {
-              if (connected) {
-                disconnect();
-              } else {
-                startNewSession(); // Start a new session for performance logging.
-                addPerfLog({ turn: 0, event: 'User Action: Connect Clicked' });
-                
-                connect();
-              }
-            }}
-            disabled={isConnecting}
-            title={connected ? "Disconnect agent" : "Connect agent"}
+            className="action-button help-button brutalist-button"
+            onClick={() => setShowHelpModal(true)}
+            title="Help"
           >
-            {isConnecting ? (
-              <RefreshCw size={20} className="animate-spin" />
-            ) : connected ? (
-              <Pause size={20} />
-            ) : (
-              <Play size={20} />
-            )}
+            <HelpCircle size={20} />
+            <span>HELP</span>
           </button>
-          <span className="text-indicator">{isConnecting ? 'LINKING...' : 'ACTIVE_LINK'}</span>
         </div>
 
-        <button
-          className={cn('action-button keyboard-button brutalist-button', {
-            active: showTextInput,
-          })}
-          onClick={() => setShowTextInput(!showTextInput)}
-          title="Type a command"
-        >
-          <Keyboard size={20} />
-        </button>
-      </div>
+        <div className={cn('button-group')}>
+          <button
+            className={cn('action-button mic-button brutalist-button', {
+              talking: isUserSpeaking && !muted && connected && !isConnecting,
+              muted: muted
+            })}
+            onClick={() => setMuted(!muted)}
+            title={muted ? "Unmute microphone" : "Mute microphone"}
+          >
+            {!muted ? (
+              <>
+                <Mic size={20} />
+                <span>MIC_ON</span>
+              </>
+            ) : (
+              <>
+                <MicOff size={20} />
+                <span>MUTED</span>
+              </>
+            )}
+          </button>
+          {children}
 
-      <div className="control-tray-right">
-        <button
-          className="action-button help-button brutalist-button"
-          onClick={() => setShowHelpModal(true)}
-          title="Help"
-        >
-          <HelpCircle size={20} />
-        </button>
+          <div className={cn('connection-button-container', { connected: connected || isConnecting })}>
+            {isUserSpeaking && !connected && !isConnecting && (
+              <span className="agent-off-indicator">SYSTEM_OFFLINE</span>
+            )}
+            <button
+              ref={connectButtonRef}
+              className={cn('action-button connect-toggle brutalist-button', { connected: connected && !isConnecting })}
+              onClick={() => {
+                if (connected) {
+                  disconnect();
+                } else {
+                  startNewSession(); // Start a new session for performance logging.
+                  addPerfLog({ turn: 0, event: 'User Action: Connect Clicked' });
+                  
+                  connect();
+                }
+              }}
+              disabled={isConnecting}
+              title={connected ? "Disconnect agent" : "Connect agent"}
+            >
+              {isConnecting ? (
+                <>
+                  <RefreshCw size={20} className="animate-spin" />
+                  <span>LINKING</span>
+                </>
+              ) : connected ? (
+                <>
+                  <Pause size={20} />
+                  <span>STOP</span>
+                </>
+              ) : (
+                <>
+                  <Play size={20} />
+                  <span>START</span>
+                </>
+              )}
+            </button>
+            <span className="text-indicator">{isConnecting ? 'LINKING...' : 'ACTIVE_LINK'}</span>
+          </div>
+
+          <button
+            className={cn('action-button keyboard-button brutalist-button', {
+              active: showTextInput,
+            })}
+            onClick={() => setShowTextInput(!showTextInput)}
+            title="Type a command"
+          >
+            <Keyboard size={20} />
+            <span>TYPE</span>
+          </button>
+        </div>
+
+        <div className="control-tray-right">
+          <button
+            className="action-button settings-button brutalist-button"
+            onClick={() => useUI.getState().setShowUserConfig(true)}
+            title="Settings"
+          >
+            <Settings size={20} />
+            <span>SETTINGS</span>
+          </button>
+        </div>
       </div>
-    </div>
   </section>
 );
 }

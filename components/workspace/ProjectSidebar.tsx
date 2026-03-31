@@ -162,7 +162,7 @@ export const ProjectSidebar: React.FC = () => {
               left: 0,
               right: 0,
               bottom: 0,
-              backgroundColor: 'rgba(0,0,0,0.5)',
+              backgroundColor: 'rgba(0,0,0,0.2)',
               backdropFilter: 'blur(4px)',
               zIndex: 1000,
             }}
@@ -199,32 +199,26 @@ export const ProjectSidebar: React.FC = () => {
             </div>
 
             {/* Search */}
-            <div style={{ padding: '15px' }}>
-              <div style={{ 
-                position: 'relative',
-                display: 'flex',
-                alignItems: 'center'
-              }}>
-                <Search size={14} style={{ position: 'absolute', left: '10px', color: 'rgba(255,255,255,0.4)' }} />
+            <div className="sidebar-search-container">
+              <div className="sidebar-search-wrapper">
+                <Search size={14} className="search-icon" />
                 <input 
                   type="text"
                   placeholder="SEARCH PROJECTS..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="brutalist-input"
-                  style={{ paddingLeft: '32px' }}
                 />
               </div>
             </div>
 
             {/* Project List */}
             <div className="sidebar-content">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', padding: '0 5px' }}>
-                <span className="brutalist-label" style={{ margin: 0 }}>Your Documents</span>
+              <div className="sidebar-content-header">
+                <span className="theme-label">Your Documents</span>
                 <button 
                   onClick={() => setIsCreating(true)}
-                  className="brutalist-button"
-                  style={{ padding: '4px 12px', fontSize: '11px' }}
+                  className="brutalist-button mini"
                 >
                   <Plus size={12} /> NEW
                 </button>
@@ -234,8 +228,7 @@ export const ProjectSidebar: React.FC = () => {
                 <motion.div 
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="brutalist-card"
-                  style={{ marginBottom: '1rem', padding: '1rem' }}
+                  className="theme-card creation-card"
                 >
                   <input 
                     autoFocus
@@ -245,20 +238,17 @@ export const ProjectSidebar: React.FC = () => {
                     onChange={(e) => setNewProjectName(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleCreateProject()}
                     className="brutalist-input"
-                    style={{ marginBottom: '0.75rem' }}
                   />
-                  <div style={{ display: 'flex', gap: '8px' }}>
+                  <div className="creation-actions">
                     <button 
                       onClick={handleCreateProject}
                       className="brutalist-button primary"
-                      style={{ flex: 1, padding: '8px' }}
                     >
                       CREATE
                     </button>
                     <button 
                       onClick={() => setIsCreating(false)}
-                      className="brutalist-button"
-                      style={{ padding: '8px 12px' }}
+                      className="brutalist-button secondary"
                     >
                       CANCEL
                     </button>
@@ -273,9 +263,9 @@ export const ProjectSidebar: React.FC = () => {
                     onClick={() => handleSelectProject(project)}
                     className={`project-item ${currentProjectId === project.id ? 'active' : ''}`}
                   >
-                    <FileText size={18} color={currentProjectId === project.id ? 'var(--theme-accent)' : 'rgba(255,255,255,0.4)'} />
+                    <FileText size={18} color={currentProjectId === project.id ? 'var(--theme-accent)' : 'rgba(0,0,0,0.4)'} />
                     
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="project-item-content">
                       {editingId === project.id ? (
                         <input 
                           autoFocus
@@ -284,24 +274,14 @@ export const ProjectSidebar: React.FC = () => {
                           onBlur={(e) => handleSaveEdit(e as any, project.id)}
                           onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit(e as any, project.id)}
                           onClick={(e) => e.stopPropagation()}
-                          className="brutalist-input"
-                          style={{ padding: '2px 8px' }}
+                          className="brutalist-input mini"
                         />
                       ) : (
-                        <div style={{ 
-                          fontSize: '13px', 
-                          fontWeight: currentProjectId === project.id ? '700' : '400',
-                          color: currentProjectId === project.id ? 'var(--theme-accent)' : 'rgba(255,255,255,0.8)',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.5px'
-                        }}>
+                        <div className="project-name">
                           {project.name}
                         </div>
                       )}
-                      <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', marginTop: '2px', fontFamily: 'var(--font-mono)' }}>
+                      <div className="project-date">
                         {project.updatedAt?.toDate ? new Date(project.updatedAt.toDate()).toLocaleDateString() : 'JUST NOW'}
                       </div>
                     </div>
@@ -324,7 +304,7 @@ export const ProjectSidebar: React.FC = () => {
                 ))}
 
                 {filteredProjects.length === 0 && !isCreating && (
-                  <div style={{ textAlign: 'center', padding: '40px 20px', color: 'rgba(255,255,255,0.3)' }}>
+                  <div style={{ textAlign: 'center', padding: '40px 20px', color: 'rgba(0,0,0,0.3)' }}>
                     <Folder size={32} style={{ marginBottom: '10px', opacity: 0.2 }} />
                     <p style={{ fontSize: '12px', fontFamily: 'var(--font-mono)' }}>NO PROJECTS FOUND. INITIALIZE NEW STARTUP DOCUMENT.</p>
                   </div>

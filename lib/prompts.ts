@@ -68,9 +68,9 @@ You are guiding the user through a structured startup roadmap. Depending on thei
 - **Anniversary Stage:** Focus on Retrospectives and Long-term Vision. Be reflective, visionary, and legacy-oriented.
 `;
 
-  const pdfPrompt = user.pdfFiles && user.pdfFiles.length > 0
-    ? `\n\n**PDF CONTEXT:** The user has uploaded the following PDF documents as background context for this session. Use the information in these documents to inform your writing and suggestions:
-${user.pdfFiles.map(f => `--- START OF PDF: ${f.name} ---\n${f.text}\n--- END OF PDF: ${f.name} ---`).join('\n\n')}`
+  const contextPrompt = user.contextFiles && user.contextFiles.length > 0
+    ? `\n\n**CONTEXT DOCUMENTS:** The user has uploaded the following documents as background context for this session. Use the information in these documents to inform your writing and suggestions:
+${user.contextFiles.map(f => `--- START OF ${f.type.toUpperCase()}: ${f.name} ---\n${f.text}\n--- END OF ${f.type.toUpperCase()}: ${f.name} ---`).join('\n\n')}`
     : '';
 
   // Assemble the final prompt string.
@@ -86,7 +86,7 @@ The user has provided the following context for your conversation: "${
     user.info || 'None'
   }".
 The topic of your writing is: "${user.topic || 'Not specified yet'}".
-${pdfPrompt}
+${contextPrompt}
 ${newToolsPrompt}
 
 **Core Interaction Rules:**
