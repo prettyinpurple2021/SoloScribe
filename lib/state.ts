@@ -199,6 +199,7 @@ export type Task = {
   dueDate: any; // Firestore Timestamp
   completed: boolean;
   notified?: boolean;
+  notifiedTimings?: number[];
   createdAt?: any;
   updatedAt?: any;
 };
@@ -206,7 +207,7 @@ export type Task = {
 export type NotificationPreferences = {
   enabled: boolean;
   browserNotifications: boolean;
-  reminderMinutes: number; // Minutes before due date to notify
+  reminderTimings: number[]; // Array of minutes before due date to notify
 };
 
 export const useUI = create<{
@@ -334,7 +335,7 @@ export const useUI = create<{
       notificationPreferences: {
         enabled: true,
         browserNotifications: false,
-        reminderMinutes: 30,
+        reminderTimings: [30], // Default to 30 minutes
       },
       setNotificationPreferences: (prefs) =>
         set(state => ({

@@ -21,6 +21,10 @@ import {
   FunctionResponse,
 } from '@google/genai';
 import c from 'classnames';
+import { MdEditor, MdPreview } from 'md-editor-rt';
+import 'md-editor-rt/lib/style.css';
+import hljs from 'highlight.js';
+import 'highlight.js/styles/github-dark.css';
 import { marked } from 'marked';
 import * as htmlToImage from 'html-to-image';
 import { diffChars } from 'diff';
@@ -685,11 +689,19 @@ const DocumentRenderer = memo(
 
       const cleanedWhitespace = stripLeadingWhitespace(processedContent);
       const { protectedText, latexMap } = protectLatex(cleanedWhitespace);
-      const rawHtml = marked.parse(protectedText, {
-        async: false,
-        breaks: true,
-        gfm: true,
-      }) as string;
+      
+      // Configure marked with highlight.js
+      marked.use({
+        renderer: {
+          code(code, lang) {
+            const language = hljs.getLanguage(lang || '') ? (lang || '') : 'plaintext';
+            const highlighted = hljs.highlight(code, { language }).value;
+            return `<pre><code class="hljs language-${language}">${highlighted}</code></pre>`;
+          }
+        }
+      });
+
+      const rawHtml = marked.parse(protectedText) as string;
       const finalHtml = restoreLatex(rawHtml, latexMap);
 
       return { html: finalHtml, embeds: embeds.reverse() };
@@ -782,51 +794,7 @@ const DocumentRenderer = memo(
   },
 );
 
-/**
- * A component to render highlighted Markdown text in the background of a textarea.
- */
-const MarkdownHighlighter = ({ text, font, backdropRef }: { text: string; font: string; backdropRef: React.RefObject<HTMLDivElement | null> }) => {
-  const lines = text.split('\n');
-  
-  return (
-    <div className="markdown-backdrop" style={{ fontFamily: font }} ref={backdropRef}>
-      {lines.map((line, i) => {
-        let lineClass = '';
-        let content: React.ReactNode = line;
-
-        if (line.startsWith('# ')) {
-          lineClass = 'md-h1';
-        } else if (line.startsWith('## ')) {
-          lineClass = 'md-h2';
-        } else if (line.trim().startsWith('- ')) {
-          lineClass = 'md-list';
-        }
-
-        // Bold highlighting: **text**
-        const parts = line.split(/(\*\*.*?\*\*)/g);
-        if (parts.length > 1) {
-          content = parts.map((part, j) => {
-            if (part.startsWith('**') && part.endsWith('**')) {
-              return <span key={j} className="md-bold">{part}</span>;
-            }
-            return part;
-          });
-        }
-
-        return (
-          <div key={i} className={c('md-line', lineClass)}>
-            {(() => {
-              if (line.startsWith('[') && line.endsWith(']')) {
-                return <span className="md-tag">{line}</span>;
-              }
-              return content;
-            })() || <br />}
-          </div>
-        );
-      })}
-    </div>
-  );
-};
+// MarkdownHighlighter removed
 
 /**
  * The primary component that orchestrates the collaborative writing experience.
@@ -882,19 +850,6 @@ export default function KeynoteCompanion() {
   const [copyButtonText, setCopyButtonText] = useState('Copy');
   const [pdfStatus, setPdfStatus] = useState<'idle' | 'preparing' | 'generating'>('idle');
   const [isThinking, setIsThinking] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const backdropRef = useRef<HTMLDivElement>(null);
-
-  const handleEditorScroll = () => {
-    if (textareaRef.current && backdropRef.current) {
-      backdropRef.current.scrollTop = textareaRef.current.scrollTop;
-    }
-  };
-
-  // Sync scroll when content changes
-  useEffect(() => {
-    handleEditorScroll();
-  }, [documentContent]);
   const [playingAudio, setPlayingAudio] = useState<{
     index: number;
     element: HTMLAudioElement;
@@ -907,8 +862,6 @@ export default function KeynoteCompanion() {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showTemplatesModal, setShowTemplatesModal] = useState(false);
   const [showDashboardModal, setShowDashboardModal] = useState(false);
-  const [showSlashMenu, setShowSlashMenu] = useState(false);
-  const [slashMenuPos, setSlashMenuPos] = useState({ top: 0, left: 0 });
   const [showShareModal, setShowShareModal] = useState(false);
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
   const [projectVersions, setProjectVersions] = useState<any[]>([]);
@@ -1169,12 +1122,6 @@ export default function KeynoteCompanion() {
   };
 
   const handleSlashCommand = (command: string) => {
-    setShowSlashMenu(false);
-    
-    // Remove the slash from content
-    const lastSlashIndex = documentContent.lastIndexOf('/');
-    const newContent = documentContent.substring(0, lastSlashIndex);
-    
     switch (command) {
       case 'template':
         setShowTemplatesModal(true);
@@ -1194,44 +1141,22 @@ export default function KeynoteCompanion() {
         handleSaveToCloud();
         break;
       case 'h1':
-        setDocumentContent(newContent + '# ');
+        setDocumentContent(prev => prev + '\n# ');
         break;
       case 'h2':
-        setDocumentContent(newContent + '## ');
+        setDocumentContent(prev => prev + '\n## ');
         break;
       case 'list':
-        setDocumentContent(newContent + '- ');
+        setDocumentContent(prev => prev + '\n- ');
         break;
       case 'bold':
-        setDocumentContent(newContent + '**bold text**');
+        setDocumentContent(prev => prev + '**bold text**');
         break;
       case 'collapse':
-        setDocumentContent(newContent + '\n[collapse title="Section Title"]\nContent goes here...\n[/collapse]\n');
+        setDocumentContent(prev => prev + '\n[collapse title="Section Title"]\nContent goes here...\n[/collapse]\n');
         break;
       default:
         break;
-    }
-  };
-
-  const onEditorKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === '/') {
-      // Basic positioning logic - in a real app we'd use a more precise method
-      const textarea = e.currentTarget;
-      const { selectionStart } = textarea;
-      
-      // Only show if at start of line or after space
-      const charBefore = documentContent[selectionStart - 1];
-      if (!charBefore || charBefore === '\n' || charBefore === ' ') {
-        const rect = textarea.getBoundingClientRect();
-        // Approximate position
-        setSlashMenuPos({ 
-          top: rect.top + 40, 
-          left: rect.left + 20 
-        });
-        setShowSlashMenu(true);
-      }
-    } else if (e.key === 'Escape') {
-      setShowSlashMenu(false);
     }
   };
 
@@ -1827,11 +1752,12 @@ export default function KeynoteCompanion() {
     return () => clearTimeout(timeoutId);
   }, [documentContent, connected, client]);
 
-  const handleDocumentChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
+  const handleDocumentChange = (value: string) => {
     setDocumentContent(prevContent => {
       pushToHistory(prevContent);
-      return e.target.value;
+      return value;
     });
+    incrementChangeCount();
   };
 
   const handleUndo = () => {
@@ -3057,7 +2983,7 @@ Format your response in Markdown.`;
   };
 
   return (
-    <div className="keynote-companion">
+    <div className="keynote-companion paper-graph">
       <div className="document-view-container">
         {mainTab === 'document' && (
           <div style={{ display: 'flex', flexDirection: 'row', height: '100%', width: '100%' }}>
@@ -3254,16 +3180,52 @@ Format your response in Markdown.`;
                   )}
                 </div>
                 <div className="document-editor-container">
-                  <MarkdownHighlighter text={documentContent} font={font} backdropRef={backdropRef} />
-                  <textarea
-                    ref={textareaRef}
-                    className="document-textarea"
-                    style={{ fontFamily: font }}
-                    value={documentContent}
+                  <MdEditor
+                    modelValue={documentContent}
                     onChange={handleDocumentChange}
-                    onKeyDown={onEditorKeyDown}
-                    onScroll={handleEditorScroll}
-                    placeholder="Start writing..."
+                    theme="dark"
+                    language="en-US"
+                    toolbars={[
+                      'bold',
+                      'underline',
+                      'italic',
+                      '-',
+                      'title',
+                      'strikeThrough',
+                      'sub',
+                      'sup',
+                      'quote',
+                      'unorderedList',
+                      'orderedList',
+                      'task',
+                      '-',
+                      'codeRow',
+                      'code',
+                      'link',
+                      'image',
+                      'table',
+                      'mermaid',
+                      'katex',
+                      '-',
+                      'revoke',
+                      'next',
+                      'save',
+                      '=',
+                      'pageFullscreen',
+                      'fullscreen',
+                      'preview',
+                      'htmlPreview',
+                      'catalog',
+                    ]}
+                    style={{ 
+                      height: '100%', 
+                      backgroundColor: 'transparent',
+                      fontFamily: font 
+                    }}
+                    editorId="soloscribe-editor"
+                    placeholder="Start writing your solo venture documentation..."
+                    noUploadImg
+                    onSave={() => handleSaveToCloud()}
                   />
                 </div>
               </>
@@ -3634,53 +3596,7 @@ Format your response in Markdown.`;
         </Modal>
       )}
 
-      {showSlashMenu && (
-        <div 
-          className="slash-menu border-4 border-black bg-theme-surface shadow-[8px_8px_0_0_#000] z-[3000] min-w-[240px]"
-          style={{ 
-            top: slashMenuPos.top, 
-            left: slashMenuPos.left, 
-          }}
-        >
-          <div className="slash-menu-label font-display text-[10px] uppercase tracking-widest p-3 bg-black text-theme-accent border-b-2 border-theme-accent">SYSTEM_COMMANDS</div>
-          <div className="p-1">
-            <button className="slash-item flex items-center gap-3 w-full p-2 font-mono text-xs hover:bg-theme-accent hover:text-black transition-colors" onClick={() => handleSlashCommand('template')}>
-              <FileText size={16} /> TEMPLATES
-            </button>
-            <button className="slash-item flex items-center gap-3 w-full p-2 font-mono text-xs hover:bg-theme-accent hover:text-black transition-colors" onClick={() => handleSlashCommand('history')}>
-              <History size={16} /> VERSION_HISTORY
-            </button>
-            <button className="slash-item flex items-center gap-3 w-full p-2 font-mono text-xs hover:bg-theme-accent hover:text-black transition-colors" onClick={() => handleSlashCommand('dashboard')}>
-              <LayoutDashboard size={16} /> DASHBOARD
-            </button>
-            <button className="slash-item flex items-center gap-3 w-full p-2 font-mono text-xs hover:bg-theme-accent hover:text-black transition-colors" onClick={() => handleSlashCommand('save')}>
-              <CloudUpload size={16} /> SAVE_TO_CLOUD
-            </button>
-          </div>
-          <div className="slash-divider border-t-2 border-black my-1"></div>
-          <div className="slash-menu-label font-display text-[10px] uppercase tracking-widest p-3 bg-black text-theme-accent-secondary border-b-2 border-theme-accent-secondary">FORMATTING_MODULES</div>
-          <div className="p-1">
-            <button className="slash-item flex items-center gap-3 w-full p-2 font-mono text-xs hover:bg-theme-accent-secondary hover:text-black transition-colors" onClick={() => handleSlashCommand('h1')}>
-              <Heading1 size={16} /> HEADING_1
-            </button>
-            <button className="slash-item flex items-center gap-3 w-full p-2 font-mono text-xs hover:bg-theme-accent-secondary hover:text-black transition-colors" onClick={() => handleSlashCommand('h2')}>
-              <Heading2 size={16} /> HEADING_2
-            </button>
-            <button className="slash-item flex items-center gap-3 w-full p-2 font-mono text-xs hover:bg-theme-accent-secondary hover:text-black transition-colors" onClick={() => handleSlashCommand('list')}>
-              <List size={16} /> BULLET_LIST
-            </button>
-            <button className="slash-item flex items-center gap-3 w-full p-2 font-mono text-xs hover:bg-theme-accent-secondary hover:text-black transition-colors" onClick={() => handleSlashCommand('bold')}>
-              <Bold size={16} /> BOLD_TEXT
-            </button>
-            <button className="slash-item flex items-center gap-3 w-full p-2 font-mono text-xs hover:bg-theme-accent-secondary hover:text-black transition-colors" onClick={() => handleSlashCommand('collapse')}>
-              <ChevronDown size={16} /> COLLAPSIBLE_SECTION
-            </button>
-            <button className="slash-item flex items-center gap-3 w-full p-2 font-mono text-xs hover:bg-red-500 hover:text-white transition-colors" onClick={() => handleSlashCommand('clear')}>
-              <Trash2 size={16} /> CLEAR_DOCUMENT
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Slash menu removed */}
 
       {showChatHistory && (
         <div className="chat-history-sidebar border-l-4 border-black bg-theme-surface shadow-[-8px_0_0_0_#000] z-[2000]">

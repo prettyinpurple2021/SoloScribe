@@ -165,7 +165,7 @@ Rules:
   if (error) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#f8f9fa' }}>
-        <div style={{ backgroundColor: '#fff', padding: '30px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', textAlign: 'center', maxWidth: '400px' }}>
+        <div style={{ backgroundColor: '#fff', padding: '30px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', textAlign: 'center', width: '100%' }}>
           <h2 style={{ color: '#d93025', marginBottom: '10px' }}>Oops!</h2>
           <p style={{ color: '#666' }}>{error}</p>
         </div>
@@ -176,7 +176,7 @@ Rules:
   if (isFinished) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#f8f9fa' }}>
-        <div style={{ backgroundColor: '#fff', padding: '40px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', textAlign: 'center', maxWidth: '500px' }}>
+        <div style={{ backgroundColor: '#fff', padding: '40px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', textAlign: 'center', width: '100%' }}>
           {isSaving ? (
             <>
               <Loader2 className="animate-spin" size={48} color="#1a73e8" style={{ margin: '0 auto 20px' }} />
@@ -196,63 +196,53 @@ Rules:
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#f0f2f5', fontFamily: 'Inter, sans-serif' }}>
-      <div style={{ backgroundColor: '#fff', padding: '20px', borderBottom: '1px solid #e0e0e0', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', zIndex: 10 }}>
-        <h1 style={{ margin: 0, fontSize: '18px', color: '#333' }}>{interview.title}</h1>
-        <p style={{ margin: '5px 0 0 0', fontSize: '13px', color: '#666' }}>AI Research Interview</p>
+    <div className="public-interview-container paper-dots">
+      <div className="public-interview-header">
+        <h1 style={{ margin: 0, fontSize: '24px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '-1px' }}>{interview.title}</h1>
+        <p style={{ margin: '5px 0 0 0', fontSize: '11px', color: 'var(--theme-accent)', fontFamily: 'var(--font-mono)', fontWeight: 'bold' }}>AI_RESEARCH_PROTOCOL_v4.2</p>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px', maxWidth: '800px', margin: '0 auto', width: '100%' }}>
+      <div className="public-interview-messages">
         {messages.map((msg, idx) => (
-          <div key={idx} style={{ 
-            alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
-            backgroundColor: msg.role === 'user' ? '#1a73e8' : '#fff',
-            color: msg.role === 'user' ? '#fff' : '#333',
-            padding: '12px 16px',
-            borderRadius: '16px',
-            borderBottomRightRadius: msg.role === 'user' ? '4px' : '16px',
-            borderBottomLeftRadius: msg.role === 'model' ? '4px' : '16px',
-            maxWidth: '80%',
-            boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-            lineHeight: '1.5',
-            fontSize: '15px'
-          }}>
+          <div key={idx} className={msg.role === 'user' ? 'message user' : 'message agent'} style={{ maxWidth: '85%' }}>
             {msg.text}
           </div>
         ))}
         {isTyping && (
-          <div style={{ alignSelf: 'flex-start', backgroundColor: '#fff', padding: '12px 16px', borderRadius: '16px', borderBottomLeftRadius: '4px', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
-            <Loader2 className="animate-spin" size={16} color="#666" />
+          <div className="message agent" style={{ width: 'fit-content' }}>
+            <Loader2 className="animate-spin" size={16} />
           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      <div style={{ backgroundColor: '#fff', padding: '20px', borderTop: '1px solid #e0e0e0' }}>
-        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-          <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '10px' }}>
+      <div className="public-interview-input-area">
+        <div style={{ width: '100%' }}>
+          <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '12px' }}>
             <input
               type="text"
               value={input}
               onChange={e => setInput(e.target.value)}
-              placeholder="Type your answer here..."
+              placeholder="TYPE_YOUR_RESPONSE_HERE..."
               disabled={isTyping || isFinished}
-              style={{ flex: 1, padding: '15px', borderRadius: '24px', border: '1px solid #ccc', fontSize: '15px', outline: 'none' }}
+              className="brutalist-input"
+              style={{ borderRadius: '0px' }}
             />
             <button 
               type="submit" 
               disabled={!input.trim() || isTyping || isFinished}
-              style={{ backgroundColor: input.trim() && !isTyping ? '#1a73e8' : '#ccc', color: '#fff', border: 'none', borderRadius: '50%', width: '50px', height: '50px', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: input.trim() && !isTyping ? 'pointer' : 'default', transition: 'background-color 0.2s' }}
+              className="brutalist-button"
+              style={{ width: '60px', height: '50px', padding: 0 }}
             >
-              <Send size={20} style={{ marginLeft: '2px' }} />
+              <Send size={20} />
             </button>
           </form>
-          <div style={{ textAlign: 'center', marginTop: '15px' }}>
+          <div style={{ textAlign: 'center', marginTop: '16px' }}>
             <button 
               onClick={handleFinishInterview}
-              style={{ background: 'none', border: 'none', color: '#666', fontSize: '13px', cursor: 'pointer', textDecoration: 'underline' }}
+              className="bypass-link"
             >
-              End interview early
+              TERMINATE_INTERVIEW_EARLY
             </button>
           </div>
         </div>

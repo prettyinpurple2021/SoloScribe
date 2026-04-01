@@ -137,7 +137,7 @@ export default function Header() {
   const isSuperUser = name === 'Root' || name === 'root';
 
   return (
-    <header>
+    <header className="paper-dots">
       <div className="roomInfo">
         <button 
           className={c('workspace-toggle userSettingsButton', { active: showProjectSidebar })}

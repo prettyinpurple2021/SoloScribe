@@ -174,7 +174,7 @@ export const ProjectSidebar: React.FC = () => {
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="sidebar-container"
+            className="sidebar-container paper-dots"
             style={{
               position: 'fixed',
               top: 0,

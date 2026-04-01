@@ -134,7 +134,7 @@ export const PublicProjectView: React.FC = () => {
       }}>
         <Globe size={64} color="rgba(255,255,255,0.1)" style={{ marginBottom: '20px' }} />
         <h1 style={{ fontFamily: 'var(--font-display)', marginBottom: '10px' }}>Project Not Found</h1>
-        <p style={{ color: 'rgba(255,255,255,0.5)', maxWidth: '400px', marginBottom: '30px' }}>
+        <p style={{ color: 'rgba(255,255,255,0.5)', width: '100%', marginBottom: '30px' }}>
           The project you're looking for might have been made private or deleted by the owner.
         </p>
         <Link to="/" style={{ 
@@ -152,49 +152,26 @@ export const PublicProjectView: React.FC = () => {
   }
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      backgroundColor: 'var(--theme-bg)', 
-      color: 'white',
-      display: 'flex',
-      flexDirection: 'column'
-    }}>
+    <div className="public-project-container paper-notebook">
       {/* Public Header */}
-      <header style={{
-        padding: '20px 40px',
-        borderBottom: '1px solid rgba(0, 243, 255, 0.2)',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0, 243, 255, 0.05)',
-        backdropFilter: 'blur(10px)',
-        position: 'sticky',
-        top: 0,
-        zIndex: 100
-      }}>
+      <header className="public-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
           <div style={{
             width: '40px',
             height: '40px',
             borderRadius: '10px',
-            backgroundColor: 'var(--theme-accent)',
+            backgroundColor: 'var(--theme-bg)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 0 15px rgba(0, 243, 255, 0.5)'
+            border: '2px solid var(--line-color)'
           }}>
-            <FileText size={24} color="black" />
+            <FileText size={24} color="var(--theme-accent)" />
           </div>
           <div>
-            <h1 style={{ 
-              margin: 0, 
-              fontSize: '20px', 
-              fontFamily: 'var(--font-display)',
-              textTransform: 'uppercase',
-              letterSpacing: '1px'
-            }}>{project.name}</h1>
-            <div style={{ fontSize: '12px', color: 'var(--theme-accent)', opacity: 0.7 }}>
-              Shared via SoloScribe
+            <h1>{project.name}</h1>
+            <div style={{ fontSize: '12px', color: 'var(--theme-bg)', opacity: 0.7, fontFamily: 'var(--font-mono)' }}>
+              SHARED_VIA_SOLOSCRIBE_PROTOCOL
             </div>
           </div>
         </div>
@@ -203,36 +180,25 @@ export const PublicProjectView: React.FC = () => {
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
-          color: 'rgba(255,255,255,0.6)',
+          color: 'var(--theme-bg)',
           textDecoration: 'none',
           fontSize: '14px',
-          transition: 'color 0.2s ease'
-        }} onMouseEnter={(e) => e.currentTarget.style.color = 'var(--theme-accent)'}
-           onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}>
-          <ArrowLeft size={16} /> Back to App
+          fontWeight: 'bold',
+          fontFamily: 'var(--font-mono)'
+        }}>
+          <ArrowLeft size={16} /> RETURN_TO_BASE
         </Link>
       </header>
 
-      <main style={{ 
-        flex: 1, 
-        display: 'grid', 
-        gridTemplateColumns: '1fr 400px',
-        maxWidth: '1600px',
-        margin: '0 auto',
-        width: '100%',
-        padding: '40px'
-      }}>
+      <main className="public-main">
         {/* Document Content */}
-        <section style={{ 
-          paddingRight: '60px',
-          borderRight: '1px solid rgba(255,255,255,0.05)'
-        }}>
+        <section className="public-document-section">
           <div 
             className="markdown-body"
             style={{
               fontSize: '16px',
               lineHeight: '1.8',
-              color: 'rgba(255,255,255,0.9)',
+              color: 'var(--theme-text)',
               fontFamily: 'var(--font-sans)'
             }}
             dangerouslySetInnerHTML={{ __html: marked(project.documentContent) }}
@@ -240,7 +206,7 @@ export const PublicProjectView: React.FC = () => {
         </section>
 
         {/* Feedback Sidebar */}
-        <aside style={{ paddingLeft: '40px' }}>
+        <aside className="public-feedback-sidebar">
           <div style={{ 
             position: 'sticky', 
             top: '100px'
@@ -263,69 +229,33 @@ export const PublicProjectView: React.FC = () => {
             {/* Feedback Form */}
             <form 
               onSubmit={handleSubmitFeedback}
-              style={{
-                backgroundColor: 'rgba(255,255,255,0.03)',
-                padding: '20px',
-                borderRadius: '16px',
-                border: '1px solid rgba(0, 243, 255, 0.1)',
-                marginBottom: '30px'
-              }}
+              className="public-card"
+              style={{ marginBottom: '30px' }}
             >
               <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginBottom: '5px', textTransform: 'uppercase' }}>Your Name</label>
+                <label className="brutalist-label">Your Name</label>
                 <input 
                   type="text"
                   placeholder="e.g. Jane Doe"
                   value={authorName}
                   onChange={(e) => setAuthorName(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    backgroundColor: 'rgba(0,0,0,0.3)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: '8px',
-                    color: 'white',
-                    fontSize: '14px'
-                  }}
+                  className="brutalist-input"
                 />
               </div>
               <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginBottom: '5px', textTransform: 'uppercase' }}>Your Feedback</label>
+                <label className="brutalist-label">Your Feedback</label>
                 <textarea 
                   placeholder="What do you think about this plan?"
                   value={newFeedback}
                   onChange={(e) => setNewFeedback(e.target.value)}
-                  style={{
-                    width: '100%',
-                    height: '100px',
-                    padding: '10px',
-                    backgroundColor: 'rgba(0,0,0,0.3)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: '8px',
-                    color: 'white',
-                    fontSize: '14px',
-                    resize: 'none'
-                  }}
+                  className="brutalist-textarea"
+                  style={{ height: '100px' }}
                 />
               </div>
               <button 
                 type="submit"
                 disabled={isSubmitting}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  backgroundColor: 'var(--theme-accent)',
-                  color: 'black',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontWeight: 'bold',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  cursor: 'pointer',
-                  opacity: isSubmitting ? 0.7 : 1
-                }}
+                className="brutalist-button w-full"
               >
                 {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
                 Submit Feedback
@@ -334,7 +264,7 @@ export const PublicProjectView: React.FC = () => {
 
             {/* Feedback List */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              <h3 style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: '5px' }}>
+              <h3 className="brutalist-label">
                 Recent Comments ({feedback.length})
               </h3>
               
@@ -344,24 +274,20 @@ export const PublicProjectView: React.FC = () => {
                     key={item.id}
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    style={{
-                      padding: '15px',
-                      backgroundColor: 'rgba(255,255,255,0.02)',
-                      borderRadius: '12px',
-                      borderLeft: '3px solid var(--theme-accent)'
-                    }}
+                    className="public-card"
+                    style={{ padding: '15px' }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 'bold' }}>
                         <User size={14} color="var(--theme-accent)" />
                         {item.authorName}
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: 'rgba(255,255,255,0.3)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: 'var(--theme-text-muted)', fontFamily: 'var(--font-mono)' }}>
                         <Calendar size={10} />
                         {item.createdAt?.toDate ? new Date(item.createdAt.toDate()).toLocaleDateString() : 'Just now'}
                       </div>
                     </div>
-                    <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.7)', lineHeight: '1.5' }}>
+                    <p style={{ margin: 0, fontSize: '13px', color: 'var(--theme-text)', lineHeight: '1.5' }}>
                       {item.content}
                     </p>
                   </motion.div>
@@ -369,8 +295,8 @@ export const PublicProjectView: React.FC = () => {
               </AnimatePresence>
 
               {feedback.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '30px', color: 'rgba(255,255,255,0.2)' }}>
-                  <p style={{ fontSize: '12px' }}>No feedback yet. Be the first to share your thoughts!</p>
+                <div style={{ textAlign: 'center', padding: '30px', color: 'var(--theme-text-muted)' }}>
+                  <p style={{ fontSize: '12px', fontFamily: 'var(--font-mono)' }}>NO_FEEDBACK_DETECTED</p>
                 </div>
               )}
             </div>

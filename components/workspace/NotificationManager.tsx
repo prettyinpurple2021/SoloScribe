@@ -10,7 +10,8 @@ import {
   Timestamp,
   doc,
   updateDoc,
-  serverTimestamp
+  serverTimestamp,
+  arrayUnion
 } from 'firebase/firestore';
 import { toast } from 'sonner';
 
@@ -49,38 +50,78 @@ export function NotificationManager() {
 
     const checkNotifications = () => {
       const now = Date.now();
-      const reminderMs = notificationPreferences.reminderMinutes * 60 * 1000;
-
+      
       tasks.forEach(async (task) => {
-        if (task.completed || task.notified) return;
-        if (notifiedTasksRef.current.has(task.id)) return;
+        if (task.completed) return;
 
         const dueDateMs = task.dueDate.toMillis();
         const timeUntilDue = dueDateMs - now;
 
-        // If task is due within the reminder window OR is overdue
-        if (timeUntilDue <= reminderMs) {
-          notifiedTasksRef.current.add(task.id);
-          
-          const message = timeUntilDue <= 0 
-            ? `Task Overdue: ${task.title}` 
-            : `Upcoming Task: ${task.title} (Due in ${Math.round(timeUntilDue / 60000)}m)`;
+        // Check each reminder timing
+        notificationPreferences.reminderTimings.forEach(async (minutes) => {
+          const reminderMs = minutes * 60 * 1000;
+          const notificationKey = `${task.id}_${minutes}`;
 
-          // In-app toast
-          toast.info(message, {
-            description: `Due at ${task.dueDate.toDate().toLocaleString()}`,
-            duration: 10000,
+          // Check session cache OR firestore record
+          if (notifiedTasksRef.current.has(notificationKey)) return;
+          if (task.notifiedTimings?.includes(minutes)) return;
+
+          // If task is due within the reminder window
+          if (timeUntilDue <= reminderMs && timeUntilDue > reminderMs - 60000) {
+            notifiedTasksRef.current.add(notificationKey);
+            
+            const message = `Upcoming Task: ${task.title} (Due in ${minutes}m)`;
+
+            // In-app toast
+            toast.info(message, {
+              description: `Due at ${task.dueDate.toDate().toLocaleString()}`,
+              duration: 10000,
+            });
+
+            // Browser notification
+            if (notificationPreferences.browserNotifications && Notification.permission === 'granted') {
+              new Notification('SoloScribe Task Reminder', {
+                body: message,
+                icon: '/favicon.ico',
+              });
+            }
+
+            // Mark as notified in Firestore for this timing
+            if (user && currentProjectId) {
+              try {
+                const taskRef = doc(db, 'users', user.uid, 'projects', currentProjectId, 'tasks', task.id);
+                await updateDoc(taskRef, {
+                  notifiedTimings: arrayUnion(minutes),
+                  updatedAt: serverTimestamp(),
+                });
+              } catch (error) {
+                console.error("Error updating task notifiedTimings:", error);
+              }
+            }
+          }
+        });
+
+        // Special check for overdue or exactly due (0m)
+        if (timeUntilDue <= 0 && !task.notified) {
+          const notificationKey = `${task.id}_due`;
+          if (notifiedTasksRef.current.has(notificationKey)) return;
+          
+          notifiedTasksRef.current.add(notificationKey);
+          const message = `Task Overdue: ${task.title}`;
+
+          toast.error(message, {
+            description: `Was due at ${task.dueDate.toDate().toLocaleString()}`,
+            duration: 0, // Persistent until closed
           });
 
-          // Browser notification
           if (notificationPreferences.browserNotifications && Notification.permission === 'granted') {
-            new Notification('SoloScribe Task Reminder', {
+            new Notification('SoloScribe Task Overdue', {
               body: message,
-              icon: '/favicon.ico', // Fallback icon
+              icon: '/favicon.ico',
             });
           }
 
-          // Mark as notified in Firestore to prevent duplicate alerts
+          // Mark as notified in Firestore
           if (user && currentProjectId) {
             try {
               const taskRef = doc(db, 'users', user.uid, 'projects', currentProjectId, 'tasks', task.id);

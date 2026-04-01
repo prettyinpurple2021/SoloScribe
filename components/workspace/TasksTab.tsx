@@ -161,14 +161,20 @@ export default function TasksTab() {
         </div>
       </div>
 
-      {/* Notification Settings */}
+      {/* Notification Settings - Simplified since full settings are in UserSettings */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-muted/30 p-4 rounded-xl border border-border">
         <div className="space-y-2">
-          <label className="text-sm font-medium">Reminder Timing</label>
+          <label className="text-sm font-medium">Primary Reminder</label>
           <div className="flex items-center gap-2">
             <select
-              value={notificationPreferences.reminderMinutes}
-              onChange={(e) => setNotificationPreferences({ reminderMinutes: parseInt(e.target.value) })}
+              value={notificationPreferences.reminderTimings[0] || 30}
+              onChange={(e) => {
+                const mins = parseInt(e.target.value);
+                const current = notificationPreferences.reminderTimings;
+                if (!current.includes(mins)) {
+                  setNotificationPreferences({ reminderTimings: [mins, ...current.filter(m => m !== mins)].sort((a, b) => a - b) });
+                }
+              }}
               className="bg-background border border-border rounded-md px-2 py-1 text-sm"
             >
               <option value={5}>5 minutes before</option>
@@ -177,7 +183,7 @@ export default function TasksTab() {
               <option value={60}>1 hour before</option>
               <option value={1440}>1 day before</option>
             </select>
-            <span className="text-xs text-muted-foreground">Lead time for alerts</span>
+            <span className="text-xs text-muted-foreground">Quick set primary alert</span>
           </div>
         </div>
         <div className="flex items-center gap-2">

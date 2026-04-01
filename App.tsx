@@ -91,7 +91,7 @@ function AppContent() {
       {showDebugModal && <DebugModal />}
       {showHelpModal && <HelpModal />}
       {showDisclaimer && <LegalDisclaimer />}
-      <div className="streaming-console">
+      <div className="streaming-console paper-legal">
         <main>
           <div className="main-app-area">
             <ErrorBoundary>

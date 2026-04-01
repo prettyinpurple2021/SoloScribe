@@ -235,7 +235,7 @@ function ControlTray({ children }: ControlTrayProps) {
           </div>
         </div>
       )}
-      <div className="control-tray">
+      <div className="control-tray paper-dots">
         <div className="control-tray-left">
           <button
             className="action-button help-button brutalist-button"

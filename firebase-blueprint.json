@@ -100,7 +100,8 @@
         "description": { "type": "string" },
         "dueDate": { "type": "string", "format": "date-time" },
         "completed": { "type": "boolean" },
-        "notified": { "type": "boolean", "description": "Whether the user has been notified about this task" },
+        "notified": { "type": "boolean", "description": "Whether the user has been notified about this task being due/overdue" },
+        "notifiedTimings": { "type": "array", "items": { "type": "integer" }, "description": "List of reminder minutes that have already been notified" },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },

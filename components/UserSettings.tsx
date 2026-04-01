@@ -8,7 +8,7 @@ import { Theme, themes } from '../lib/themes';
 import { FONT_OPTIONS, PLACEHOLDER_DOC } from '../lib/constants';
 import React, { useState, useRef } from 'react';
 import * as pdfjs from 'pdfjs-dist';
-import { FileUp, X, FileText, Loader2, ChevronDown, Sparkles } from 'lucide-react';
+import { FileUp, X, FileText, Loader2, ChevronDown, Sparkles, Bell, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 
 // Set up PDF.js worker
@@ -89,7 +89,20 @@ export default function UserSettings() {
   const { name, info, topic, format, setName, setInfo, setTopic, setFormat, contextFiles, addContextFile, removeContextFile } =
     useUser();
   // Hooks to manage UI state (modal visibility, current theme)
-  const { setShowUserConfig, font, setFont, useSearch, setUseSearch, liveApiModel, setLiveApiModel, documentContent, setHasCompletedOnboarding, setShowWelcomeScreen } = useUI();
+  const { 
+    setShowUserConfig, 
+    font, 
+    setFont, 
+    useSearch, 
+    setUseSearch, 
+    liveApiModel, 
+    setLiveApiModel, 
+    documentContent, 
+    setHasCompletedOnboarding, 
+    setShowWelcomeScreen,
+    notificationPreferences,
+    setNotificationPreferences
+  } = useUI();
   // Hooks to manage agent state (needed for updating agent color on theme change)
   const { current: agent, update: updateAgent } = useAgent();
 
@@ -113,6 +126,34 @@ export default function UserSettings() {
   const handleEditAgent = () => {
     setShowUserConfig(false);
     useUI.getState().setShowAgentEdit(true);
+  };
+
+  const handleRequestNotificationPermission = async () => {
+    if (!('Notification' in window)) {
+      toast.error('This browser does not support desktop notifications');
+      return;
+    }
+
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      setNotificationPreferences({ browserNotifications: true });
+      toast.success('Notifications enabled!');
+    } else {
+      toast.error('Notification permission denied');
+    }
+  };
+
+  const toggleReminderTiming = (minutes: number) => {
+    const current = notificationPreferences.reminderTimings;
+    if (current.includes(minutes)) {
+      setNotificationPreferences({ 
+        reminderTimings: current.filter(m => m !== minutes) 
+      });
+    } else {
+      setNotificationPreferences({ 
+        reminderTimings: [...current, minutes].sort((a, b) => a - b) 
+      });
+    }
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -179,67 +220,119 @@ export default function UserSettings() {
             updateClient();
           }}
         >
-          <div className="settings-grid">
-            <div>
-              <p className="input-label">Your name</p>
-              <input
-                type="text"
-                name="name"
-                className="brutalist-input"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder="What do you like to be called?"
-              />
-            </div>
+          {/* Identity Section */}
+          <div className="settings-section">
+            <h3 className="section-title"><Sparkles size={16} /> Identity & Context</h3>
+            <div className="settings-grid">
+              <div>
+                <p className="input-label">Your name</p>
+                <input
+                  type="text"
+                  name="name"
+                  className="brutalist-input"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="What do you like to be called?"
+                />
+              </div>
 
-            <div>
-              <p className="input-label">Topic</p>
-              <input
-                type="text"
-                name="topic"
-                className="brutalist-input"
-                value={topic}
-                onChange={e => setTopic(e.target.value)}
-                placeholder="A business plan, pitch deck, marketing strategy, lean canvas, etc."
-              />
-            </div>
-          </div>
-
-          <div className="settings-grid">
-            <div>
-              <p className="input-label">Document Font</p>
-              <CustomDropdown
-                value={font}
-                options={FONT_OPTIONS}
-                onChange={setFont}
-                placeholder="Select a font"
-              />
-            </div>
-
-            <div>
-              <p className="input-label">Live API Model</p>
-              <CustomDropdown
-                value={liveApiModel === 'gemini-2.5-flash-native-audio-preview-12-2025' ? '12-2025' : '09-2025 (Default)'}
-                options={['12-2025', '09-2025 (Default)']}
-                onChange={(val) => setLiveApiModel(val === '12-2025' ? 'gemini-2.5-flash-native-audio-preview-12-2025' : 'gemini-2.5-flash-native-audio-preview-09-2025')}
-              />
+              <div>
+                <p className="input-label">Topic</p>
+                <input
+                  type="text"
+                  name="topic"
+                  className="brutalist-input"
+                  value={topic}
+                  onChange={e => setTopic(e.target.value)}
+                  placeholder="A business plan, pitch deck, marketing strategy, lean canvas, etc."
+                />
+              </div>
             </div>
           </div>
 
-          <div style={{ marginTop: '15px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={useSearch}
-                onChange={e => setUseSearch(e.target.checked)}
-                style={{ width: '18px', height: '18px' }}
-              />
-              <span>Use search as needed</span>
-            </label>
+          {/* Notifications Section - PROMINENT */}
+          <div className="settings-section prominent-section">
+            <h3 className="section-title"><Bell size={16} /> Task Notifications</h3>
+            <div className="notification-controls">
+              <div className="flex items-center justify-between mb-4">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={notificationPreferences.enabled}
+                    onChange={e => setNotificationPreferences({ enabled: e.target.checked })}
+                    className="brutalist-checkbox"
+                  />
+                  <span className="font-bold">Enable Reminders</span>
+                </label>
+
+                <button
+                  type="button"
+                  onClick={handleRequestNotificationPermission}
+                  className={`brutalist-button-small ${notificationPreferences.browserNotifications ? 'active' : ''}`}
+                >
+                  {notificationPreferences.browserNotifications ? 'Browser Notifications Active' : 'Enable Browser Notifications'}
+                </button>
+              </div>
+
+              {notificationPreferences.enabled && (
+                <div className="reminder-timings">
+                  <p className="input-label mb-2">Reminder Timings (minutes before due)</p>
+                  <div className="flex flex-wrap gap-2">
+                    {[5, 15, 30, 60, 120, 1440].map(mins => (
+                      <button
+                        key={mins}
+                        type="button"
+                        onClick={() => toggleReminderTiming(mins)}
+                        className={`timing-chip ${notificationPreferences.reminderTimings.includes(mins) ? 'active' : ''}`}
+                      >
+                        {mins < 60 ? `${mins}m` : mins === 1440 ? '1d' : `${mins / 60}h`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Appearance Section */}
+          <div className="settings-section">
+            <h3 className="section-title"><Settings size={16} /> Appearance & Model</h3>
+            <div className="settings-grid">
+              <div>
+                <p className="input-label">Document Font</p>
+                <CustomDropdown
+                  value={font}
+                  options={FONT_OPTIONS}
+                  onChange={setFont}
+                  placeholder="Select a font"
+                />
+              </div>
+
+              <div>
+                <p className="input-label">Live API Model</p>
+                <CustomDropdown
+                  value={liveApiModel === 'gemini-2.5-flash-native-audio-preview-12-2025' ? '12-2025' : '09-2025 (Default)'}
+                  options={['12-2025', '09-2025 (Default)']}
+                  onChange={(val) => setLiveApiModel(val === '12-2025' ? 'gemini-2.5-flash-native-audio-preview-12-2025' : 'gemini-2.5-flash-native-audio-preview-09-2025')}
+                />
+              </div>
+            </div>
+
+            <div style={{ marginTop: '15px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={useSearch}
+                  onChange={e => setUseSearch(e.target.checked)}
+                  style={{ width: '18px', height: '18px' }}
+                />
+                <span>Use search as needed</span>
+              </label>
+            </div>
           </div>
 
           <details style={{ marginTop: '15px' }}>
-            <summary>Context (Optional)</summary>
+            <summary>Context & Documents (Optional)</summary>
             <div className="details-content">
               <p className="context-description">
                 Provide any background info worth knowing for this session.
@@ -301,8 +394,8 @@ export default function UserSettings() {
           </details>
 
           {documentContent === PLACEHOLDER_DOC && (
-            <div>
-              <p>Output Format</p>
+            <div style={{ marginTop: '15px' }}>
+              <p className="input-label">Output Format</p>
               <div className="format-selector">
                 {FORMAT_OPTIONS.map(f => (
                   <label key={f} className="format-option">
