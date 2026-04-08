@@ -107,7 +107,7 @@ export class GenAILiveClient {
 
     while (attempt < maxRetries) {
       try {
-        console.log(`[GenAILiveClient] Connection attempt ${attempt + 1} of ${maxRetries}...`);
+        this.log('client.connect', `Connection attempt ${attempt + 1} of ${maxRetries}...`);
         this.session = await this.client.live.connect({
           model: this.model,
           config: { ...config },
@@ -115,7 +115,7 @@ export class GenAILiveClient {
         });
         this._status = 'connected';
         this.isRetrying = false;
-        console.log(`[GenAILiveClient] Connected successfully on attempt ${attempt + 1}`);
+        this.log('client.connect', `Connected successfully on attempt ${attempt + 1}`);
         return true; // Success
       } catch (e: any) {
         attempt++;
@@ -130,18 +130,18 @@ export class GenAILiveClient {
 
         if (isTransient && attempt < maxRetries) {
           const delay = initialDelay * Math.pow(2, attempt - 1);
-          console.warn(`[GenAILiveClient] Transient error: "${errorMessage}". Retrying in ${delay}ms... (Attempt ${attempt}/${maxRetries})`);
+          this.log('client.warn', `Transient error: "${errorMessage}". Retrying in ${delay}ms... (Attempt ${attempt}/${maxRetries})`);
           
           // Explicitly wait for the delay period
           await new Promise((resolve) => {
             setTimeout(() => {
-              console.log(`[GenAILiveClient] Wait finished. Retrying now...`);
+              this.log('client.connect', `Wait finished. Retrying now...`);
               resolve(true);
             }, delay);
           });
         } else {
           this.isRetrying = false;
-          console.error('[GenAILiveClient] Permanent error or max retries reached:', e);
+          this.log('client.error', `Permanent error or max retries reached: ${e}`);
           this._status = 'disconnected';
           this.session = undefined;
           // Emit the error now that isRetrying is false
@@ -200,7 +200,7 @@ export class GenAILiveClient {
     try {
       this.session!.sendRealtimeInput(chunks);
     } catch (e: any) {
-      console.error('Error sending realtime input:', e);
+      this.log('client.error', `Error sending realtime input: ${e}`);
       this.onError(e);
     }
 
@@ -309,14 +309,13 @@ export class GenAILiveClient {
         !serverContent.turnComplete &&
         !serverContent.generationComplete
       ) {
-        console.log('received unmatched message', message);
+        this.log('server.unmatched', message);
       }
     }
   }
 
   protected onError(e: any) {
     this._status = 'disconnected';
-    console.error('GenAI Live Error:', e);
     const errorMessage = e.message || (typeof e === 'string' ? e : 'Unknown error');
     const message = `GenAI Live Error: ${errorMessage}`;
     this.log(`server.error`, message);

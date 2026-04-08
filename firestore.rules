@@ -49,9 +49,11 @@ service cloud.firestore {
     //   - userId: string (required)
     //   - title: string (required)
     //   - description: string (optional)
+    //   - priority: string (required, 'low', 'medium', 'high')
     //   - dueDate: timestamp (required)
     //   - completed: boolean (required)
     //   - notified: boolean (optional)
+    //   - notifiedTimings: list (optional)
     //   - createdAt: timestamp (optional)
     //   - updatedAt: timestamp (optional)
     //
@@ -201,17 +203,19 @@ service cloud.firestore {
     }
 
     function isValidTask() {
-      let allowedFields = ['id', 'projectId', 'userId', 'title', 'description', 'dueDate', 'completed', 'notified', 'createdAt', 'updatedAt'];
+      let allowedFields = ['id', 'projectId', 'userId', 'title', 'description', 'priority', 'dueDate', 'completed', 'notified', 'notifiedTimings', 'createdAt', 'updatedAt'];
       return hasOnlyAllowedFields(allowedFields) &&
-             hasRequiredFields(['id', 'projectId', 'userId', 'title', 'dueDate', 'completed']) &&
+             hasRequiredFields(['id', 'projectId', 'userId', 'title', 'priority', 'dueDate', 'completed']) &&
              isValidString('id', 1, 100) &&
              isValidString('projectId', 1, 100) &&
              isValidString('userId', 1, 100) &&
              isValidString('title', 1, 500) &&
              isValidOptionalString('description', 0, 5000) &&
+             request.resource.data.priority in ['low', 'medium', 'high'] &&
              isTimestamp('dueDate') &&
              request.resource.data.completed is bool &&
              (!( 'notified' in request.resource.data ) || request.resource.data.notified is bool) &&
+             isValidOptionalList('notifiedTimings', 10) &&
              isOptionalTimestamp('createdAt') &&
              isOptionalTimestamp('updatedAt');
     }

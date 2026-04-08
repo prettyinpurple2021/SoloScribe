@@ -6,6 +6,7 @@ import { useLogStore, usePerfLogStore } from '../lib/state';
 import Modal from './Modal';
 import { useUI } from '../lib/state';
 import React, { useEffect, useMemo, useState } from 'react';
+import { Tooltip } from './Tooltip';
 
 /**
  * Assigns a specific CSS class to a log row based on the API/Action type
@@ -124,7 +125,9 @@ export default function DebugModal() {
         <div className="debug-header">
           <div className="debug-header-top">
             <div className="debug-actions">
-              <button onClick={handleCopyLogs} className="brutalist-button">{copyButtonText}</button>
+              <Tooltip content="Copy all logs to clipboard as JSON" position="bottom">
+                <button onClick={handleCopyLogs} className="brutalist-button">{copyButtonText}</button>
+              </Tooltip>
             </div>
           </div>
           <div className="debug-stats">
@@ -166,24 +169,30 @@ export default function DebugModal() {
             </label>
           </div>
           <div className="debug-tabs">
-            <button
-              onClick={() => setActiveTab('interactions')}
-              className={activeTab === 'interactions' ? 'active' : ''}
-            >
-              Interaction Log
-            </button>
-            <button
-              onClick={() => setActiveTab('performance')}
-              className={activeTab === 'performance' ? 'active' : ''}
-            >
-              Performance Log
-            </button>
-            <button
-              onClick={() => setActiveTab('suppressed')}
-              className={activeTab === 'suppressed' ? 'active' : ''}
-            >
-              Suppressed Log
-            </button>
+            <Tooltip content="View GenAI interaction logs" position="top">
+              <button
+                onClick={() => setActiveTab('interactions')}
+                className={activeTab === 'interactions' ? 'active' : ''}
+              >
+                Interaction Log
+              </button>
+            </Tooltip>
+            <Tooltip content="View system performance logs" position="top">
+              <button
+                onClick={() => setActiveTab('performance')}
+                className={activeTab === 'performance' ? 'active' : ''}
+              >
+                Performance Log
+              </button>
+            </Tooltip>
+            <Tooltip content="View logs suppressed by filters" position="top">
+              <button
+                onClick={() => setActiveTab('suppressed')}
+                className={activeTab === 'suppressed' ? 'active' : ''}
+              >
+                Suppressed Log
+              </button>
+            </Tooltip>
           </div>
         </div>
 
@@ -386,7 +395,9 @@ export default function DebugModal() {
         {activeTab === 'performance' && (
            <div className="debug-log-container">
               <div className="debug-controls">
-                <button onClick={clearPerfLogs}>Clear Performance Logs</button>
+                <Tooltip content="Clear all performance logs" position="right">
+                  <button onClick={clearPerfLogs}>Clear Performance Logs</button>
+                </Tooltip>
               </div>
               <table>
                 <thead>

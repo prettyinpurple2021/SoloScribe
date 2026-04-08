@@ -27,6 +27,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
+import { ConfirmModal } from '../Modal';
+import { Tooltip } from '../Tooltip';
 
 export const ProjectSidebar: React.FC = () => {
   const { user } = useAuth();
@@ -46,6 +48,7 @@ export const ProjectSidebar: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -101,9 +104,8 @@ export const ProjectSidebar: React.FC = () => {
     setShowProjectSidebar(false);
   };
 
-  const handleDeleteProject = async (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    if (!user || !window.confirm('Are you sure you want to delete this project?')) return;
+  const handleDeleteProject = async (id: string) => {
+    if (!user) return;
 
     try {
       await deleteDoc(doc(db, 'users', user.uid, 'projects', id));
@@ -113,8 +115,9 @@ export const ProjectSidebar: React.FC = () => {
         setTranscript([]);
       }
       toast.success('Project deleted');
+      setShowDeleteConfirm(null);
     } catch (error) {
-      console.error('Error deleting project:', error);
+      handleFirestoreError(error, OperationType.DELETE, `users/${user.uid}/projects/${id}`);
       toast.error('Failed to delete project');
     }
   };
@@ -190,12 +193,14 @@ export const ProjectSidebar: React.FC = () => {
                 <Folder size={20} color="var(--theme-accent)" />
                 <h2>Workspace</h2>
               </div>
-              <button 
-                onClick={() => setShowProjectSidebar(false)}
-                className="project-action-btn"
-              >
-                <X size={20} />
-              </button>
+              <Tooltip content="Close Workspace" position="left">
+                <button 
+                  onClick={() => setShowProjectSidebar(false)}
+                  className="project-action-btn"
+                >
+                  <X size={20} />
+                </button>
+              </Tooltip>
             </div>
 
             {/* Search */}
@@ -216,12 +221,14 @@ export const ProjectSidebar: React.FC = () => {
             <div className="sidebar-content">
               <div className="sidebar-content-header">
                 <span className="theme-label">Your Documents</span>
-                <button 
-                  onClick={() => setIsCreating(true)}
-                  className="brutalist-button mini"
-                >
-                  <Plus size={12} /> NEW
-                </button>
+                <Tooltip content="Create New Project" position="left">
+                  <button 
+                    onClick={() => setIsCreating(true)}
+                    className="brutalist-button mini"
+                  >
+                    <Plus size={12} /> NEW
+                  </button>
+                </Tooltip>
               </div>
 
               {isCreating && (
@@ -287,18 +294,22 @@ export const ProjectSidebar: React.FC = () => {
                     </div>
 
                     <div className="project-actions">
-                      <button 
-                        onClick={(e) => handleStartEdit(e, project)}
-                        className="project-action-btn"
-                      >
-                        <Edit3 size={14} />
-                      </button>
-                      <button 
-                        onClick={(e) => handleDeleteProject(e, project.id)}
-                        className="project-action-btn"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      <Tooltip content="Rename Project" position="top">
+                        <button 
+                          onClick={(e) => handleStartEdit(e, project)}
+                          className="project-action-btn"
+                        >
+                          <Edit3 size={14} />
+                        </button>
+                      </Tooltip>
+                      <Tooltip content="Delete Project" position="top">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(project.id); }}
+                          className="project-action-btn"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </Tooltip>
                     </div>
                   </div>
                 ))}
@@ -317,6 +328,17 @@ export const ProjectSidebar: React.FC = () => {
               SOLOSCRIBE_WORKSPACE_V1.0 // SYSTEM_READY
             </div>
           </motion.div>
+
+          {showDeleteConfirm && (
+            <ConfirmModal 
+              title="Delete Project?"
+              message="Are you sure you want to delete this project? This action cannot be undone and all document content will be lost."
+              onConfirm={() => handleDeleteProject(showDeleteConfirm)}
+              onCancel={() => setShowDeleteConfirm(null)}
+              confirmText="Delete Project"
+              variant="danger"
+            />
+          )}
         </>
       )}
     </AnimatePresence>

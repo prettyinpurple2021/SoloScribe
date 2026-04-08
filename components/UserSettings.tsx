@@ -8,8 +8,9 @@ import { Theme, themes } from '../lib/themes';
 import { FONT_OPTIONS, PLACEHOLDER_DOC } from '../lib/constants';
 import React, { useState, useRef } from 'react';
 import * as pdfjs from 'pdfjs-dist';
-import { FileUp, X, FileText, Loader2, ChevronDown, Sparkles, Bell, Settings } from 'lucide-react';
+import { FileUp, X, FileText, Loader2, ChevronDown, Sparkles, Bell, Settings, Camera, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import { Tooltip } from './Tooltip';
 
 // Set up PDF.js worker
 // Using unpkg as it's often more reliable for specific versioned assets
@@ -17,6 +18,97 @@ pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.vers
 
 type FormatOption = 'Markdown' | 'HTML';
 const FORMAT_OPTIONS: FormatOption[] = ['Markdown', 'HTML'];
+
+/**
+ * A component to capture a profile picture using the camera.
+ */
+function CameraCapture({ onCapture, initialImage }: { onCapture: (data: string | undefined) => void, initialImage?: string }) {
+  const [isStreaming, setIsStreaming] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+
+  const startCamera = async () => {
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      setStream(mediaStream);
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+        setIsStreaming(true);
+      }
+    } catch (err) {
+      console.error("Error accessing camera:", err);
+      toast.error("Could not access camera. Please check permissions.");
+    }
+  };
+
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+      setIsStreaming(false);
+    }
+  };
+
+  const captureImage = () => {
+    if (videoRef.current && canvasRef.current) {
+      const context = canvasRef.current.getContext('2d');
+      if (context) {
+        canvasRef.current.width = videoRef.current.videoWidth;
+        canvasRef.current.height = videoRef.current.videoHeight;
+        context.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
+        const dataUrl = canvasRef.current.toDataURL('image/png');
+        onCapture(dataUrl);
+        stopCamera();
+      }
+    }
+  };
+
+  const clearImage = () => {
+    onCapture(undefined);
+  };
+
+  return (
+    <div className="camera-capture-container">
+      <div className="camera-preview-wrapper">
+        {isStreaming ? (
+          <video ref={videoRef} autoPlay playsInline className="camera-preview" />
+        ) : initialImage ? (
+          <img src={initialImage} alt="Profile" className="profile-picture-img" />
+        ) : (
+          <div className="flex items-center justify-center h-full opacity-20">
+            <Camera size={48} />
+          </div>
+        )}
+      </div>
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
+      
+      <div className="camera-actions">
+        {!isStreaming ? (
+          <>
+            <button type="button" onClick={startCamera} className="brutalist-button camera-btn">
+              {initialImage ? 'Retake' : 'Capture'}
+            </button>
+            {initialImage && (
+              <button type="button" onClick={clearImage} className="brutalist-button-outline camera-btn">
+                Remove
+              </button>
+            )}
+          </>
+        ) : (
+          <>
+            <button type="button" onClick={captureImage} className="brutalist-button camera-btn">
+              Snap
+            </button>
+            <button type="button" onClick={stopCamera} className="brutalist-button-outline camera-btn">
+              Cancel
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
 
 /**
  * A custom dropdown component for settings.
@@ -86,7 +178,7 @@ function CustomDropdown({
  */
 export default function UserSettings() {
   // Hooks to manage user-specific data (name, info, topic, etc.)
-  const { name, info, topic, format, setName, setInfo, setTopic, setFormat, contextFiles, addContextFile, removeContextFile } =
+  const { name, info, topic, format, profilePicture, setName, setInfo, setTopic, setFormat, setProfilePicture, contextFiles, addContextFile, removeContextFile } =
     useUser();
   // Hooks to manage UI state (modal visibility, current theme)
   const { 
@@ -223,6 +315,9 @@ export default function UserSettings() {
           {/* Identity Section */}
           <div className="settings-section">
             <h3 className="section-title"><Sparkles size={16} /> Identity & Context</h3>
+            
+            <CameraCapture onCapture={setProfilePicture} initialImage={profilePicture} />
+
             <div className="settings-grid">
               <div>
                 <p className="input-label">Your name</p>
@@ -376,14 +471,18 @@ export default function UserSettings() {
                       {contextFiles.map(file => (
                         <div key={file.name} className="pdf-item">
                           <FileText size={14} className="pdf-icon" />
-                          <span className="pdf-name" title={file.name}>{file.name}</span>
-                          <button
-                            type="button"
-                            className="pdf-remove"
-                            onClick={() => removeContextFile(file.name)}
-                          >
-                            <X size={14} />
-                          </button>
+                          <Tooltip content={file.name} position="top">
+                            <span className="pdf-name">{file.name}</span>
+                          </Tooltip>
+                          <Tooltip content="Remove File" position="top">
+                            <button
+                              type="button"
+                              className="pdf-remove"
+                              onClick={() => removeContextFile(file.name)}
+                            >
+                              <X size={14} />
+                            </button>
+                          </Tooltip>
                         </div>
                       ))}
                     </div>

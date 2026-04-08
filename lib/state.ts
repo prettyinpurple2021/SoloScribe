@@ -54,6 +54,7 @@ export type User = {
   topic?: string;
   format: 'Markdown' | 'HTML';
   contextFiles: ContextFile[];
+  profilePicture?: string;
 };
 
 export const useUser = create<
@@ -62,6 +63,7 @@ export const useUser = create<
     setInfo: (info: string) => void;
     setTopic: (topic: string) => void;
     setFormat: (format: 'Markdown' | 'HTML') => void;
+    setProfilePicture: (data: string | undefined) => void;
     addContextFile: (file: ContextFile) => void;
     removeContextFile: (name: string) => void;
     clearContextFiles: () => void;
@@ -72,11 +74,13 @@ export const useUser = create<
   info: '',
   topic: '',
   format: 'Markdown',
+  profilePicture: undefined,
   contextFiles: [],
   setName: name => set({ name }),
   setInfo: info => set({ info }),
   setTopic: topic => set({ topic }),
   setFormat: format => set({ format }),
+  setProfilePicture: profilePicture => set({ profilePicture }),
   addContextFile: file => set(state => ({ contextFiles: [...state.contextFiles, file] })),
   removeContextFile: name => set(state => ({ contextFiles: state.contextFiles.filter(f => f.name !== name) })),
   clearContextFiles: () => set({ contextFiles: [] }),
@@ -196,6 +200,7 @@ export type Task = {
   userId: string;
   title: string;
   description?: string;
+  priority: 'low' | 'medium' | 'high';
   dueDate: any; // Firestore Timestamp
   completed: boolean;
   notified?: boolean;
@@ -245,8 +250,8 @@ export const useUI = create<{
   incrementChangeCount: () => void;
   agentState: string | null;
   setAgentState: (state: string | null) => void;
-  mainTab: 'document' | 'transcript' | 'minutes' | 'audio-log' | 'chatbot' | 'tools' | 'validation' | 'projections' | 'roadmap' | 'tasks';
-  setMainTab: (tab: 'document' | 'transcript' | 'minutes' | 'audio-log' | 'chatbot' | 'tools' | 'validation' | 'projections' | 'roadmap' | 'tasks') => void;
+  mainTab: 'document' | 'transcript' | 'minutes' | 'audio-log' | 'chatbot' | 'tools' | 'validation' | 'projections' | 'roadmap' | 'tasks' | 'marketing';
+  setMainTab: (tab: 'document' | 'transcript' | 'minutes' | 'audio-log' | 'chatbot' | 'tools' | 'validation' | 'projections' | 'roadmap' | 'tasks' | 'marketing') => void;
   documentTab: 'editor' | 'rendered';
   setDocumentTab: (tab: 'editor' | 'rendered') => void;
   speechBubbleText: string | null;

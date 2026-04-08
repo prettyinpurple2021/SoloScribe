@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { db } from '../firebase';
+import { db, OperationType, handleFirestoreError } from '../firebase';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { GoogleGenAI } from '@google/genai';
 import { Loader2, Send, CheckCircle } from 'lucide-react';
@@ -35,7 +35,7 @@ export const PublicInterview: React.FC<PublicInterviewProps> = ({ interviewId })
           setError('Interview not found. The link may be invalid or expired.');
         }
       } catch (err) {
-        console.error(err);
+        handleFirestoreError(err, OperationType.GET, `interviews/${interviewId}`);
         setError('Failed to load interview.');
       } finally {
         setLoading(false);
@@ -138,6 +138,7 @@ Rules:
       });
 
       const responseId = crypto.randomUUID();
+      const path = `interviews/${interviewId}/responses/${responseId}`;
       const responseRef = doc(db, `interviews/${interviewId}/responses`, responseId);
       
       await setDoc(responseRef, {
@@ -148,7 +149,7 @@ Rules:
       });
 
     } catch (err) {
-      console.error("Failed to save interview response:", err);
+      handleFirestoreError(err, OperationType.WRITE, `interviews/${interviewId}/responses`);
     } finally {
       setIsSaving(false);
     }

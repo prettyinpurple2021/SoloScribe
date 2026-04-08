@@ -4,7 +4,8 @@ import { thinkDeeply } from '../../lib/ai-tools';
 import { Users, Loader2, Plus, Link as LinkIcon, MessageSquare } from 'lucide-react';
 import { marked } from 'marked';
 import { useAuth } from '../../contexts/AuthContext';
-import { db } from '../../firebase';
+import { Tooltip } from '../Tooltip';
+import { db, OperationType, handleFirestoreError } from '../../firebase';
 import { collection, doc, setDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
 
@@ -37,7 +38,7 @@ export const ValidationEngineTab: React.FC = () => {
       const fetchedCampaigns = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setCampaigns(fetchedCampaigns);
     } catch (error) {
-      console.error("Error fetching campaigns:", error);
+      handleFirestoreError(error, OperationType.LIST, `interviews?userId=${user.uid}`);
     }
   };
 
@@ -48,7 +49,7 @@ export const ValidationEngineTab: React.FC = () => {
       const responses = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setCampaignResponses(responses);
     } catch (error) {
-      console.error("Error fetching responses:", error);
+      handleFirestoreError(error, OperationType.LIST, `interviews/${interviewId}/responses`);
     }
   };
 
@@ -81,7 +82,7 @@ export const ValidationEngineTab: React.FC = () => {
       fetchCampaigns();
       toast.success("Campaign created successfully!");
     } catch (error) {
-      console.error("Error creating campaign:", error);
+      handleFirestoreError(error, OperationType.CREATE, `interviews`);
       toast.error("Failed to create campaign.");
     } finally {
       setIsLoading(false);
@@ -127,43 +128,53 @@ export const ValidationEngineTab: React.FC = () => {
       <p style={{ marginBottom: '20px', color: '#666' }}>Ensure you are building something people actually want.</p>
 
       <div style={{ display: 'flex', gap: '15px', marginBottom: '30px', borderBottom: '1px solid #eee', paddingBottom: '15px', flexWrap: 'wrap' }}>
-        <button
-          onClick={() => setActiveTool('interviews')}
-          style={{ padding: '10px 20px', borderRadius: '0px', backgroundColor: activeTool === 'interviews' ? 'var(--theme-accent)' : 'transparent', color: activeTool === 'interviews' ? 'var(--theme-bg)' : 'var(--theme-text)', border: '2px solid var(--theme-text)', cursor: 'pointer', fontWeight: 'bold', fontFamily: 'var(--font-mono)', fontSize: '12px' }}
-        >
-          AI Interview Campaigns
-        </button>
-        <button
-          onClick={() => { setActiveTool('hypothesis-tester'); setResult(null); }}
-          style={{ padding: '10px 20px', borderRadius: '0px', backgroundColor: activeTool === 'hypothesis-tester' ? 'var(--theme-accent)' : 'transparent', color: activeTool === 'hypothesis-tester' ? 'var(--theme-bg)' : 'var(--theme-text)', border: '2px solid var(--theme-text)', cursor: 'pointer', fontWeight: 'bold', fontFamily: 'var(--font-mono)', fontSize: '12px' }}
-        >
-          Hypothesis Tester
-        </button>
-        <button
-          onClick={() => runValidation('plan-reviewer')}
-          style={{ padding: '10px 20px', borderRadius: '0px', backgroundColor: activeTool === 'plan-reviewer' ? 'var(--theme-accent)' : 'transparent', color: activeTool === 'plan-reviewer' ? 'var(--theme-bg)' : 'var(--theme-text)', border: '2px solid var(--theme-text)', cursor: 'pointer', fontWeight: 'bold', fontFamily: 'var(--font-mono)', fontSize: '12px' }}
-        >
-          Business Plan Reviewer
-        </button>
-        <button
-          onClick={() => runValidation('mom-test')}
-          style={{ padding: '10px 20px', borderRadius: '0px', backgroundColor: activeTool === 'mom-test' ? 'var(--theme-accent)' : 'transparent', color: activeTool === 'mom-test' ? 'var(--theme-bg)' : 'var(--theme-text)', border: '2px solid var(--theme-text)', cursor: 'pointer', fontWeight: 'bold', fontFamily: 'var(--font-mono)', fontSize: '12px' }}
-        >
-          The Mom Test
-        </button>
+        <Tooltip content="Manage Interview Campaigns" position="bottom">
+          <button
+            onClick={() => setActiveTool('interviews')}
+            style={{ padding: '10px 20px', borderRadius: '0px', backgroundColor: activeTool === 'interviews' ? 'var(--theme-accent)' : 'transparent', color: activeTool === 'interviews' ? 'var(--theme-bg)' : 'var(--theme-text)', border: '2px solid var(--theme-text)', cursor: 'pointer', fontWeight: 'bold', fontFamily: 'var(--font-mono)', fontSize: '12px' }}
+          >
+            AI Interview Campaigns
+          </button>
+        </Tooltip>
+        <Tooltip content="Test Business Hypotheses" position="bottom">
+          <button
+            onClick={() => { setActiveTool('hypothesis-tester'); setResult(null); }}
+            style={{ padding: '10px 20px', borderRadius: '0px', backgroundColor: activeTool === 'hypothesis-tester' ? 'var(--theme-accent)' : 'transparent', color: activeTool === 'hypothesis-tester' ? 'var(--theme-bg)' : 'var(--theme-text)', border: '2px solid var(--theme-text)', cursor: 'pointer', fontWeight: 'bold', fontFamily: 'var(--font-mono)', fontSize: '12px' }}
+          >
+            Hypothesis Tester
+          </button>
+        </Tooltip>
+        <Tooltip content="Get AI Business Plan Review" position="bottom">
+          <button
+            onClick={() => runValidation('plan-reviewer')}
+            style={{ padding: '10px 20px', borderRadius: '0px', backgroundColor: activeTool === 'plan-reviewer' ? 'var(--theme-accent)' : 'transparent', color: activeTool === 'plan-reviewer' ? 'var(--theme-bg)' : 'var(--theme-text)', border: '2px solid var(--theme-text)', cursor: 'pointer', fontWeight: 'bold', fontFamily: 'var(--font-mono)', fontSize: '12px' }}
+          >
+            Business Plan Reviewer
+          </button>
+        </Tooltip>
+        <Tooltip content="Validate with 'The Mom Test' Principles" position="bottom">
+          <button
+            onClick={() => runValidation('mom-test')}
+            style={{ padding: '10px 20px', borderRadius: '0px', backgroundColor: activeTool === 'mom-test' ? 'var(--theme-accent)' : 'transparent', color: activeTool === 'mom-test' ? 'var(--theme-bg)' : 'var(--theme-text)', border: '2px solid var(--theme-text)', cursor: 'pointer', fontWeight: 'bold', fontFamily: 'var(--font-mono)', fontSize: '12px' }}
+          >
+            The Mom Test
+          </button>
+        </Tooltip>
       </div>
 
       {activeTool === 'interviews' && (
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <h3>Your Interview Campaigns</h3>
-            <button 
-              onClick={() => setShowCreateCampaign(!showCreateCampaign)}
-              className="brutalist-button"
-              style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 16px' }}
-            >
-              <Plus size={16} /> New Campaign
-            </button>
+            <Tooltip content="Create New Interview Campaign" position="left">
+              <button 
+                onClick={() => setShowCreateCampaign(!showCreateCampaign)}
+                className="brutalist-button"
+                style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 16px' }}
+              >
+                <Plus size={16} /> New Campaign
+              </button>
+            </Tooltip>
           </div>
 
           {!user && (
@@ -237,23 +248,27 @@ export const ValidationEngineTab: React.FC = () => {
                     <p style={{ margin: 0, fontSize: '14px', color: '#666' }}>{campaign.goal}</p>
                   </div>
                   <div style={{ display: 'flex', gap: '10px' }}>
-                    <button 
-                      onClick={() => copyLink(campaign.id)}
-                      style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', backgroundColor: '#f1f3f4', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
-                    >
-                      <LinkIcon size={14} /> Copy Public Link
-                    </button>
-                    <button 
-                      onClick={() => {
-                        setSelectedCampaign(selectedCampaign?.id === campaign.id ? null : campaign);
-                        if (selectedCampaign?.id !== campaign.id) {
-                          fetchResponses(campaign.id);
-                        }
-                      }}
-                      style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', backgroundColor: '#e8f0fe', color: '#1a73e8', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
-                    >
-                      <MessageSquare size={14} /> View Responses
-                    </button>
+                    <Tooltip content="Copy Public Interview Link" position="top">
+                      <button 
+                        onClick={() => copyLink(campaign.id)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', backgroundColor: '#f1f3f4', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                      >
+                        <LinkIcon size={14} /> Copy Public Link
+                      </button>
+                    </Tooltip>
+                    <Tooltip content="View Interview Responses" position="top">
+                      <button 
+                        onClick={() => {
+                          setSelectedCampaign(selectedCampaign?.id === campaign.id ? null : campaign);
+                          if (selectedCampaign?.id !== campaign.id) {
+                            fetchResponses(campaign.id);
+                          }
+                        }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', backgroundColor: '#e8f0fe', color: '#1a73e8', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                      >
+                        <MessageSquare size={14} /> View Responses
+                      </button>
+                    </Tooltip>
                   </div>
                 </div>
 

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useUI, useUser } from '../../lib/state';
 import { thinkDeeply } from '../../lib/ai-tools';
 import { Send } from 'lucide-react';
+import { Tooltip } from '../Tooltip';
 
 export const ChatbotTab: React.FC = () => {
   const { setDocumentContent, setMainTab, setTranscript, documentContent } = useUI();
@@ -104,14 +105,16 @@ Use this context to provide highly relevant and strategic advice.`;
           style={{ flex: 1 }}
           disabled={isLoading}
         />
-        <button
-          onClick={handleSend}
-          disabled={isLoading || !input.trim()}
-          className={`brutalist-button ${isLoading || !input.trim() ? '' : 'primary'}`}
-          style={{ padding: '0 20px' }}
-        >
-          <Send size={18} />
-        </button>
+        <Tooltip content="Send Message" position="top">
+          <button
+            onClick={handleSend}
+            disabled={isLoading || !input.trim()}
+            className={`brutalist-button ${isLoading || !input.trim() ? '' : 'primary'}`}
+            style={{ padding: '0 20px' }}
+          >
+            <Send size={18} />
+          </button>
+        </Tooltip>
       </div>
     </div>
   );

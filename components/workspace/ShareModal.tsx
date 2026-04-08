@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, Share2, Copy, Globe, Lock, Check, MessageSquare } from 'lucide-react';
 import { useUI, Project } from '../../lib/state';
 import { useAuth } from '../../contexts/AuthContext';
+import { Tooltip } from '../Tooltip';
 import { db } from '../../firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
@@ -148,12 +149,14 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, project
                   letterSpacing: '1px'
                 }}>Share Project</h2>
               </div>
-              <button 
-                onClick={onClose}
-                style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}
-              >
-                <X size={24} />
-              </button>
+              <Tooltip content="Close" position="left">
+                <button 
+                  onClick={onClose}
+                  style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}
+                >
+                  <X size={24} />
+                </button>
+              </Tooltip>
             </div>
 
             <div style={{ padding: '24px' }}>
@@ -192,24 +195,26 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, project
                     </div>
                   </div>
                 </div>
-                <button
-                  onClick={handleToggleShare}
-                  disabled={isSaving}
-                  style={{
-                    padding: '8px 16px',
-                    borderRadius: '20px',
-                    border: 'none',
-                    backgroundColor: isPublic ? 'rgba(255, 68, 68, 0.2)' : 'var(--theme-accent)',
-                    color: isPublic ? '#ff4444' : 'black',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    cursor: 'pointer',
-                    opacity: isSaving ? 0.5 : 1,
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  {isSaving ? 'Updating...' : isPublic ? 'Make Private' : 'Share Publicly'}
-                </button>
+                <Tooltip content={isPublic ? "Disable Public Access" : "Enable Public Access"} position="left">
+                  <button
+                    onClick={handleToggleShare}
+                    disabled={isSaving}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '20px',
+                      border: 'none',
+                      backgroundColor: isPublic ? 'rgba(255, 68, 68, 0.2)' : 'var(--theme-accent)',
+                      color: isPublic ? '#ff4444' : 'black',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      opacity: isSaving ? 0.5 : 1,
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    {isSaving ? 'Updating...' : isPublic ? 'Make Private' : 'Share Publicly'}
+                  </button>
+                </Tooltip>
               </div>
 
               {/* Link Display */}
@@ -247,22 +252,24 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, project
                     }}>
                       {shareUrl}
                     </div>
-                    <button
-                      onClick={copyToClipboard}
-                      style={{
-                        padding: '0 16px',
-                        backgroundColor: 'rgba(0, 243, 255, 0.1)',
-                        border: '1px solid rgba(0, 243, 255, 0.3)',
-                        borderRadius: '8px',
-                        color: 'var(--theme-accent)',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
-                      {copied ? <Check size={18} /> : <Copy size={18} />}
-                    </button>
+                    <Tooltip content="Copy Share Link" position="top">
+                      <button
+                        onClick={copyToClipboard}
+                        style={{
+                          padding: '0 16px',
+                          backgroundColor: 'rgba(0, 243, 255, 0.1)',
+                          border: '1px solid rgba(0, 243, 255, 0.3)',
+                          borderRadius: '8px',
+                          color: 'var(--theme-accent)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        {copied ? <Check size={18} /> : <Copy size={18} />}
+                      </button>
+                    </Tooltip>
                   </div>
 
                   <div style={{

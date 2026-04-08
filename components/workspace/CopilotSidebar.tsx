@@ -3,6 +3,7 @@ import { useUI } from '../../lib/state';
 import { thinkDeeply } from '../../lib/ai-tools';
 import { Loader2, Lightbulb, Sparkles } from 'lucide-react';
 import { marked } from 'marked';
+import { Tooltip } from '../Tooltip';
 
 export const CopilotSidebar: React.FC = () => {
   const { documentContent } = useUI();
@@ -63,15 +64,17 @@ Provide 3 specific, actionable suggestions for improvements or content additions
           />
         </div>
         
-        <button 
-          onClick={() => generateSuggestions(false)}
-          disabled={isLoading || !documentContent.trim()}
-          className={`brutalist-button ${isLoading || !documentContent.trim() ? '' : 'primary'}`}
-          style={{ width: '100%' }}
-        >
-          {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Lightbulb size={16} />}
-          {isLoading ? 'ANALYZING...' : 'GET SUGGESTIONS'}
-        </button>
+        <Tooltip content="Get AI Suggestions for your Document" position="top">
+          <button 
+            onClick={() => generateSuggestions(false)}
+            disabled={isLoading || !documentContent.trim()}
+            className={`brutalist-button ${isLoading || !documentContent.trim() ? '' : 'primary'}`}
+            style={{ width: '100%' }}
+          >
+            {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Lightbulb size={16} />}
+            {isLoading ? 'ANALYZING...' : 'GET SUGGESTIONS'}
+          </button>
+        </Tooltip>
 
         {!documentContent.trim() && (
           <p style={{ fontSize: '12px', color: 'var(--theme-text)', opacity: 0.6, marginTop: '1.5rem', textAlign: 'center', fontStyle: 'italic', fontFamily: 'var(--font-mono)' }}>

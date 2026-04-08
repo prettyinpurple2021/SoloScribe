@@ -11,6 +11,7 @@ import {
 import Modal from './Modal';
 import { useAgent, useUI } from '../lib/state';
 import { toast } from 'sonner';
+import { Tooltip } from './Tooltip';
 
 /**
  * A modal component for editing the properties of the currently active agent.
@@ -93,16 +94,20 @@ export default function EditAgent() {
             </select>
           </div>
           <div className="header-actions">
-            <button 
-              type="button" 
-              className="brutalist-button secondary"
-              onClick={onClose}
-            >
-              Cancel
-            </button>
-            <button type="submit" className="brutalist-button">
-              Done
-            </button>
+            <Tooltip content="Discard Changes" position="bottom">
+              <button 
+                type="button" 
+                className="brutalist-button secondary"
+                onClick={onClose}
+              >
+                Cancel
+              </button>
+            </Tooltip>
+            <Tooltip content="Save Changes" position="bottom">
+              <button type="submit" className="brutalist-button">
+                Done
+              </button>
+            </Tooltip>
           </div>
         </div>
 

@@ -12,7 +12,13 @@ import {
   PieChart as PieChartIcon,
   ArrowUpRight,
   ArrowDownRight,
-  Info
+  Info,
+  AlertCircle,
+  TrendingDown,
+  RefreshCcw,
+  Sparkles,
+  AlertTriangle,
+  ChevronRight
 } from 'lucide-react';
 import { 
   LineChart, 
@@ -20,7 +26,7 @@ import {
   XAxis, 
   YAxis, 
   CartesianGrid, 
-  Tooltip, 
+  Tooltip as RechartsTooltip, 
   Legend, 
   ResponsiveContainer, 
   AreaChart, 
@@ -32,11 +38,13 @@ import {
   Pie
 } from 'recharts';
 import { toast } from 'sonner';
+import { Tooltip as AppTooltip } from '../Tooltip';
 
 export const ProjectionsTab: React.FC = () => {
   const { documentContent } = useUI();
   const [isLoading, setIsLoading] = useState(false);
   const [scenario, setScenario] = useState<'conservative' | 'moderate' | 'aggressive'>('moderate');
+  const [activeWhatIf, setActiveWhatIf] = useState<string | null>(null);
   const [projectionData, setProjectionData] = useState<{
     timeline: any[];
     cac: number;
@@ -62,27 +70,51 @@ export const ProjectionsTab: React.FC = () => {
   });
 
   const scenarios = {
-    conservative: { growth: 0.6, churn: 1.5, cac: 1.2 },
+    conservative: { growth: 0.5, churn: 1.5, cac: 1.5 },
     moderate: { growth: 1.0, churn: 1.0, cac: 1.0 },
-    aggressive: { growth: 1.8, churn: 0.8, cac: 0.8 }
+    aggressive: { growth: 2.0, churn: 0.7, cac: 0.8 }
   };
 
-  const handleGenerateProjections = async () => {
+  const whatIfScenarios = [
+    { id: 'hiring', label: 'Hire a VA/Assistant', impact: { fixedCosts: 1500, growth: 1.2 }, description: '+$1.5k/mo costs, 20% growth boost' },
+    { id: 'cac_spike', label: 'Ad Cost Spike', impact: { cac: 2.0 }, description: 'Marketing costs double' },
+    { id: 'viral', label: 'Viral Growth', impact: { growth: 3.0, cac: 0.5 }, description: '3x growth, 50% lower CAC' },
+    { id: 'retention', label: 'Retention Focus', impact: { churn: 0.5, arpu: 1.2 }, description: '50% lower churn, 20% higher ARPU' },
+  ];
+
+  const handleGenerateProjections = async (isStressTest = false) => {
     setIsLoading(true);
     try {
       const activeScenario = scenarios[scenario];
-      const adjustedGrowth = params.monthlyGrowthRate * activeScenario.growth;
-      const adjustedChurn = params.churnRate * activeScenario.churn;
-      const adjustedCac = params.cac * activeScenario.cac;
+      let adjustedGrowth = params.monthlyGrowthRate * activeScenario.growth;
+      let adjustedChurn = params.churnRate * activeScenario.churn;
+      let adjustedCac = params.cac * activeScenario.cac;
+      let adjustedFixedCosts = params.fixedCosts;
+      let adjustedArpu = params.arpu;
 
-      const prompt = `Analyze this startup plan for a ${scenario} growth scenario:\n\n${documentContent}\n\nParameters:
+      if (isStressTest) {
+        adjustedGrowth *= 0.3; // 70% drop in growth
+        adjustedChurn *= 2.5; // 150% spike in churn
+        adjustedCac *= 2.0; // Double CAC
+      } else if (activeWhatIf) {
+        const whatIf = whatIfScenarios.find(w => w.id === activeWhatIf);
+        if (whatIf) {
+          if (whatIf.impact.growth) adjustedGrowth *= whatIf.impact.growth;
+          if (whatIf.impact.churn) adjustedChurn *= whatIf.impact.churn;
+          if (whatIf.impact.cac) adjustedCac *= whatIf.impact.cac;
+          if (whatIf.impact.fixedCosts) adjustedFixedCosts += whatIf.impact.fixedCosts;
+          if (whatIf.impact.arpu) adjustedArpu *= whatIf.impact.arpu;
+        }
+      }
+
+      const prompt = `Analyze this startup plan for a ${isStressTest ? 'WORST CASE STRESS TEST' : scenario + (activeWhatIf ? ' with ' + activeWhatIf : '')} scenario:\n\n${documentContent}\n\nParameters:
       - Growth: ${adjustedGrowth.toFixed(1)}%
       - Churn: ${adjustedChurn.toFixed(1)}%
-      - ARPU: $${params.arpu}
+      - ARPU: $${adjustedArpu}
       - CAC: $${adjustedCac.toFixed(1)}
-      - Fixed Costs: $${params.fixedCosts}
+      - Fixed Costs: $${adjustedFixedCosts}
       
-      Provide a concise financial health assessment (max 150 words). Focus on unit economics and scalability.`;
+      Provide a concise financial health assessment (max 150 words). Focus on ${isStressTest ? 'survival and contingency planning' : 'unit economics and scalability'}.`;
       
       const summary = await thinkDeeply(prompt);
 
@@ -91,10 +123,10 @@ export const ProjectionsTab: React.FC = () => {
       let cumulativeRevenue = 0;
       
       for (let i = 0; i < params.months; i++) {
-        const mrr = Math.round(currentUsers * params.arpu);
+        const mrr = Math.round(currentUsers * adjustedArpu);
         const newUsers = currentUsers * (adjustedGrowth / 100);
         const marketingSpend = newUsers * adjustedCac;
-        const totalExpenses = marketingSpend + params.fixedCosts;
+        const totalExpenses = marketingSpend + adjustedFixedCosts;
         const netProfit = mrr - totalExpenses;
         cumulativeRevenue += mrr;
 
@@ -111,8 +143,8 @@ export const ProjectionsTab: React.FC = () => {
         currentUsers = currentUsers + newUsers - churnedUsers;
       }
 
-      const ltv = params.arpu / (adjustedChurn / 100);
-      const paybackPeriod = adjustedCac / (params.arpu * (1 - adjustedChurn / 100));
+      const ltv = adjustedArpu / (adjustedChurn / 100);
+      const paybackPeriod = adjustedCac / (adjustedArpu * (1 - adjustedChurn / 100));
 
       const lastMonth = timeline[timeline.length - 1];
       const lastNetProfit = lastMonth.profit;
@@ -126,11 +158,11 @@ export const ProjectionsTab: React.FC = () => {
         summary,
         metrics: {
           paybackPeriod,
-          runway: lastNetProfit < 0 ? Math.abs(100000 / lastNetProfit) : Infinity, // Assuming 100k starting capital for runway calc
+          runway: lastNetProfit < 0 ? Math.abs(100000 / lastNetProfit) : Infinity,
           burnRate: Math.max(0, -lastNetProfit)
         }
       });
-      toast.success(`${scenario.charAt(0).toUpperCase() + scenario.slice(1)} projections generated!`);
+      toast.success(isStressTest ? 'Runway Stress Test Complete!' : `${scenario.charAt(0).toUpperCase() + scenario.slice(1)} projections generated!`);
     } catch (error) {
       console.error(error);
       toast.error('Failed to generate projections.');
@@ -156,24 +188,25 @@ export const ProjectionsTab: React.FC = () => {
         </div>
         <div style={{ display: 'flex', gap: '8px', backgroundColor: 'rgba(255,255,255,0.05)', padding: '4px', borderRadius: '8px' }}>
           {(['conservative', 'moderate', 'aggressive'] as const).map((s) => (
-            <button
-              key={s}
-              onClick={() => setScenario(s)}
-              style={{
-                padding: '6px 12px',
-                borderRadius: '6px',
-                fontSize: '12px',
-                fontWeight: 600,
-                textTransform: 'capitalize',
-                backgroundColor: scenario === s ? 'var(--theme-accent)' : 'transparent',
-                color: scenario === s ? '#000' : '#fff',
-                border: 'none',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              {s}
-            </button>
+            <AppTooltip key={s} content={`${s.charAt(0).toUpperCase() + s.slice(1)} Growth Scenario`} position="bottom">
+              <button
+                onClick={() => setScenario(s)}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  textTransform: 'capitalize',
+                  backgroundColor: scenario === s ? 'var(--theme-accent)' : 'transparent',
+                  color: scenario === s ? '#000' : '#fff',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {s}
+              </button>
+            </AppTooltip>
           ))}
         </div>
       </div>
@@ -222,28 +255,82 @@ export const ProjectionsTab: React.FC = () => {
             ))}
           </div>
 
+          <AppTooltip content="Run Financial Simulation" position="top">
+            <button
+              onClick={() => handleGenerateProjections(false)}
+              disabled={isLoading || !documentContent.trim()}
+              style={{ 
+                marginTop: '24px', 
+                width: '100%', 
+                padding: '14px', 
+                borderRadius: '12px', 
+                backgroundColor: 'var(--theme-accent)', 
+                color: '#000', 
+                fontWeight: 700,
+                border: 'none', 
+                cursor: 'pointer', 
+                display: 'flex', 
+                justifyContent: 'center', 
+                alignItems: 'center', 
+                gap: '8px',
+                boxShadow: '0 4px 20px rgba(0, 243, 255, 0.3)'
+              }}
+            >
+              {isLoading ? <Loader2 size={18} className="animate-spin" /> : <BarChart3 size={18} />}
+              {isLoading ? 'Processing...' : 'Run Simulation'}
+            </button>
+          </AppTooltip>
+
+          <div style={{ marginTop: '32px' }}>
+            <h3 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '16px', color: 'rgba(255,255,255,0.7)' }}>
+              "What-If" Scenarios
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {whatIfScenarios.map((w) => (
+                <button
+                  key={w.id}
+                  onClick={() => setActiveWhatIf(activeWhatIf === w.id ? null : w.id)}
+                  style={{
+                    padding: '10px',
+                    borderRadius: '8px',
+                    fontSize: '11px',
+                    textAlign: 'left',
+                    backgroundColor: activeWhatIf === w.id ? 'rgba(0,243,255,0.1)' : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${activeWhatIf === w.id ? 'var(--theme-accent)' : 'rgba(255,255,255,0.1)'}`,
+                    color: activeWhatIf === w.id ? 'var(--theme-accent)' : '#fff',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <div style={{ fontWeight: 700, marginBottom: '2px' }}>{w.label}</div>
+                  <div style={{ opacity: 0.5, fontSize: '10px' }}>{w.description}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <button
-            onClick={handleGenerateProjections}
+            onClick={() => handleGenerateProjections(true)}
             disabled={isLoading || !documentContent.trim()}
             style={{ 
               marginTop: '24px', 
               width: '100%', 
-              padding: '14px', 
+              padding: '12px', 
               borderRadius: '12px', 
-              backgroundColor: 'var(--theme-accent)', 
-              color: '#000', 
-              fontWeight: 700,
-              border: 'none', 
+              backgroundColor: 'transparent', 
+              color: '#ff4444', 
+              fontWeight: 600,
+              border: '1px solid #ff4444', 
               cursor: 'pointer', 
               display: 'flex', 
               justifyContent: 'center', 
               alignItems: 'center', 
               gap: '8px',
-              boxShadow: '0 4px 20px rgba(0, 243, 255, 0.3)'
+              fontSize: '12px'
             }}
           >
-            {isLoading ? <Loader2 size={18} className="animate-spin" /> : <BarChart3 size={18} />}
-            {isLoading ? 'Processing...' : 'Run Simulation'}
+            <AlertCircle size={16} />
+            Runway Stress Test
           </button>
         </div>
 
@@ -298,7 +385,7 @@ export const ProjectionsTab: React.FC = () => {
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                       <XAxis dataKey="month" stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} />
                       <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v/1000}k`} />
-                      <Tooltip 
+                      <RechartsTooltip 
                         contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
                         itemStyle={{ fontSize: '12px' }}
                       />
@@ -343,7 +430,7 @@ export const ProjectionsTab: React.FC = () => {
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                   <XAxis dataKey="month" stroke="rgba(255,255,255,0.3)" fontSize={10} />
                   <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} />
-                  <Tooltip 
+                  <RechartsTooltip 
                     contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
                   />
                   <Bar dataKey="users" fill="#ff00ff" radius={[4, 4, 0, 0]} name="Active Users" />

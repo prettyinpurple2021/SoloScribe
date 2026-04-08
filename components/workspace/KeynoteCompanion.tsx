@@ -44,7 +44,7 @@ import {
   Project,
 } from '../../lib/state';
 import { pcmToWav, combineArrayBuffers } from '../../lib/utils';
-import Modal from '../Modal';
+import Modal, { ConfirmModal, PromptModal } from '../Modal';
 import FunctionPlotter from './FunctionPlotter';
 import { ChatbotTab } from './ChatbotTab';
 import { AIToolsTab } from './AIToolsTab';
@@ -52,9 +52,11 @@ import { ValidationEngineTab } from './ValidationEngineTab';
 import { ProjectionsTab } from './ProjectionsTab';
 import { RoadmapTab } from './RoadmapTab';
 import TasksTab from './TasksTab';
+import MarketingTab from './MarketingTab';
 import { CopilotSidebar } from './CopilotSidebar';
 import { MinutesLoadingAnimation } from '../MinutesLoadingAnimation';
 import { useAuth } from '../../contexts/AuthContext';
+import { Tooltip } from '../Tooltip';
 import { db, handleFirestoreError, OperationType } from '../../firebase';
 import { doc, setDoc, getDoc, serverTimestamp, collection, addDoc, query, orderBy, getDocs } from 'firebase/firestore';
 import { toast } from 'sonner';
@@ -725,27 +727,33 @@ const DocumentRenderer = memo(
               const insert = inserts.find(ins => ins.id === embed.id);
               if (!insert) {
                 return (
-                  <div className="illustration-loading" title={`Preparing: ${embed.prompt}`}>
-                    <div className="spinner"></div>
-                    <span>Preparing image...</span>
-                  </div>
+                  <Tooltip content={`Preparing: ${embed.prompt}`}>
+                    <div className="illustration-loading">
+                      <div className="spinner"></div>
+                      <span>Preparing image...</span>
+                    </div>
+                  </Tooltip>
                 );
               }
 
               switch (insert.status) {
                 case 'loading':
                   return (
-                    <div className="illustration-loading" title={`Generating: ${insert.prompt}`}>
-                      <div className="spinner"></div>
-                      <span>Generating image...</span>
-                    </div>
+                    <Tooltip content={`Generating: ${insert.prompt}`}>
+                      <div className="illustration-loading">
+                        <div className="spinner"></div>
+                        <span>Generating image...</span>
+                      </div>
+                    </Tooltip>
                   );
                 case 'error':
                   return (
-                    <div className="illustration-error" title={insert.error}>
-                      <span className="icon">error</span>
-                      <span>Error generating image.</span>
-                    </div>
+                    <Tooltip content={insert.error || "Error generating image"}>
+                      <div className="illustration-error">
+                        <span className="icon">error</span>
+                        <span>Error generating image.</span>
+                      </div>
+                    </Tooltip>
                   );
                 case 'done':
                   return (
@@ -862,6 +870,9 @@ export default function KeynoteCompanion() {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showTemplatesModal, setShowTemplatesModal] = useState(false);
   const [showDashboardModal, setShowDashboardModal] = useState(false);
+  const [showConfirmReplaceModal, setShowConfirmReplaceModal] = useState<{ template: any } | null>(null);
+  const [showPromptProjectName, setShowPromptProjectName] = useState<{ onConfirm: (name: string) => void } | null>(null);
+  const [showPromptNewProject, setShowPromptNewProject] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
   const [projectVersions, setProjectVersions] = useState<any[]>([]);
@@ -893,7 +904,7 @@ export default function KeynoteCompanion() {
         }
         lastLoadedProjectIdRef.current = projectId;
       } catch (error) {
-        console.error('Error loading project:', error);
+        handleFirestoreError(error, OperationType.GET, projectRef.path);
       }
     };
     
@@ -922,7 +933,7 @@ export default function KeynoteCompanion() {
         
         setLastAutoSavedAt(new Date());
       } catch (error) {
-        console.error('Auto-save error:', error);
+        handleFirestoreError(error, OperationType.WRITE, projectRef.path);
       }
     }, 5000); // Auto-save after 5 seconds of inactivity
 
@@ -977,16 +988,28 @@ export default function KeynoteCompanion() {
           updatedAt: serverTimestamp(),
         }, { merge: true });
       } else {
-        const projectName = window.prompt('Enter project name:', 'My Startup Workspace') || 'Untitled Project';
-        await setDoc(projectRef, {
-          id: projectId,
-          userId: authUser.uid,
-          name: projectName,
-          documentContent,
-          transcript,
-          updatedAt: serverTimestamp(),
-          createdAt: serverTimestamp()
+        setShowPromptProjectName({
+          onConfirm: async (projectName) => {
+            const finalName = projectName || 'Untitled Project';
+            try {
+              await setDoc(projectRef, {
+                id: projectId,
+                userId: authUser.uid,
+                name: finalName,
+                documentContent,
+                transcript,
+                updatedAt: serverTimestamp(),
+                createdAt: serverTimestamp()
+              });
+              toast.success('Project saved to cloud successfully!');
+              await handleCreateVersion(`Manual Save - ${new Date().toLocaleString()}`);
+            } catch (error) {
+              handleFirestoreError(error, OperationType.WRITE, path);
+            }
+            setShowPromptProjectName(null);
+          }
         });
+        return; // Exit and wait for prompt
       }
       
       // Automatically create a version snapshot on manual save
@@ -1019,7 +1042,7 @@ export default function KeynoteCompanion() {
         await fetchVersions();
       }
     } catch (error) {
-      console.error('Error creating version:', error);
+      handleFirestoreError(error, OperationType.CREATE, versionsRef.path);
     }
   };
 
@@ -1037,7 +1060,7 @@ export default function KeynoteCompanion() {
       }));
       setProjectVersions(versions);
     } catch (error) {
-      console.error('Error fetching versions:', error);
+      handleFirestoreError(error, OperationType.LIST, versionsRef.path);
       toast.error('Failed to load version history.');
     } finally {
       setIsLoadingVersions(false);
@@ -1068,7 +1091,7 @@ export default function KeynoteCompanion() {
       })) as Project[];
       setUserProjects(projects);
     } catch (error) {
-      console.error('Error fetching projects:', error);
+      handleFirestoreError(error, OperationType.LIST, projectsRef.path);
       toast.error('Failed to load projects.');
     } finally {
       setIsLoadingProjects(false);
@@ -1082,8 +1105,11 @@ export default function KeynoteCompanion() {
   };
 
   const handleCreateNewProject = async () => {
-    const name = window.prompt('Enter new project name:');
-    if (!name) return;
+    setShowPromptNewProject(true);
+  };
+
+  const executeCreateNewProject = async (name: string) => {
+    if (!name || !authUser) return;
 
     const newProjectId = `project_${Date.now()}`;
     const projectRef = doc(db, 'users', authUser.uid, 'projects', newProjectId);
@@ -1103,21 +1129,28 @@ export default function KeynoteCompanion() {
       setDocumentContent(PLACEHOLDER_DOC);
       setTranscript([]);
       setShowDashboardModal(false);
+      setShowPromptNewProject(false);
       toast.success(`Project "${name}" created.`);
     } catch (error) {
-      console.error('Error creating project:', error);
+      handleFirestoreError(error, OperationType.CREATE, projectRef.path);
       toast.error('Failed to create project.');
     }
   };
 
   const handleSelectTemplate = (template: any) => {
     if (documentContent !== PLACEHOLDER_DOC && documentContent.trim() !== '') {
-      if (!window.confirm('This will replace your current document content. Continue?')) {
-        return;
-      }
+      setShowConfirmReplaceModal({ template });
+      return;
     }
     setDocumentContent(template.content);
     setShowTemplatesModal(false);
+    toast.success(`Template "${template.name}" applied.`);
+  };
+
+  const executeSelectTemplate = (template: any) => {
+    setDocumentContent(template.content);
+    setShowTemplatesModal(false);
+    setShowConfirmReplaceModal(null);
     toast.success(`Template "${template.name}" applied.`);
   };
 
@@ -3044,104 +3077,126 @@ Format your response in Markdown.`;
                   ) : (
                     <>
                       <div className="toolbar-group">
-                        <button className="brutalist-button-sm" onClick={handleUndo} disabled={documentHistory.length === 0} title="Undo">
-                          <Undo2 size={14} />
-                        </button>
-                        <button className="brutalist-button-sm" onClick={handleRedo} disabled={redoHistory.length === 0} title="Redo">
-                          <Redo2 size={14} />
-                        </button>
-                        <button className="brutalist-button-sm" onClick={handleClear} title="Clear Document">
-                          <Eraser size={14} />
-                        </button>
+                        <Tooltip content="Undo" position="bottom">
+                          <button className="brutalist-button-sm" onClick={handleUndo} disabled={documentHistory.length === 0}>
+                            <Undo2 size={14} />
+                          </button>
+                        </Tooltip>
+                        <Tooltip content="Redo" position="bottom">
+                          <button className="brutalist-button-sm" onClick={handleRedo} disabled={redoHistory.length === 0}>
+                            <Redo2 size={14} />
+                          </button>
+                        </Tooltip>
+                        <Tooltip content="Clear Document" position="bottom">
+                          <button className="brutalist-button-sm" onClick={handleClear}>
+                            <Eraser size={14} />
+                          </button>
+                        </Tooltip>
                       </div>
 
                       <div className="toolbar-divider"></div>
 
                       <div className="toolbar-group">
-                        <button className="brutalist-button-sm" onClick={() => handleSlashCommand('h1')} title="Heading 1">
-                          <Heading1 size={14} />
-                        </button>
-                        <button className="brutalist-button-sm" onClick={() => handleSlashCommand('h2')} title="Heading 2">
-                          <Heading2 size={14} />
-                        </button>
-                        <button className="brutalist-button-sm" onClick={() => handleSlashCommand('list')} title="Bullet List">
-                          <List size={14} />
-                        </button>
-                        <button className="brutalist-button-sm" onClick={() => handleSlashCommand('bold')} title="Bold">
-                          <Bold size={14} />
-                        </button>
-                        <button className="brutalist-button-sm" onClick={() => handleSlashCommand('collapse')} title="Collapsible Section">
-                          <ChevronDown size={14} />
-                        </button>
+                        <Tooltip content="Heading 1" position="bottom">
+                          <button className="brutalist-button-sm" onClick={() => handleSlashCommand('h1')}>
+                            <Heading1 size={14} />
+                          </button>
+                        </Tooltip>
+                        <Tooltip content="Heading 2" position="bottom">
+                          <button className="brutalist-button-sm" onClick={() => handleSlashCommand('h2')}>
+                            <Heading2 size={14} />
+                          </button>
+                        </Tooltip>
+                        <Tooltip content="Bullet List" position="bottom">
+                          <button className="brutalist-button-sm" onClick={() => handleSlashCommand('list')}>
+                            <List size={14} />
+                          </button>
+                        </Tooltip>
+                        <Tooltip content="Bold" position="bottom">
+                          <button className="brutalist-button-sm" onClick={() => handleSlashCommand('bold')}>
+                            <Bold size={14} />
+                          </button>
+                        </Tooltip>
+                        <Tooltip content="Collapsible Section" position="bottom">
+                          <button className="brutalist-button-sm" onClick={() => handleSlashCommand('collapse')}>
+                            <ChevronDown size={14} />
+                          </button>
+                        </Tooltip>
                       </div>
 
                       <div className="toolbar-divider"></div>
 
                       <div className="toolbar-group">
-                        <button 
-                          className="brutalist-button-sm ai-button"
-                          onClick={handleStrategicReview} 
-                          title="Get AI Strategic Review"
-                        >
-                          <Sparkles size={14} />
-                          <span>Strategic Review</span>
-                        </button>
+                        <Tooltip content="Get AI Strategic Review" position="bottom">
+                          <button 
+                            className="brutalist-button-sm ai-button"
+                            onClick={handleStrategicReview} 
+                          >
+                            <Sparkles size={14} />
+                            <span>Strategic Review</span>
+                          </button>
+                        </Tooltip>
                         
-                        <button 
-                          className="brutalist-button-sm"
-                          onClick={() => {
-                            fetchVersions();
-                            setShowHistoryModal(true);
-                          }}
-                          title="Version History"
-                        >
-                          <History size={14} />
-                          <span>History</span>
-                        </button>
+                        <Tooltip content="Version History" position="bottom">
+                          <button 
+                            className="brutalist-button-sm"
+                            onClick={() => {
+                              fetchVersions();
+                              setShowHistoryModal(true);
+                            }}
+                          >
+                            <History size={14} />
+                            <span>History</span>
+                          </button>
+                        </Tooltip>
 
-                        <button 
-                          className="brutalist-button-sm"
-                          onClick={() => setShowTemplatesModal(true)}
-                          title="Document Templates"
-                        >
-                          <FileText size={14} />
-                          <span>Templates</span>
-                        </button>
+                        <Tooltip content="Document Templates" position="bottom">
+                          <button 
+                            className="brutalist-button-sm"
+                            onClick={() => setShowTemplatesModal(true)}
+                          >
+                            <FileText size={14} />
+                            <span>Templates</span>
+                          </button>
+                        </Tooltip>
 
-                        <button 
-                          className="brutalist-button-sm"
-                          onClick={() => {
-                            fetchProjects();
-                            setShowDashboardModal(true);
-                          }}
-                          title="Project Dashboard"
-                        >
-                          <LayoutDashboard size={14} />
-                          <span>Dashboard</span>
-                        </button>
+                        <Tooltip content="Project Dashboard" position="bottom">
+                          <button 
+                            className="brutalist-button-sm"
+                            onClick={() => {
+                              fetchProjects();
+                              setShowDashboardModal(true);
+                            }}
+                          >
+                            <LayoutDashboard size={14} />
+                            <span>Dashboard</span>
+                          </button>
+                        </Tooltip>
                       </div>
 
                       <div className="toolbar-divider"></div>
 
                       <div className="toolbar-group">
-                        <button 
-                          className="brutalist-button-sm"
-                          onClick={handleDownloadMarkdown}
-                          title="Export as Markdown"
-                        >
-                          <Download size={14} />
-                          <span>Export MD</span>
-                        </button>
+                        <Tooltip content="Export as Markdown" position="bottom">
+                          <button 
+                            className="brutalist-button-sm"
+                            onClick={handleDownloadMarkdown}
+                          >
+                            <Download size={14} />
+                            <span>Export MD</span>
+                          </button>
+                        </Tooltip>
 
-                        <button 
-                          className="brutalist-button-sm"
-                          onClick={handleSaveToCloud} 
-                          disabled={isSavingToCloud}
-                          title="Save to Cloud"
-                        >
-                          <CloudUpload size={14} />
-                          <span>{isSavingToCloud ? 'Saving...' : 'Save to Cloud'}</span>
-                        </button>
+                        <Tooltip content="Save to Cloud" position="bottom">
+                          <button 
+                            className="brutalist-button-sm"
+                            onClick={handleSaveToCloud} 
+                            disabled={isSavingToCloud}
+                          >
+                            <CloudUpload size={14} />
+                            <span>{isSavingToCloud ? 'Saving...' : 'Save to Cloud'}</span>
+                          </button>
+                        </Tooltip>
                       </div>
 
                       <div className="toolbar-group ml-auto">
@@ -3235,31 +3290,34 @@ Format your response in Markdown.`;
               <>
                 {documentContent !== PLACEHOLDER_DOC && (
                   <div className="document-actions exclude-from-pdf">
-                    <button
-                      className="brutalist-button-sm share-button"
-                      onClick={() => setShowShareModal(true)}
-                      title="Share Project"
-                    >
-                      <Share2 size={14} />
-                      <span>Share</span>
-                    </button>
-                    <button
-                      className="brutalist-button-sm"
-                      onClick={() => handleDownloadPDF(renderedViewRef, user.topic || 'soloscribe-document')}
-                      disabled={pdfStatus !== 'idle'}
-                      title="Download PDF"
-                    >
-                      <Download size={14} />
-                      <span>PDF</span>
-                    </button>
-                    <button
-                      className="brutalist-button-sm"
-                      onClick={() => handleCopyToClipboard(documentContent)}
-                      title="Copy to clipboard"
-                    >
-                      <Copy size={14} />
-                      <span>Copy</span>
-                    </button>
+                    <Tooltip content="Share Project" position="bottom">
+                      <button
+                        className="brutalist-button-sm share-button"
+                        onClick={() => setShowShareModal(true)}
+                      >
+                        <Share2 size={14} />
+                        <span>Share</span>
+                      </button>
+                    </Tooltip>
+                    <Tooltip content="Download PDF" position="bottom">
+                      <button
+                        className="brutalist-button-sm"
+                        onClick={() => handleDownloadPDF(renderedViewRef, user.topic || 'soloscribe-document')}
+                        disabled={pdfStatus !== 'idle'}
+                      >
+                        <Download size={14} />
+                        <span>PDF</span>
+                      </button>
+                    </Tooltip>
+                    <Tooltip content="Copy to clipboard" position="bottom">
+                      <button
+                        className="brutalist-button-sm"
+                        onClick={() => handleCopyToClipboard(documentContent)}
+                      >
+                        <Copy size={14} />
+                        <span>Copy</span>
+                      </button>
+                    </Tooltip>
                   </div>
                 )}
                 <div
@@ -3355,22 +3413,24 @@ Format your response in Markdown.`;
         {mainTab === 'minutes' && (
           <div className="minutes-view p-6">
             <div className="flex gap-4 mb-6">
-              <button
-                className="brutalist-button flex items-center gap-2 px-4 py-2 text-xs"
-                onClick={() => handleDownloadPDF(minutesViewRef, `${user.topic || 'soloscribe'}_minutes`)}
-                disabled={pdfStatus !== 'idle'}
-                title="Download PDF"
-              >
-                <Download size={16} />
-                DOWNLOAD_PDF
-              </button>
-              <button
-                className="brutalist-button px-4 py-2 text-xs"
-                onClick={() => handleCopyToClipboard(correctedTranscript)}
-                title="Copy to clipboard"
-              >
-                <Copy size={16} />
-              </button>
+              <Tooltip content="Download PDF" position="bottom">
+                <button
+                  className="brutalist-button flex items-center gap-2 px-4 py-2 text-xs"
+                  onClick={() => handleDownloadPDF(minutesViewRef, `${user.topic || 'soloscribe'}_minutes`)}
+                  disabled={pdfStatus !== 'idle'}
+                >
+                  <Download size={16} />
+                  DOWNLOAD_PDF
+                </button>
+              </Tooltip>
+              <Tooltip content="Copy to clipboard" position="bottom">
+                <button
+                  className="brutalist-button px-4 py-2 text-xs"
+                  onClick={() => handleCopyToClipboard(correctedTranscript)}
+                >
+                  <Copy size={16} />
+                </button>
+              </Tooltip>
             </div>
             <div ref={minutesViewRef} className="document-content prose-view border-4 border-black p-8 bg-black/40">
               {isCorrectingTranscript ? (
@@ -3458,6 +3518,10 @@ Format your response in Markdown.`;
 
         {mainTab === 'tasks' && (
           <TasksTab />
+        )}
+
+        {mainTab === 'marketing' && (
+          <MarketingTab />
         )}
       </div>
 
@@ -3640,6 +3704,40 @@ Format your response in Markdown.`;
           isOpen={showShareModal}
           onClose={() => setShowShareModal(false)}
           project={userProjects.find(p => p.id === currentProjectId) || null}
+        />
+      )}
+
+      {showConfirmReplaceModal && (
+        <ConfirmModal 
+          title="Replace Document Content?"
+          message={`This will replace your current document content with the "${showConfirmReplaceModal.template.name}" template. This action cannot be undone.`}
+          onConfirm={() => executeSelectTemplate(showConfirmReplaceModal.template)}
+          onCancel={() => setShowConfirmReplaceModal(null)}
+          confirmText="Replace Content"
+          variant="danger"
+        />
+      )}
+
+      {showPromptProjectName && (
+        <PromptModal 
+          title="Save Project"
+          message="Enter a name for your project to save it to the cloud."
+          defaultValue="My Startup Workspace"
+          onConfirm={showPromptProjectName.onConfirm}
+          onCancel={() => setShowPromptProjectName(null)}
+          confirmText="Save Project"
+          placeholder="e.g., My Awesome Startup"
+        />
+      )}
+
+      {showPromptNewProject && (
+        <PromptModal 
+          title="New Project"
+          message="Enter a name for your new startup project."
+          onConfirm={executeCreateNewProject}
+          onCancel={() => setShowPromptNewProject(false)}
+          confirmText="Create Project"
+          placeholder="e.g., Project Phoenix"
         />
       )}
     </div>

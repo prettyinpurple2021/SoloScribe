@@ -1,7 +1,20 @@
-import React, { useState } from 'react';
-import { useUI, useUser } from '../../lib/state';
-import { CheckCircle2, Circle, ArrowRight, Rocket, Target, TrendingUp, Calendar, Award, Loader2, Sparkles } from 'lucide-react';
-import { motion } from 'motion/react';
+import React, { useState, useMemo } from 'react';
+import { useUI, useUser, useTaskStore } from '../../lib/state';
+import { 
+  CheckCircle2, 
+  Circle, 
+  ArrowRight, 
+  Rocket, 
+  Target, 
+  TrendingUp, 
+  Calendar, 
+  Award, 
+  Loader2, 
+  Sparkles,
+  Lightbulb,
+  Plus
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { thinkDeeply } from '../../lib/ai-tools';
 import { toast } from 'sonner';
 
@@ -94,9 +107,21 @@ const ROADMAP_ITEMS: RoadmapItem[] = [
 ];
 
 export const RoadmapTab: React.FC = () => {
-  const { setDocumentContent, setMainTab, setTranscript, documentContent } = useUI();
+  const { setDocumentContent, setMainTab, setTranscript, documentContent, currentProjectId } = useUI();
   const { name, info, topic } = useUser();
+  const { tasks } = useTaskStore();
   const [isGenerating, setIsGenerating] = useState<string | null>(null);
+  const [isSuggesting, setIsSuggesting] = useState(false);
+  const [customItems, setCustomItems] = useState<RoadmapItem[]>([]);
+
+  const projectTasks = useMemo(() => 
+    tasks.filter(t => t.projectId === currentProjectId),
+    [tasks, currentProjectId]
+  );
+
+  const completedTasksCount = projectTasks.filter(t => t.completed).length;
+  const totalTasksCount = projectTasks.length;
+  const progressPercentage = totalTasksCount > 0 ? Math.round((completedTasksCount / totalTasksCount) * 100) : 0;
 
   const handleStartDocument = (item: RoadmapItem) => {
     const initialContent = `# ${item.title}\n\n## Overview\n${item.description}\n\n## Let's get started...\n`;
@@ -135,14 +160,97 @@ Format the response in Markdown. Include sections like Executive Summary, Key Ob
     }
   };
 
+  const handleSuggestCustomItem = async () => {
+    if (!documentContent.trim()) {
+      toast.error('Add some content to your document first so I can suggest something relevant.');
+      return;
+    }
+
+    setIsSuggesting(true);
+    try {
+      const prompt = `Based on this project document, suggest ONE unique, highly strategic roadmap item that is missing but crucial for this specific venture.
+      
+      Document:
+      ${documentContent}
+      
+      Return ONLY a JSON object with:
+      {
+        "title": "Short Title",
+        "description": "One sentence description",
+        "stage": "Idea" | "Planning" | "Launch" | "Growth"
+      }`;
+
+      const result = await thinkDeeply(prompt);
+      const suggestion = JSON.parse(result.replace(/```json|```/g, ''));
+      
+      const newItem: RoadmapItem = {
+        id: `custom-${Date.now()}`,
+        title: suggestion.title,
+        description: suggestion.description,
+        stage: suggestion.stage,
+        icon: <Lightbulb size={20} />
+      };
+
+      setCustomItems(prev => [...prev, newItem]);
+      toast.success('AI suggested a new roadmap milestone!');
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to generate suggestion.');
+    } finally {
+      setIsSuggesting(false);
+    }
+  };
+
   const stages = ['Idea', 'Planning', 'Launch', 'Growth', 'Anniversary'] as const;
+
+  const allItems = [...ROADMAP_ITEMS, ...customItems];
 
   return (
     <div className="roadmap-tab" style={{ padding: '30px', height: '100%', overflowY: 'auto' }}>
-      <header style={{ marginBottom: '40px' }}>
-        <h2 style={{ fontSize: '24px', fontFamily: 'var(--font-display)', color: 'var(--theme-accent)', marginBottom: '10px' }}>Startup Roadmap</h2>
-        <p style={{ color: 'rgba(255,255,255,0.6)' }}>Orchestrate your startup documentation from idea to legacy.</p>
+      <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <h2 style={{ fontSize: '24px', fontFamily: 'var(--font-display)', color: 'var(--theme-accent)', marginBottom: '10px' }}>Startup Roadmap</h2>
+          <p style={{ color: 'rgba(255,255,255,0.6)' }}>Orchestrate your startup documentation from idea to legacy.</p>
+        </div>
+        
+        <div style={{ textAlign: 'right', minWidth: '200px' }}>
+          <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '8px', fontWeight: 600 }}>OVERALL PROGRESS</div>
+          <div style={{ width: '100%', height: '8px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: `${progressPercentage}%` }}
+              style={{ height: '100%', backgroundColor: 'var(--theme-accent)', boxShadow: '0 0 10px var(--theme-accent)' }}
+            />
+          </div>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--theme-accent)', marginTop: '8px' }}>
+            {completedTasksCount} / {totalTasksCount} Tasks Completed ({progressPercentage}%)
+          </div>
+        </div>
       </header>
+
+      <div style={{ marginBottom: '40px' }}>
+        <button
+          onClick={handleSuggestCustomItem}
+          disabled={isSuggesting}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            padding: '12px 20px',
+            borderRadius: '12px',
+            backgroundColor: 'rgba(0, 243, 255, 0.1)',
+            border: '1px solid var(--theme-accent)',
+            color: 'var(--theme-accent)',
+            fontSize: '13px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          {isSuggesting ? <Loader2 size={18} className="animate-spin" /> : <Lightbulb size={18} />}
+          {isSuggesting ? 'Analyzing Project...' : 'Suggest Custom Milestone'}
+        </button>
+      </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
         {stages.map((stage) => (
@@ -168,15 +276,18 @@ Format the response in Markdown. Include sections like Executive Summary, Key Ob
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
-              {ROADMAP_ITEMS.filter(item => item.stage === stage).map((item) => (
+              {allItems.filter(item => item.stage === stage).map((item) => (
                 <motion.div
                   key={item.id}
+                  layout
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
                   whileHover={{ scale: 1.02, backgroundColor: 'rgba(0, 243, 255, 0.05)' }}
                   style={{
                     padding: '20px',
                     borderRadius: '12px',
-                    backgroundColor: 'rgba(255,255,255,0.03)',
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    backgroundColor: item.id.startsWith('custom-') ? 'rgba(0,243,255,0.05)' : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${item.id.startsWith('custom-') ? 'var(--theme-accent)' : 'rgba(255,255,255,0.1)'}`,
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',
                     display: 'flex',
@@ -188,7 +299,7 @@ Format the response in Markdown. Include sections like Executive Summary, Key Ob
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
                       <h4 style={{ margin: 0, fontSize: '16px', color: 'white' }}>{item.title}</h4>
-                      <Circle size={16} color="rgba(255,255,255,0.2)" />
+                      {item.id.startsWith('custom-') ? <Lightbulb size={16} color="var(--theme-accent)" /> : <Circle size={16} color="rgba(255,255,255,0.2)" />}
                     </div>
                     <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', lineHeight: '1.5', marginBottom: '20px' }}>
                       {item.description}

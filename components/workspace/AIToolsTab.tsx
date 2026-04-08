@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { generateSpeech, generateVideo, animateImage } from '../../lib/ai-tools';
 import { Play, Video, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Tooltip } from '../Tooltip';
 
 export const AIToolsTab: React.FC = () => {
   const [speechText, setSpeechText] = useState('');
@@ -92,15 +93,17 @@ export const AIToolsTab: React.FC = () => {
           className="brutalist-textarea"
           style={{ width: '100%', minHeight: '80px', marginBottom: '15px' }}
         />
-        <button
-          onClick={handleGenerateSpeech}
-          disabled={isGeneratingSpeech || !speechText.trim()}
-          className={`brutalist-button ${isGeneratingSpeech || !speechText.trim() ? '' : 'primary'}`}
-          style={{ width: '100%' }}
-        >
-          {isGeneratingSpeech ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
-          {isGeneratingSpeech ? 'GENERATING...' : 'GENERATE SPEECH'}
-        </button>
+        <Tooltip content="Generate Speech from Text" position="top">
+          <button
+            onClick={handleGenerateSpeech}
+            disabled={isGeneratingSpeech || !speechText.trim()}
+            className={`brutalist-button ${isGeneratingSpeech || !speechText.trim() ? '' : 'primary'}`}
+            style={{ width: '100%' }}
+          >
+            {isGeneratingSpeech ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
+            {isGeneratingSpeech ? 'GENERATING...' : 'GENERATE SPEECH'}
+          </button>
+        </Tooltip>
         {speechUrl && (
           <div style={{ marginTop: '20px', border: '2px solid var(--theme-accent)', padding: '10px' }}>
             <audio src={speechUrl} controls style={{ width: '100%' }} />
@@ -119,15 +122,17 @@ export const AIToolsTab: React.FC = () => {
           className="brutalist-textarea"
           style={{ width: '100%', minHeight: '80px', marginBottom: '15px' }}
         />
-        <button
-          onClick={handleGenerateVideo}
-          disabled={isGeneratingVideo || !videoPrompt.trim()}
-          className={`brutalist-button ${isGeneratingVideo || !videoPrompt.trim() ? '' : 'primary'}`}
-          style={{ width: '100%' }}
-        >
-          {isGeneratingVideo ? <Loader2 size={16} className="animate-spin" /> : <Video size={16} />}
-          {isGeneratingVideo ? 'GENERATING VIDEO...' : 'GENERATE VIDEO'}
-        </button>
+        <Tooltip content="Generate Video from Prompt" position="top">
+          <button
+            onClick={handleGenerateVideo}
+            disabled={isGeneratingVideo || !videoPrompt.trim()}
+            className={`brutalist-button ${isGeneratingVideo || !videoPrompt.trim() ? '' : 'primary'}`}
+            style={{ width: '100%' }}
+          >
+            {isGeneratingVideo ? <Loader2 size={16} className="animate-spin" /> : <Video size={16} />}
+            {isGeneratingVideo ? 'GENERATING VIDEO...' : 'GENERATE VIDEO'}
+          </button>
+        </Tooltip>
         {videoUrl && (
           <div style={{ marginTop: '20px', border: '2px solid var(--theme-accent)', boxShadow: '4px 4px 0px var(--theme-accent)' }}>
             <video src={videoUrl} controls style={{ width: '100%', display: 'block' }} />
@@ -154,15 +159,17 @@ export const AIToolsTab: React.FC = () => {
           className="brutalist-textarea"
           style={{ width: '100%', minHeight: '80px', marginBottom: '15px' }}
         />
-        <button
-          onClick={handleAnimateImage}
-          disabled={isAnimatingImage || !animatePrompt.trim() || !animateImageBase64}
-          className={`brutalist-button ${isAnimatingImage || !animatePrompt.trim() || !animateImageBase64 ? '' : 'primary'}`}
-          style={{ width: '100%' }}
-        >
-          {isAnimatingImage ? <Loader2 size={16} className="animate-spin" /> : <Video size={16} />}
-          {isAnimatingImage ? 'ANIMATING IMAGE...' : 'ANIMATE IMAGE'}
-        </button>
+        <Tooltip content="Animate Uploaded Image" position="top">
+          <button
+            onClick={handleAnimateImage}
+            disabled={isAnimatingImage || !animatePrompt.trim() || !animateImageBase64}
+            className={`brutalist-button ${isAnimatingImage || !animatePrompt.trim() || !animateImageBase64 ? '' : 'primary'}`}
+            style={{ width: '100%' }}
+          >
+            {isAnimatingImage ? <Loader2 size={16} className="animate-spin" /> : <Video size={16} />}
+            {isAnimatingImage ? 'ANIMATING IMAGE...' : 'ANIMATE IMAGE'}
+          </button>
+        </Tooltip>
         {animatedVideoUrl && (
           <div style={{ marginTop: '20px', border: '2px solid var(--theme-accent)', boxShadow: '4px 4px 0px var(--theme-accent)' }}>
             <video src={animatedVideoUrl} controls style={{ width: '100%', display: 'block' }} />

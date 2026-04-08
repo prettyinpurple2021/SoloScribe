@@ -5,10 +5,11 @@
 import * as React from 'react';
 import { useEffect, useState, useMemo } from 'react';
 import { useUI } from '../lib/state';
-import { ArrowRight, LogIn, MessageSquare, Volume2, Edit3, Users, Sparkles, ChevronRight, ChevronLeft, Mail, User as UserIcon, Lock } from 'lucide-react';
+import { ArrowRight, LogIn, MessageSquare, Volume2, Edit3, Users, Sparkles, ChevronRight, ChevronLeft, Mail, User as UserIcon, Lock, Mic } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
+import { Tooltip } from './Tooltip';
 
 const ONBOARDING_STEPS = [
   {
@@ -51,6 +52,34 @@ export default function WelcomeScreen() {
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+
+  const toggleVoiceType = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      toast.error('Speech recognition not supported in this browser.');
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => setIsListening(true);
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setUsername(transcript);
+      setIsListening(false);
+    };
+    recognition.onerror = (event: any) => {
+      console.error('Speech recognition error:', event.error);
+      setIsListening(false);
+    };
+    recognition.onend = () => setIsListening(false);
+
+    recognition.start();
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => setIsVisible(true), 100);
@@ -200,8 +229,17 @@ export default function WelcomeScreen() {
                                   value={username}
                                   onChange={(e) => setUsername(e.target.value)}
                                   placeholder="SOLO_FOUNDER_NAME"
-                                  className="brutalist-input pl-10"
+                                  className="brutalist-input pl-10 pr-10"
                                 />
+                                <Tooltip content="Voice Type" position="right">
+                                  <button
+                                    type="button"
+                                    onClick={toggleVoiceType}
+                                    className={`absolute right-3 top-1/2 -translate-y-1/2 transition-colors ${isListening ? 'text-theme-accent animate-pulse' : 'opacity-30 hover:opacity-100'}`}
+                                  >
+                                    <Mic size={16} />
+                                  </button>
+                                </Tooltip>
                               </div>
                             </div>
                           )}
