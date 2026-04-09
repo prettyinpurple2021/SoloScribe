@@ -10,11 +10,11 @@ import BasicFace from './avatar/BasicFace';
 import cn from 'classnames';
 
 // Minimum volume level that indicates audio output is occurring.
-const AUDIO_OUTPUT_DETECTION_THRESHOLD = 0.05;
+const AUDIO_OUTPUT_DETECTION_THRESHOLD = 0.01;
 
 // Amount of delay in milliseconds after audio output stops before the avatar
 // is considered "not talking".
-const TALKING_STATE_COOLDOWN_MS = 2000;
+const TALKING_STATE_COOLDOWN_MS = 500;
 
 export default function FloatingAvatar() {
   const { agentState, speechBubbleText, setSpeechBubbleText } = useUI();

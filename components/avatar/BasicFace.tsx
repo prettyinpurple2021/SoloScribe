@@ -62,7 +62,7 @@ export default function BasicFace({
       if (ctx) {
         renderBasicFace({
           ctx,
-          mouthScale: volumeRef.current / 2,
+          mouthScale: volumeRef.current * 4,
           eyeScale: eyeScaleRef.current,
           color: colorRef.current,
         });

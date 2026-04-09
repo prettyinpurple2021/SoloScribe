@@ -27,10 +27,10 @@ import Header from './components/Header';
 import UserSettings from './components/UserSettings';
 import WelcomeScreen from './components/WelcomeScreen';
 import { ProjectSidebar } from './components/workspace/ProjectSidebar';
-import { LiveAPIProvider, useLiveAPIContext } from './contexts/LiveAPIContext';
-import { useAgent, useUI } from './lib/state';
+import { LiveAPIProvider } from './contexts/LiveAPIContext';
+import { useUI } from './lib/state';
 // Fix: Import React to resolve "Cannot find namespace 'React'" error.
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { themes } from './lib/themes';
 import FloatingAvatar from './components/FloatingAvatar';
 import HelpModal from './components/HelpModal';
@@ -55,15 +55,6 @@ const getApiKey = () => {
 };
 
 const API_KEY = getApiKey() as string;
-
-// Minimum volume level that indicates audio output is occurring.
-// This threshold prevents the avatar from reacting to negligible noise.
-const AUDIO_OUTPUT_DETECTION_THRESHOLD = 0.05;
-
-// Amount of delay in milliseconds after audio output stops before the avatar
-// is considered "not talking". This creates a more natural-looking effect,
-// preventing the talking animation from stopping abruptly between words.
-const TALKING_STATE_COOLDOWN_MS = 2000;
 
 import { BrowserRouter as Router, Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
 import { PublicProjectView } from './components/workspace/PublicProjectView';

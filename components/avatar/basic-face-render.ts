@@ -119,19 +119,24 @@ export function renderBasicFace({
   ctx.strokeStyle = '#000000';
   ctx.lineWidth = 4;
   const mouthY = centerY + radiusY * 0.5;
-  const mWidth = 14;
-  const mHeight = 8 + mouthScale * 12;
+  
+  // Dynamic mouth sizing based on audio volume
+  // We want it to go from a small slit to a wide open mouth
+  const mWidth = 12 + mouthScale * 8;
+  const mHeight = 4 + mouthScale * 24;
   
   ctx.beginPath();
   ctx.ellipse(centerX, mouthY, mWidth, mHeight, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
   
-  // Interior (Dark red tongue/throat area)
-  ctx.fillStyle = '#7A2F2F'; // Dark reddish
-  ctx.beginPath();
-  ctx.ellipse(centerX, mouthY + mHeight * 0.3, mWidth * 0.7, mHeight * 0.4, 0, 0, Math.PI * 2);
-  ctx.fill();
+  // Interior (Dark red tongue/throat area) - only visible when mouth is open
+  if (mouthScale > 0.05) {
+    ctx.fillStyle = '#7A2F2F'; // Dark reddish
+    ctx.beginPath();
+    ctx.ellipse(centerX, mouthY + mHeight * 0.2, mWidth * 0.7, mHeight * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
   
   ctx.restore();
 }
