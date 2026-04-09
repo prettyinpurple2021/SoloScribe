@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
-import { generateSpeech, generateVideo, animateImage } from '../../lib/ai-tools';
-import { Play, Video, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { generateSpeech, generateVideo, animateImage, thinkDeeply } from '../../lib/ai-tools';
+import { Play, Video, Image as ImageIcon, Loader2, LayoutDashboard, Sparkles, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { Tooltip } from '../Tooltip';
+import { useUI } from '../../lib/state';
+import { marked } from 'marked';
 
 export const AIToolsTab: React.FC = () => {
+  const { documentContent } = useUI();
   const [speechText, setSpeechText] = useState('');
   const [speechUrl, setSpeechUrl] = useState<string | null>(null);
   const [isGeneratingSpeech, setIsGeneratingSpeech] = useState(false);
@@ -18,6 +21,53 @@ export const AIToolsTab: React.FC = () => {
   const [animateMimeType, setAnimateMimeType] = useState<string | null>(null);
   const [animatedVideoUrl, setAnimatedVideoUrl] = useState<string | null>(null);
   const [isAnimatingImage, setIsAnimatingImage] = useState(false);
+
+  const [isGeneratingPitchDeck, setIsGeneratingPitchDeck] = useState(false);
+  const [pitchDeck, setPitchDeck] = useState<string | null>(null);
+
+  const [competitorQuery, setCompetitorQuery] = useState('');
+  const [competitorAnalysis, setCompetitorAnalysis] = useState<string | null>(null);
+  const [isAnalyzingCompetitors, setIsAnalyzingCompetitors] = useState(false);
+
+  const handleGeneratePitchDeck = async () => {
+    if (!documentContent.trim()) return;
+    setIsGeneratingPitchDeck(true);
+    try {
+      const prompt = `You are an expert pitch deck consultant. Based on the following business document, generate a professional 10-12 slide pitch deck outline. For each slide, provide a title, key bullet points, and a suggestion for a visual/illustration.
+      
+      Document Content:
+      ${documentContent}
+      
+      Format your response in Markdown.`;
+      const response = await thinkDeeply(prompt);
+      setPitchDeck(response);
+      toast.success('Pitch deck outline generated!');
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to generate pitch deck.');
+    } finally {
+      setIsGeneratingPitchDeck(false);
+    }
+  };
+
+  const handleAnalyzeCompetitors = async () => {
+    if (!competitorQuery.trim()) return;
+    setIsAnalyzingCompetitors(true);
+    try {
+      const prompt = `You are a market intelligence analyst. Perform a deep competitive analysis for the following query: "${competitorQuery}". 
+      Identify top 3-5 competitors, their strengths, weaknesses, and key differentiators. 
+      Then, suggest a "Blue Ocean" strategy or a unique value proposition that a startup could use to win.
+      Format your response in Markdown.`;
+      const response = await thinkDeeply(prompt);
+      setCompetitorAnalysis(response);
+      toast.success('Competitor analysis complete!');
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to analyze competitors.');
+    } finally {
+      setIsAnalyzingCompetitors(false);
+    }
+  };
 
   const handleGenerateSpeech = async () => {
     if (!speechText.trim()) return;
@@ -173,6 +223,58 @@ export const AIToolsTab: React.FC = () => {
         {animatedVideoUrl && (
           <div style={{ marginTop: '20px', border: '2px solid var(--theme-accent)', boxShadow: '4px 4px 0px var(--theme-accent)' }}>
             <video src={animatedVideoUrl} controls style={{ width: '100%', display: 'block' }} />
+          </div>
+        )}
+      </div>
+
+      {/* Pitch Deck Orchestrator */}
+      <div className="tool-section" style={{ marginBottom: '40px', padding: '20px', border: '2px solid var(--theme-accent)', backgroundColor: 'var(--theme-surface)', boxShadow: '4px 4px 0px var(--theme-accent)' }}>
+        <h3 style={{ fontFamily: 'var(--font-display)', textTransform: 'uppercase', marginBottom: '15px' }}><LayoutDashboard size={18} style={{ display: 'inline', marginRight: '8px' }} /> Pitch Deck Orchestrator</h3>
+        <p style={{ fontSize: '12px', color: 'var(--theme-text)', marginBottom: '15px', fontFamily: 'var(--font-mono)' }}>GENERATE A PROFESSIONAL PITCH DECK OUTLINE AND SLIDE CONTENT BASED ON YOUR CURRENT PROJECT.</p>
+        <Tooltip content="Generate Pitch Deck Outline" position="top">
+          <button
+            onClick={handleGeneratePitchDeck}
+            disabled={isGeneratingPitchDeck || !documentContent.trim()}
+            className={`brutalist-button ${isGeneratingPitchDeck || !documentContent.trim() ? '' : 'primary'}`}
+            style={{ width: '100%' }}
+          >
+            {isGeneratingPitchDeck ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+            {isGeneratingPitchDeck ? 'ORCHESTRATING...' : 'GENERATE PITCH DECK'}
+          </button>
+        </Tooltip>
+        {pitchDeck && (
+          <div style={{ marginTop: '20px', border: '2px solid var(--theme-accent)', padding: '15px', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+            <div className="markdown-body" dangerouslySetInnerHTML={{ __html: marked.parse(pitchDeck) as string }} />
+          </div>
+        )}
+      </div>
+
+      {/* Competitor Intelligence Hub */}
+      <div className="tool-section" style={{ marginBottom: '40px', padding: '20px', border: '2px solid var(--theme-accent)', backgroundColor: 'var(--theme-surface)', boxShadow: '4px 4px 0px var(--theme-accent)' }}>
+        <h3 style={{ fontFamily: 'var(--font-display)', textTransform: 'uppercase', marginBottom: '15px' }}><Search size={18} style={{ display: 'inline', marginRight: '8px' }} /> Competitor Intelligence Hub</h3>
+        <p style={{ fontSize: '12px', color: 'var(--theme-text)', marginBottom: '15px', fontFamily: 'var(--font-mono)' }}>ANALYZE YOUR COMPETITORS AND IDENTIFY YOUR UNIQUE VALUE PROPOSITION.</p>
+        <input
+          type="text"
+          value={competitorQuery}
+          onChange={e => setCompetitorQuery(e.target.value)}
+          placeholder="ENTER COMPETITOR NAMES OR INDUSTRY..."
+          className="brutalist-input"
+          style={{ width: '100%', marginBottom: '15px' }}
+        />
+        <Tooltip content="Analyze Competitors" position="top">
+          <button
+            onClick={handleAnalyzeCompetitors}
+            disabled={isAnalyzingCompetitors || !competitorQuery.trim()}
+            className={`brutalist-button ${isAnalyzingCompetitors || !competitorQuery.trim() ? '' : 'primary'}`}
+            style={{ width: '100%' }}
+          >
+            {isAnalyzingCompetitors ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+            {isAnalyzingCompetitors ? 'ANALYZING...' : 'ANALYZE COMPETITORS'}
+          </button>
+        </Tooltip>
+        {competitorAnalysis && (
+          <div style={{ marginTop: '20px', border: '2px solid var(--theme-accent)', padding: '15px', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+            <div className="markdown-body" dangerouslySetInnerHTML={{ __html: marked.parse(competitorAnalysis) as string }} />
           </div>
         )}
       </div>

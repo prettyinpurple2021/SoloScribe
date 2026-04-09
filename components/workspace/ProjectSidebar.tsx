@@ -92,7 +92,7 @@ export const ProjectSidebar: React.FC = () => {
       setIsCreating(false);
       toast.success('Project created!');
     } catch (error) {
-      console.error('Error creating project:', error);
+      handleFirestoreError(error, OperationType.CREATE, `users/${user.uid}/projects`);
       toast.error('Failed to create project');
     }
   };
@@ -140,7 +140,7 @@ export const ProjectSidebar: React.FC = () => {
       setEditingId(null);
       toast.success('Project renamed');
     } catch (error) {
-      console.error('Error renaming project:', error);
+      handleFirestoreError(error, OperationType.UPDATE, `users/${user.uid}/projects/${id}`);
       toast.error('Failed to rename project');
     }
   };

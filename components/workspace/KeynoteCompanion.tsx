@@ -53,12 +53,13 @@ import { ProjectionsTab } from './ProjectionsTab';
 import { RoadmapTab } from './RoadmapTab';
 import TasksTab from './TasksTab';
 import MarketingTab from './MarketingTab';
+import { SearchTab } from './SearchTab';
 import { CopilotSidebar } from './CopilotSidebar';
 import { MinutesLoadingAnimation } from '../MinutesLoadingAnimation';
 import { useAuth } from '../../contexts/AuthContext';
 import { Tooltip } from '../Tooltip';
 import { db, handleFirestoreError, OperationType } from '../../firebase';
-import { doc, setDoc, getDoc, serverTimestamp, collection, addDoc, query, orderBy, getDocs } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp, collection, addDoc, query, orderBy, getDocs, Timestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { thinkDeeply } from '../../lib/ai-tools';
 import { 
@@ -240,6 +241,9 @@ const WelcomePlaceholder = () => (
           <p className="feature-desc">DIRECT_EDIT_MODE: FULL CONTROL OVER DOCUMENT STATE AT ANY TIME.</p>
         </div>
       </div>
+    </div>
+    <div className="inklo-mascot-label">
+      ASK INKLO, SOLOSCRIBE
     </div>
   </div>
 );
@@ -1659,6 +1663,34 @@ export default function KeynoteCompanion() {
     },
   };
 
+  const createTaskDeclaration: FunctionDeclaration = {
+    name: 'create_task',
+    description: 'Creates a new task for the current project.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        title: {
+          type: Type.STRING,
+          description: 'The title of the task.',
+        },
+        description: {
+          type: Type.STRING,
+          description: 'A detailed description of the task.',
+        },
+        priority: {
+          type: Type.STRING,
+          enum: ['low', 'medium', 'high'],
+          description: 'The priority of the task.',
+        },
+        dueDate: {
+          type: Type.STRING,
+          description: 'The due date of the task in ISO 8601 format (YYYY-MM-DD).',
+        },
+      },
+      required: ['title', 'priority', 'dueDate'],
+    },
+  };
+
   useEffect(() => {
     // We only update the config when NOT connected to avoid interrupting an active session.
     // When the user pauses (disconnects), this will re-run and capture the latest document state
@@ -1696,6 +1728,7 @@ export default function KeynoteCompanion() {
             generateVideoDeclaration,
             thinkDeeplyDeclaration,
             searchWebDeclaration,
+            createTaskDeclaration,
           ],
         },
       ],
@@ -2154,6 +2187,32 @@ ${recentTranscript}`;
                 const { searchWeb } = await import('../../lib/ai-tools');
                 const searchResults = await searchWeb(query);
                 result = { searchResults };
+              }
+              break;
+            }
+            case 'create_task': {
+              setAgentState('Creating Task');
+              const { title, description, priority, dueDate } = fc.args;
+              if (typeof title === 'string' && typeof priority === 'string' && typeof dueDate === 'string') {
+                if (authUser && currentProjectId) {
+                  const taskData = {
+                    projectId: currentProjectId,
+                    userId: authUser.uid,
+                    title,
+                    description: description || '',
+                    priority: priority as 'low' | 'medium' | 'high',
+                    dueDate: Timestamp.fromDate(new Date(dueDate)),
+                    completed: false,
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp()
+                  };
+                  const tasksRef = collection(db, 'users', authUser.uid, 'projects', currentProjectId, 'tasks');
+                  await addDoc(tasksRef, taskData);
+                  toast.success(`Task created: ${title}`);
+                  result = { status: 'Task created successfully' };
+                } else {
+                  result = { error: 'No active project or user not authenticated' };
+                }
               }
               break;
             }
@@ -3522,6 +3581,10 @@ Format your response in Markdown.`;
 
         {mainTab === 'marketing' && (
           <MarketingTab />
+        )}
+
+        {mainTab === 'search' && (
+          <SearchTab />
         )}
       </div>
 

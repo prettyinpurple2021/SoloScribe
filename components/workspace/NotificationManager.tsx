@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useUI, useTaskStore, Task } from '../../lib/state';
 import { useAuth } from '../../contexts/AuthContext';
-import { db } from '../../firebase';
+import { db, handleFirestoreError, OperationType } from '../../firebase';
 import { 
   collection, 
   query, 
@@ -38,7 +38,7 @@ export function NotificationManager() {
       })) as Task[];
       setTasks(fetchedTasks);
     }, (error) => {
-      console.error("Error fetching tasks:", error);
+      handleFirestoreError(error, OperationType.LIST, `users/${user.uid}/projects/${currentProjectId}/tasks`);
     });
 
     return () => unsubscribe();
@@ -95,7 +95,7 @@ export function NotificationManager() {
                   updatedAt: serverTimestamp(),
                 });
               } catch (error) {
-                console.error("Error updating task notifiedTimings:", error);
+                handleFirestoreError(error, OperationType.UPDATE, `users/${user.uid}/projects/${currentProjectId}/tasks/${task.id}`);
               }
             }
           }
@@ -130,7 +130,7 @@ export function NotificationManager() {
                 updatedAt: serverTimestamp(),
               });
             } catch (error) {
-              console.error("Error updating task notified status:", error);
+              handleFirestoreError(error, OperationType.UPDATE, `users/${user.uid}/projects/${currentProjectId}/tasks/${task.id}`);
             }
           }
         }

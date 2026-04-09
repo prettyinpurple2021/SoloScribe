@@ -6,7 +6,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import {
   Agent,
-  Alice,
+  Inklo,
   Amelie,
   Ari,
   Defne,
@@ -55,6 +55,7 @@ export type User = {
   format: 'Markdown' | 'HTML';
   contextFiles: ContextFile[];
   profilePicture?: string;
+  webhookUrl?: string;
 };
 
 export const useUser = create<
@@ -110,9 +111,9 @@ export const useAgent = create<{
 }>()(
   persist(
     (set) => ({
-      current: Alice,
+      current: Inklo,
       availablePresets: [
-        Alice,
+        Inklo,
         Sam,
         Irene,
         Tom,
@@ -183,6 +184,8 @@ export type Project = {
   userId?: string;
   isPublic?: boolean;
   shareId?: string;
+  viewCount?: number;
+  lastViewedAt?: any;
 };
 
 export type Feedback = {
@@ -250,8 +253,10 @@ export const useUI = create<{
   incrementChangeCount: () => void;
   agentState: string | null;
   setAgentState: (state: string | null) => void;
-  mainTab: 'document' | 'transcript' | 'minutes' | 'audio-log' | 'chatbot' | 'tools' | 'validation' | 'projections' | 'roadmap' | 'tasks' | 'marketing';
-  setMainTab: (tab: 'document' | 'transcript' | 'minutes' | 'audio-log' | 'chatbot' | 'tools' | 'validation' | 'projections' | 'roadmap' | 'tasks' | 'marketing') => void;
+  founderMood: 'great' | 'good' | 'neutral' | 'tired' | 'stressed' | 'overwhelmed' | null;
+  setFounderMood: (mood: 'great' | 'good' | 'neutral' | 'tired' | 'stressed' | 'overwhelmed' | null) => void;
+  mainTab: 'document' | 'transcript' | 'minutes' | 'audio-log' | 'chatbot' | 'tools' | 'validation' | 'projections' | 'roadmap' | 'tasks' | 'marketing' | 'search';
+  setMainTab: (tab: 'document' | 'transcript' | 'minutes' | 'audio-log' | 'chatbot' | 'tools' | 'validation' | 'projections' | 'roadmap' | 'tasks' | 'marketing' | 'search') => void;
   documentTab: 'editor' | 'rendered';
   setDocumentTab: (tab: 'editor' | 'rendered') => void;
   speechBubbleText: string | null;
@@ -273,6 +278,8 @@ export const useUI = create<{
   setProjects: (projects: Project[]) => void;
   notificationPreferences: NotificationPreferences;
   setNotificationPreferences: (prefs: Partial<NotificationPreferences>) => void;
+  webhookUrl: string;
+  setWebhookUrl: (url: string) => void;
 }>()(
   persist(
     (set) => ({
@@ -310,6 +317,8 @@ export const useUI = create<{
       incrementChangeCount: () => set(state => ({ changeCount: state.changeCount + 1 })),
       agentState: null,
       setAgentState: (state: string | null) => set({ agentState: state }),
+      founderMood: null,
+      setFounderMood: (mood) => set({ founderMood: mood }),
       mainTab: 'document',
       setMainTab: (tab) => set({ mainTab: tab }),
       documentTab: 'rendered',
@@ -346,6 +355,8 @@ export const useUI = create<{
         set(state => ({
           notificationPreferences: { ...state.notificationPreferences, ...prefs },
         })),
+      webhookUrl: '',
+      setWebhookUrl: (url: string) => set({ webhookUrl: url }),
     }),
     {
       name: 'ui-storage',
@@ -356,6 +367,8 @@ export const useUI = create<{
         outputModality: state.outputModality,
         currentProjectId: state.currentProjectId,
         notificationPreferences: state.notificationPreferences,
+        founderMood: state.founderMood,
+        webhookUrl: state.webhookUrl,
       }),
     }
   )

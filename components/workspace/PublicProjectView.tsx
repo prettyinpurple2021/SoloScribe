@@ -9,7 +9,9 @@ import {
   addDoc, 
   serverTimestamp,
   onSnapshot,
-  orderBy
+  orderBy,
+  updateDoc,
+  increment
 } from 'firebase/firestore';
 import { Project, Feedback } from '../../lib/state';
 import { 
@@ -45,8 +47,19 @@ export const PublicProjectView: React.FC = () => {
         const querySnapshot = await getDocs(q);
         
         if (!querySnapshot.empty) {
+          const docRef = querySnapshot.docs[0].ref;
           const projectData = querySnapshot.docs[0].data() as Project;
           setProject(projectData);
+          
+          // Increment view count
+          try {
+            await updateDoc(docRef, {
+              viewCount: increment(1),
+              lastViewedAt: serverTimestamp()
+            });
+          } catch (err) {
+            console.warn('Failed to increment view count:', err);
+          }
           
           // Fetch feedback
           const feedbackQuery = query(
@@ -67,7 +80,7 @@ export const PublicProjectView: React.FC = () => {
           toast.error('Project not found or no longer public.');
         }
       } catch (error) {
-        console.error('Error fetching public project:', error);
+        handleFirestoreError(error, OperationType.GET, `public_projects/${shareId}`);
         toast.error('Failed to load project');
       } finally {
         setIsLoading(false);
@@ -97,7 +110,7 @@ export const PublicProjectView: React.FC = () => {
       setNewFeedback('');
       toast.success('Feedback submitted! Thank you.');
     } catch (error) {
-      console.error('Error submitting feedback:', error);
+      handleFirestoreError(error, OperationType.WRITE, `projects/${project.id}/feedback`);
       toast.error('Failed to submit feedback');
     } finally {
       setIsSubmitting(false);

@@ -16,6 +16,7 @@
         "format": { "type": "string" },
         "documentContent": { "type": "string" },
         "transcript": { "type": "array" },
+        "webhookUrl": { "type": "string" },
         "updatedAt": { "type": "string", "format": "date-time" }
       }
     },
@@ -31,6 +32,8 @@
         "transcript": { "type": "array" },
         "isPublic": { "type": "boolean", "description": "Whether the project is shared publicly" },
         "shareId": { "type": "string", "description": "Unique ID for public sharing" },
+        "viewCount": { "type": "integer", "description": "Number of times the public link has been viewed" },
+        "lastViewedAt": { "type": "string", "format": "date-time", "description": "Last time the public link was viewed" },
         "updatedAt": { "type": "string", "format": "date-time" },
         "createdAt": { "type": "string", "format": "date-time" }
       },

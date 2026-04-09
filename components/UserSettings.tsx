@@ -8,7 +8,7 @@ import { Theme, themes } from '../lib/themes';
 import { FONT_OPTIONS, PLACEHOLDER_DOC } from '../lib/constants';
 import React, { useState, useRef } from 'react';
 import * as pdfjs from 'pdfjs-dist';
-import { FileUp, X, FileText, Loader2, ChevronDown, Sparkles, Bell, Settings, Camera, RefreshCw } from 'lucide-react';
+import { FileUp, X, FileText, Loader2, ChevronDown, Sparkles, Bell, Settings, Camera, RefreshCw, Webhook } from 'lucide-react';
 import { toast } from 'sonner';
 import { Tooltip } from './Tooltip';
 
@@ -193,7 +193,9 @@ export default function UserSettings() {
     setHasCompletedOnboarding, 
     setShowWelcomeScreen,
     notificationPreferences,
-    setNotificationPreferences
+    setNotificationPreferences,
+    webhookUrl,
+    setWebhookUrl
   } = useUI();
   // Hooks to manage agent state (needed for updating agent color on theme change)
   const { current: agent, update: updateAgent } = useAgent();
@@ -423,6 +425,24 @@ export default function UserSettings() {
                 />
                 <span>Use search as needed</span>
               </label>
+            </div>
+          </div>
+
+          {/* Integrations Section */}
+          <div className="settings-section">
+            <h3 className="section-title"><Webhook size={16} /> Integrations & Webhooks</h3>
+            <div>
+              <p className="input-label">Outgoing Webhook URL</p>
+              <input
+                type="url"
+                className="brutalist-input"
+                value={webhookUrl}
+                onChange={e => setWebhookUrl(e.target.value)}
+                placeholder="https://zapier.com/hooks/..."
+              />
+              <p className="config-description" style={{ marginTop: '8px', fontSize: '11px' }}>
+                SoloScribe will send events (like task completion) to this URL.
+              </p>
             </div>
           </div>
 

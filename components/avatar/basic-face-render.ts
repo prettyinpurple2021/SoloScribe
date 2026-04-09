@@ -11,114 +11,144 @@ export type BasicFaceState = {
 };
 
 /**
- * Renders a sophisticated, purely abstract "Glowing Nebula" AI.
- * No facial features. Layered cosmic energy that pulses with audio.
+ * Renders Inklo, the SoloScribe mascot.
+ * Matches the provided image: egg-shaped yellow body, thick black glasses, 
+ * vertical oval eyes, and a specific top-left highlight.
  */
 export function renderBasicFace({
   ctx,
   mouthScale,
   eyeScale,
-  color = '#00f3ff',
+  color = '#F2FF00', // Bright Inklo Yellow
 }: BasicFaceState) {
   const { width, height } = ctx.canvas;
   const centerX = width / 2;
   const centerY = height / 2;
-  const radius = Math.min(width, height) / 2 - 5;
+  
+  // Proportions based on an egg shape
+  const radiusX = Math.min(width, height) / 2 - 15;
+  const radiusY = radiusX * 1.2; // Slightly taller than wide
 
   // Clear the canvas
   ctx.clearRect(0, 0, width, height);
 
-  // 1. Deep Space Background
-  const spaceGrad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
-  spaceGrad.addColorStop(0, '#0a0a1a');
-  spaceGrad.addColorStop(0.8, '#050510');
-  spaceGrad.addColorStop(1, '#000000');
-  ctx.fillStyle = spaceGrad;
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-  ctx.fill();
-
-  // 2. Layered Nebula Clouds
-  const time = Date.now() / 1000;
-  
-  // Primary Nebula (Cyan/Blue)
+  // 1. Shadow (Flat black oval at the bottom)
   ctx.save();
-  ctx.globalCompositeOperation = 'screen';
-  const nebula1 = ctx.createRadialGradient(
-    centerX + Math.cos(time * 0.5) * radius * 0.2,
-    centerY + Math.sin(time * 0.5) * radius * 0.2,
-    0,
-    centerX, centerY, radius * 0.8
-  );
-  nebula1.addColorStop(0, 'rgba(0, 243, 255, 0.3)');
-  nebula1.addColorStop(0.5, 'rgba(0, 100, 255, 0.1)');
-  nebula1.addColorStop(1, 'transparent');
-  ctx.fillStyle = nebula1;
-  ctx.fillRect(0, 0, width, height);
-
-  // Secondary Nebula (Purple/Magenta)
-  const nebula2 = ctx.createRadialGradient(
-    centerX + Math.sin(time * 0.7) * radius * 0.3,
-    centerY + Math.cos(time * 0.7) * radius * 0.3,
-    0,
-    centerX, centerY, radius * 0.7
-  );
-  nebula2.addColorStop(0, 'rgba(176, 38, 255, 0.25)');
-  nebula2.addColorStop(0.6, 'rgba(100, 0, 255, 0.05)');
-  nebula2.addColorStop(1, 'transparent');
-  ctx.fillStyle = nebula2;
-  ctx.fillRect(0, 0, width, height);
-  
-  // 3. Pulsing AI Core (Reacts to audio)
-  const coreRadius = radius * (0.3 + mouthScale * 0.2);
-  const coreGrad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, coreRadius);
-  coreGrad.addColorStop(0, '#fff');
-  coreGrad.addColorStop(0.2, color);
-  coreGrad.addColorStop(0.5, 'rgba(0, 243, 255, 0.2)');
-  coreGrad.addColorStop(1, 'transparent');
-  
-  ctx.shadowBlur = 20 + mouthScale * 30;
-  ctx.shadowColor = color;
-  ctx.fillStyle = coreGrad;
+  ctx.fillStyle = '#000000';
   ctx.beginPath();
-  ctx.arc(centerX, centerY, coreRadius, 0, Math.PI * 2);
+  ctx.ellipse(centerX, centerY + radiusY + 15, radiusX * 0.6, radiusY * 0.12, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.shadowBlur = 0;
+  ctx.restore();
 
-  // 4. Star Particles
-  ctx.fillStyle = '#fff';
-  for (let i = 0; i < 15; i++) {
-    const angle = (i / 15) * Math.PI * 2 + time * 0.2;
-    const dist = radius * (0.4 + Math.sin(time + i) * 0.2);
-    const px = centerX + Math.cos(angle) * dist;
-    const py = centerY + Math.sin(angle) * dist;
-    const size = 0.5 + Math.random() * 1;
-    
-    ctx.globalAlpha = 0.3 + Math.sin(time * 2 + i) * 0.2;
-    ctx.beginPath();
-    ctx.arc(px, py, size, 0, Math.PI * 2);
-    ctx.fill();
-  }
+  // 2. Body (Yellow Egg Shape)
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.strokeStyle = '#000000';
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
   
-  // 5. Energy Rings (React to audio)
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 1;
-  for (let i = 0; i < 2; i++) {
-    const ringRadius = radius * (0.5 + i * 0.15 + mouthScale * 0.1);
-    ctx.globalAlpha = (0.2 - i * 0.1) * (1 + mouthScale);
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, ringRadius, 0, Math.PI * 2);
-    ctx.stroke();
-  }
+  // Top-Left Highlight (Curved white shape)
+  ctx.save();
+  ctx.strokeStyle = '#FFFFFF';
+  ctx.lineWidth = 10;
+  ctx.lineCap = 'round';
+  ctx.globalAlpha = 0.8;
+  ctx.beginPath();
+  // Drawing a curve on the top left
+  ctx.arc(centerX - radiusX * 0.4, centerY - radiusY * 0.5, radiusX * 0.3, Math.PI * 0.8, Math.PI * 1.4);
+  ctx.stroke();
+  ctx.restore();
+  ctx.restore();
+
+  // 3. Glasses (Thick Black Frames)
+  ctx.save();
+  ctx.fillStyle = '#000000';
+  
+  const gWidth = radiusX * 0.75;
+  const gHeight = radiusY * 0.45;
+  const gY = centerY - radiusY * 0.1;
+  const bridge = radiusX * 0.2;
+  const cornerRadius = 15;
+  
+  // Left Frame
+  drawRoundedRect(ctx, centerX - gWidth - bridge/2, gY, gWidth, gHeight, cornerRadius);
+  ctx.fill();
+  
+  // Right Frame
+  drawRoundedRect(ctx, centerX + bridge/2, gY, gWidth, gHeight, cornerRadius);
+  ctx.fill();
+  
+  // Bridge (Thick)
+  ctx.fillRect(centerX - bridge/2 - 2, gY + gHeight * 0.3, bridge + 4, gHeight * 0.25);
+  
+  // Side Wings (Extensions)
+  ctx.fillRect(centerX - gWidth - bridge/2 - 5, gY + 5, 10, gHeight * 0.4);
+  ctx.fillRect(centerX + gWidth + bridge/2 - 5, gY + 5, 10, gHeight * 0.4);
+
+  // 4. Lenses (Yellow interior of glasses)
+  ctx.fillStyle = color;
+  const lensPadding = 8;
+  drawRoundedRect(ctx, centerX - gWidth - bridge/2 + lensPadding, gY + lensPadding, gWidth - lensPadding * 2, gHeight - lensPadding * 2, cornerRadius - 5);
+  ctx.fill();
+  drawRoundedRect(ctx, centerX + bridge/2 + lensPadding, gY + lensPadding, gWidth - lensPadding * 2, gHeight - lensPadding * 2, cornerRadius - 5);
+  ctx.fill();
+  
+  // 5. Eyes (Inside Lenses - Vertical Ovals)
+  ctx.fillStyle = '#000000';
+  const eyeY = gY + gHeight / 2;
+  const eyeXOffset = gWidth / 2;
+  
+  // Left Eye
+  ctx.beginPath();
+  ctx.ellipse(centerX - bridge/2 - eyeXOffset, eyeY, 4, 8 * (0.8 + eyeScale * 0.4), 0, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // Right Eye
+  ctx.beginPath();
+  ctx.ellipse(centerX + bridge/2 + eyeXOffset, eyeY, 4, 8 * (0.8 + eyeScale * 0.4), 0, 0, Math.PI * 2);
+  ctx.fill();
   
   ctx.restore();
 
-  // 6. Outer Rim Glow
-  ctx.strokeStyle = color;
-  ctx.globalAlpha = 0.2;
-  ctx.lineWidth = 2;
+  // 6. Mouth (Open oval with dark red interior)
+  ctx.save();
+  ctx.fillStyle = '#000000';
+  ctx.strokeStyle = '#000000';
+  ctx.lineWidth = 4;
+  const mouthY = centerY + radiusY * 0.5;
+  const mWidth = 14;
+  const mHeight = 8 + mouthScale * 12;
+  
   ctx.beginPath();
-  ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+  ctx.ellipse(centerX, mouthY, mWidth, mHeight, 0, 0, Math.PI * 2);
+  ctx.fill();
   ctx.stroke();
-  ctx.globalAlpha = 1.0;
+  
+  // Interior (Dark red tongue/throat area)
+  ctx.fillStyle = '#7A2F2F'; // Dark reddish
+  ctx.beginPath();
+  ctx.ellipse(centerX, mouthY + mHeight * 0.3, mWidth * 0.7, mHeight * 0.4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  
+  ctx.restore();
+}
+
+/**
+ * Helper to draw rounded rectangles for the glasses frames.
+ */
+function drawRoundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
 }

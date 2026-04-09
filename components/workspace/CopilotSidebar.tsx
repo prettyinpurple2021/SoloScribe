@@ -4,6 +4,7 @@ import { thinkDeeply } from '../../lib/ai-tools';
 import { Loader2, Lightbulb, Sparkles } from 'lucide-react';
 import { marked } from 'marked';
 import { Tooltip } from '../Tooltip';
+import { FounderHealthCheck } from './FounderHealthCheck';
 
 export const CopilotSidebar: React.FC = () => {
   const { documentContent } = useUI();
@@ -53,6 +54,8 @@ Provide 3 specific, actionable suggestions for improvements or content additions
       </div>
       
       <div className="copilot-content">
+        <FounderHealthCheck />
+        
         <div style={{ marginBottom: '1.5rem' }}>
           <label className="brutalist-label">YOUR GOALS (OPTIONAL)</label>
           <textarea 

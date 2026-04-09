@@ -141,7 +141,7 @@ service cloud.firestore {
     // ===============================================================
 
     function isValidUser() {
-      let allowedFields = ['uid', 'email', 'displayName', 'photoURL', 'role', 'createdAt', 'info', 'topic', 'format', 'documentContent', 'transcript', 'updatedAt'];
+      let allowedFields = ['uid', 'email', 'displayName', 'photoURL', 'role', 'createdAt', 'info', 'topic', 'format', 'documentContent', 'transcript', 'updatedAt', 'webhookUrl'];
       return hasOnlyAllowedFields(allowedFields) &&
              isValidString('uid', 1, 100) &&
              isValidString('email', 3, 100) &&
@@ -154,11 +154,12 @@ service cloud.firestore {
              isValidOptionalString('format', 0, 100) &&
              isValidOptionalString('documentContent', 0, 1000000) && // 1MB limit
              isValidOptionalList('transcript', 10000) &&
-             isOptionalTimestamp('updatedAt');
+             isOptionalTimestamp('updatedAt') &&
+             isValidOptionalString('webhookUrl', 0, 1000);
     }
 
     function isValidProject() {
-      let allowedFields = ['id', 'userId', 'name', 'documentContent', 'transcript', 'updatedAt', 'createdAt'];
+      let allowedFields = ['id', 'userId', 'name', 'documentContent', 'transcript', 'updatedAt', 'createdAt', 'isPublic', 'shareId', 'viewCount', 'lastViewedAt'];
       return hasOnlyAllowedFields(allowedFields) &&
              hasRequiredFields(['id', 'userId', 'name', 'documentContent', 'transcript', 'updatedAt']) &&
              isValidString('id', 1, 100) &&
@@ -167,7 +168,11 @@ service cloud.firestore {
              isValidString('documentContent', 0, 1000000) &&
              isValidList('transcript', 10000) &&
              isTimestamp('updatedAt') &&
-             isOptionalTimestamp('createdAt');
+             isOptionalTimestamp('createdAt') &&
+             (!( 'isPublic' in request.resource.data ) || request.resource.data.isPublic is bool) &&
+             isValidOptionalString('shareId', 0, 100) &&
+             (!( 'viewCount' in request.resource.data ) || request.resource.data.viewCount is int) &&
+             isOptionalTimestamp('lastViewedAt');
     }
 
     function isValidInterview() {
@@ -290,6 +295,22 @@ service cloud.firestore {
         // Responses cannot be updated or deleted by public users
         allow update, delete: if false;
       }
+    }
+
+    match /public_projects/{shareId} {
+      allow read: if true;
+      // Allow public to increment viewCount and update lastViewedAt
+      // OR allow owner to update everything
+      allow update: if (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount', 'lastViewedAt']) &&
+                       (resource.data.userId == request.auth.uid || true)) || 
+                       (isAuthenticated() && resource.data.userId == request.auth.uid && isValidProject());
+    }
+
+    match /projects/{projectId}/feedback/{feedbackId} {
+      // Only owner can read feedback
+      allow read: if isAuthenticated() && resource.data.ownerId == request.auth.uid;
+      // Anyone can create feedback
+      allow create: if isValidInterviewResponse(); // Reusing similar validation or define isValidFeedback
     }
   }
 }

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Share2, Copy, Globe, Lock, Check, MessageSquare } from 'lucide-react';
+import { X, Share2, Copy, Globe, Lock, Check, MessageSquare, BarChart3, Eye, Clock } from 'lucide-react';
 import { useUI, Project } from '../../lib/state';
 import { useAuth } from '../../contexts/AuthContext';
 import { Tooltip } from '../Tooltip';
-import { db } from '../../firebase';
+import { db, handleFirestoreError, OperationType } from '../../firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
 
@@ -68,7 +68,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, project
       setShareId(newShareId);
       toast.success(newIsPublic ? 'Project shared publicly!' : 'Project is now private.');
     } catch (error) {
-      console.error('Error toggling share:', error);
+      handleFirestoreError(error, OperationType.UPDATE, `users/${user.uid}/projects/${project.id}`);
       toast.error('Failed to update sharing settings');
     } finally {
       setIsSaving(false);
@@ -216,6 +216,40 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, project
                   </button>
                 </Tooltip>
               </div>
+
+              {/* Analytics Section */}
+              {isPublic && (
+                <div style={{
+                  marginBottom: '24px',
+                  padding: '16px',
+                  backgroundColor: 'rgba(0, 243, 255, 0.03)',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(0, 243, 255, 0.1)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                    <BarChart3 size={16} color="var(--theme-accent)" />
+                    <span style={{ fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>Project Analytics</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Eye size={14} color="rgba(255,255,255,0.4)" />
+                      <div>
+                        <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--theme-accent)' }}>{project.viewCount || 0}</div>
+                        <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Total Views</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Clock size={14} color="rgba(255,255,255,0.4)" />
+                      <div>
+                        <div style={{ fontSize: '12px', fontWeight: 'bold' }}>
+                          {project.lastViewedAt?.toDate ? new Date(project.lastViewedAt.toDate()).toLocaleDateString() : 'Never'}
+                        </div>
+                        <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Last Viewed</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Link Display */}
               {isPublic && (

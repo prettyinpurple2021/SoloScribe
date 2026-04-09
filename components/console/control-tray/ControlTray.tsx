@@ -291,107 +291,95 @@ function ControlTray({ children }: ControlTrayProps) {
         </div>
       )}
       <div className="control-tray paper-dots">
-        <div className="control-tray-left">
-          <Tooltip content="Help" position="right">
-            <button
-              className="action-button help-button brutalist-button"
-              onClick={() => setShowHelpModal(true)}
-            >
-              <HelpCircle size={20} />
-              <span>HELP</span>
-            </button>
-          </Tooltip>
-        </div>
+        <Tooltip content="Help" position="top">
+          <button
+            className="action-button help-button"
+            onClick={() => setShowHelpModal(true)}
+          >
+            <HelpCircle size={20} />
+            <span className="hidden sm:inline">HELP</span>
+          </button>
+        </Tooltip>
 
-        <div className={cn('button-group')}>
-          <Tooltip content={muted ? "Unmute microphone" : "Mute microphone"}>
-            <button
-              className={cn('action-button mic-button brutalist-button', {
-                talking: isUserSpeaking && !muted && connected && !isConnecting,
-                muted: muted
-              })}
-              onClick={() => setMuted(!muted)}
-            >
-              {!muted ? (
-                <>
-                  <Mic size={20} />
-                  <span>MIC_ON</span>
-                </>
-              ) : (
-                <>
-                  <MicOff size={20} />
-                  <span>MUTED</span>
-                </>
-              )}
-            </button>
-          </Tooltip>
-          {children}
-
-          <div className={cn('connection-button-container', { connected: connected || isConnecting })}>
-            {isUserSpeaking && !connected && !isConnecting && (
-              <span className="agent-off-indicator">SYSTEM_OFFLINE</span>
+        <Tooltip content={muted ? "Unmute microphone" : "Mute microphone"} position="top">
+          <button
+            className={cn('action-button mic-button', {
+              talking: isUserSpeaking && !muted && connected && !isConnecting,
+              muted: muted
+            })}
+            onClick={() => setMuted(!muted)}
+          >
+            {!muted ? (
+              <>
+                <Mic size={20} />
+                <span className="hidden sm:inline">MIC_ON</span>
+              </>
+            ) : (
+              <>
+                <MicOff size={20} />
+                <span className="hidden sm:inline">MUTED</span>
+              </>
             )}
-            <Tooltip content={connected ? "Disconnect agent" : "Connect agent"}>
-              <button
-                ref={connectButtonRef}
-                className={cn('action-button connect-toggle brutalist-button', { connected: connected && !isConnecting })}
-                onClick={() => {
-                  if (connected) {
-                    disconnect();
-                  } else {
-                    startNewSession(); // Start a new session for performance logging.
-                    addPerfLog({ turn: 0, event: 'User Action: Connect Clicked' });
-                    
-                    connect();
-                  }
-                }}
-                disabled={isConnecting}
-              >
-                {isConnecting ? (
-                  <>
-                    <RefreshCw size={20} className="animate-spin" />
-                    <span>LINKING</span>
-                  </>
-                ) : connected ? (
-                  <>
-                    <Pause size={20} />
-                    <span>STOP</span>
-                  </>
-                ) : (
-                  <>
-                    <Play size={20} />
-                    <span>START</span>
-                  </>
-                )}
-              </button>
-            </Tooltip>
-            <span className="text-indicator">{isConnecting ? 'LINKING...' : 'ACTIVE_LINK'}</span>
-          </div>
+          </button>
+        </Tooltip>
 
-          <Tooltip content="Type a command">
-            <button
-              className={cn('action-button keyboard-button brutalist-button', {
-                active: showTextInput,
-              })}
-              onClick={() => setShowTextInput(!showTextInput)}
-            >
-              <Keyboard size={20} />
-              <span>TYPE</span>
-            </button>
-          </Tooltip>
-        </div>
+        <Tooltip content={connected ? "Disconnect agent" : "Connect agent"} position="top">
+          <button
+            ref={connectButtonRef}
+            className={cn('connect-toggle', { connected: connected && !isConnecting })}
+            onClick={() => {
+              if (connected) {
+                disconnect();
+              } else {
+                startNewSession();
+                addPerfLog({ turn: 0, event: 'User Action: Connect Clicked' });
+                connect();
+              }
+            }}
+            disabled={isConnecting}
+          >
+            {isConnecting ? (
+              <>
+                <RefreshCw size={20} className="animate-spin" />
+                <span>LINKING</span>
+              </>
+            ) : connected ? (
+              <>
+                <Pause size={20} />
+                <span>STOP</span>
+              </>
+            ) : (
+              <>
+                <Play size={20} />
+                <span>START</span>
+              </>
+            )}
+          </button>
+        </Tooltip>
 
-        <div className="control-tray-right">
-          <Tooltip content="Settings" position="left">
-            <button
-              className="action-button settings-button brutalist-button"
-              onClick={() => useUI.getState().setShowUserConfig(true)}
-            >
-              <Settings size={20} />
-              <span>SETTINGS</span>
-            </button>
-          </Tooltip>
-        </div>
+        <Tooltip content="Type a command" position="top">
+          <button
+            className={cn('action-button keyboard-button', {
+              active: showTextInput,
+            })}
+            onClick={() => setShowTextInput(!showTextInput)}
+          >
+            <Keyboard size={20} />
+            <span className="hidden sm:inline">TYPE</span>
+          </button>
+        </Tooltip>
+
+        <Tooltip content="Settings" position="top">
+          <button
+            className="action-button settings-button"
+            onClick={() => useUI.getState().setShowUserConfig(true)}
+          >
+            <Settings size={20} />
+            <span className="hidden sm:inline">SETTINGS</span>
+          </button>
+        </Tooltip>
+
+        {children}
       </div>
   </section>
 );
