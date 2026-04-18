@@ -19,10 +19,7 @@ import {
   Trash2, 
   Edit3, 
   X, 
-  ChevronRight, 
   FileText,
-  MoreVertical,
-  Check,
   Search
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';

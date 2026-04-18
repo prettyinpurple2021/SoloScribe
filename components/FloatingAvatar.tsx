@@ -48,8 +48,8 @@ export default function FloatingAvatar() {
   useEffect(() => {
     // Position it at bottom-right
     setPosition({ 
-      x: window.innerWidth - 140, 
-      y: window.innerHeight - 140 
+      x: 100, 
+      y: 100 
     });
   }, []);
 
@@ -154,6 +154,7 @@ export default function FloatingAvatar() {
 
   return (
     <div
+      id="tour-avatar"
       className={cn('basic-face-container-top', {
         dragging: isDragging,
         talking: isTalking,
@@ -161,6 +162,9 @@ export default function FloatingAvatar() {
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
+        zIndex: 9999,
+        padding: '4px',
+        backgroundColor: 'transparent',
       }}
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}

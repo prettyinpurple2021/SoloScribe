@@ -142,7 +142,7 @@ Current Document State:
 ${documentContent}
 ---`;
 
-      const prompt = `${context}\n\nAct as a strategic AI co-founder. Generate a comprehensive and professional draft for the document: "${item.title}". 
+      const prompt = `${context}\n\nAct as a strategic InkLo. Generate a comprehensive and professional draft for the document: "${item.title}". 
 The goal of this document is: ${item.description}.
 Use the current project context provided above to make it highly relevant and actionable. 
 Format the response in Markdown. Include sections like Executive Summary, Key Objectives, and Next Steps where appropriate.`;

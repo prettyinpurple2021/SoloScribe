@@ -26,6 +26,7 @@ import KeynoteCompanion from './components/workspace/KeynoteCompanion';
 import Header from './components/Header';
 import UserSettings from './components/UserSettings';
 import WelcomeScreen from './components/WelcomeScreen';
+import { TutorialTour } from './components/TutorialTour';
 import { ProjectSidebar } from './components/workspace/ProjectSidebar';
 import { LiveAPIProvider } from './contexts/LiveAPIContext';
 import { useUI } from './lib/state';
@@ -54,8 +55,6 @@ const getApiKey = () => {
   return undefined;
 };
 
-const API_KEY = getApiKey() as string;
-
 import { BrowserRouter as Router, Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
 import { PublicProjectView } from './components/workspace/PublicProjectView';
 
@@ -64,7 +63,7 @@ import { PublicProjectView } from './components/workspace/PublicProjectView';
  * the draggable agent avatar, the primary app area (KeynoteCompanion), and the control tray.
  */
 function AppContent() {
-  const { showUserConfig, showAgentEdit, showDebugModal, showHelpModal, showDisclaimer } =
+  const { showUserConfig, showAgentEdit, showDebugModal, showHelpModal, showDisclaimer, showTutorial } =
     useUI();
 
   return (
@@ -82,6 +81,7 @@ function AppContent() {
       {showDebugModal && <DebugModal />}
       {showHelpModal && <HelpModal />}
       {showDisclaimer && <LegalDisclaimer />}
+      {showTutorial && <TutorialTour />}
       <div className="streaming-console paper-legal">
         <main>
           <div className="main-app-area">
@@ -204,6 +204,7 @@ function AppRoutes() {
 }
 
 function App() {
+  console.log('App rendered');
   return (
     <ErrorBoundary>
       <AuthProvider>

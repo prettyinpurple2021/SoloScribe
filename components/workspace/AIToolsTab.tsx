@@ -198,7 +198,7 @@ export const AIToolsTab: React.FC = () => {
         <input type="file" accept="image/*" onChange={handleImageUpload} className="brutalist-input" style={{ marginBottom: '15px', width: '100%' }} />
         {animateImageBase64 && (
           <div style={{ marginBottom: '15px', border: '2px solid var(--theme-accent)', display: 'inline-block', padding: '4px' }}>
-            <img src={`data:${animateMimeType};base64,${animateImageBase64}`} alt="Preview" style={{ maxWidth: '200px', maxHeight: '200px', display: 'block' }} />
+            <img src={`data:${animateMimeType};base64,${animateImageBase64}`} alt="Preview" style={{ maxWidth: '200px', maxHeight: '200px', display: 'block' }} referrerPolicy="no-referrer" />
           </div>
         )}
         

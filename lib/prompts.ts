@@ -40,7 +40,7 @@ export const createSystemInstructions = (
 `;
 
   // Include the current document state if it's a warm start.
-  const documentPrompt = currentDocument && currentDocument !== 'As you talk, your AI co-founder will draft your business plan, pitch deck, or strategy here...'
+  const documentPrompt = currentDocument && currentDocument !== 'As you talk, your InkLo will draft your business plan, pitch deck, or strategy here...'
     ? `\n\n**WARM START:** This is a continuation of a previous session. The document is NOT empty. 
 Current Document Content:
 ---
@@ -74,7 +74,7 @@ ${user.contextFiles.map(f => `--- START OF ${f.type.toUpperCase()}: ${f.name} --
     : '';
 
   // Assemble the final prompt string.
-  return `You are a brilliant, strategic, and highly proactive AI co-founder with the personality of "${
+  return `You are a brilliant, strategic, and highly proactive InkLo with the personality of "${
     agent.name
   }". Your persona is defined by the following characteristics: ${
     agent.personality

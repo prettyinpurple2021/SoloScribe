@@ -30,7 +30,7 @@ export const ChatbotTab: React.FC = () => {
 
     try {
       const chatHistory = messages.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.text}`).join('\n');
-      const systemContext = `You are a strategic AI co-founder. 
+      const systemContext = `You are a strategic InkLo. 
 User Name: ${name || 'User'}
 User Background: ${info || 'None'}
 Current Topic: ${topic || 'Not specified'}
@@ -57,7 +57,7 @@ Use this context to provide highly relevant and strategic advice.`;
       <div className="chat-messages" style={{ flex: 1, overflowY: 'auto', marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
         {messages.length === 0 ? (
           <div style={{ textAlign: 'center', color: 'var(--theme-text)', marginTop: '40px', opacity: 0.8 }}>
-            <h3 style={{ fontFamily: 'var(--font-display)', textTransform: 'uppercase' }}>AI Co-Founder Chat</h3>
+            <h3 style={{ fontFamily: 'var(--font-display)', textTransform: 'uppercase' }}>InkLo Chat</h3>
             <p style={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}>ASK ME ANYTHING ABOUT YOUR STARTUP, STRATEGY, OR IDEAS.</p>
           </div>
         ) : (

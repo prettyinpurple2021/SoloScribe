@@ -5,7 +5,6 @@
 import { useLiveAPIContext } from '../contexts/LiveAPIContext';
 import { Agent } from '../lib/presets/agents';
 import { useAgent, useUI, useUser } from '../lib/state';
-import { FONT_OPTIONS } from '../lib/constants';
 import { Tooltip } from './Tooltip';
 import c from 'classnames';
 import { useEffect, useState, useRef } from 'react';
@@ -28,7 +27,9 @@ import {
   History,
   Bug,
   Settings,
-  Megaphone
+  Megaphone,
+  Shield,
+  DollarSign
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -133,6 +134,8 @@ export default function Header() {
       case 'roadmap': return 'Roadmap';
       case 'tasks': return 'Tasks';
       case 'marketing': return 'Marketing Kit';
+      case 'compliance': return 'Compliance';
+      case 'monetization': return 'Monetization';
       default: return 'View';
     }
   };
@@ -144,6 +147,7 @@ export default function Header() {
       <div className="roomInfo">
         <Tooltip content="Open Workspace" position="right">
           <button 
+            id="tour-workspace"
             className={c('workspace-toggle userSettingsButton', { active: showProjectSidebar })}
             onClick={() => setShowProjectSidebar(!showProjectSidebar)}
           >
@@ -189,7 +193,7 @@ export default function Header() {
                 .filter(agent => agent.id !== current.id)
                 .map(agent => (
                   <li
-                    key={agent.name}
+                    key={agent.id}
                     className={c({ active: agent.id === current.id })}
                   >
                     <button onClick={() => changeAgent(agent)}>
@@ -269,7 +273,7 @@ export default function Header() {
         </div>
 
         {/* View Menu Dropdown */}
-        <div className="header-menu-container">
+        <div className="header-menu-container" id="tour-view-menu">
           <span className="header-menu-title">View:</span>
           <div className="header-menu-wrapper" ref={viewMenuRef}>
             <Tooltip content="Change current view" position="bottom">
@@ -293,6 +297,8 @@ export default function Header() {
                   {mainTab === 'roadmap' && <Map size={16} />}
                   {mainTab === 'tasks' && <CheckSquare size={16} />}
                   {mainTab === 'marketing' && <Megaphone size={16} />}
+                  {mainTab === 'compliance' && <Shield size={16} />}
+                  {mainTab === 'monetization' && <DollarSign size={16} />}
                 </div>
                 <span className="menu-label">{getViewLabel()}</span>
                 <ChevronDown size={14} className={c('chevron', { open: showViewMenu })} />
@@ -422,6 +428,26 @@ export default function Header() {
                 >
                   <Megaphone size={16} />
                   <span>Marketing Kit</span>
+                </button>
+                <button 
+                  className={c('menu-item', { active: mainTab === 'compliance' })}
+                  onClick={() => {
+                    setMainTab('compliance');
+                    setShowViewMenu(false);
+                  }}
+                >
+                  <Shield size={16} />
+                  <span>Compliance</span>
+                </button>
+                <button 
+                  className={c('menu-item', { active: mainTab === 'monetization' })}
+                  onClick={() => {
+                    setMainTab('monetization');
+                    setShowViewMenu(false);
+                  }}
+                >
+                  <DollarSign size={16} />
+                  <span>Monetization</span>
                 </button>
               </div>
             )}
@@ -609,12 +635,13 @@ export default function Header() {
         )}
         <Tooltip content="Settings" position="bottom">
           <button
+            id="tour-settings"
             className={c('userSettingsButton', { active: showUserConfig })}
             onClick={() => setShowUserConfig(!showUserConfig)}
             style={{ padding: profilePicture ? '0' : undefined, overflow: 'hidden' }}
           >
             {profilePicture ? (
-              <img src={profilePicture} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img src={profilePicture} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} referrerPolicy="no-referrer" />
             ) : (
               <Settings size={20} />
             )}

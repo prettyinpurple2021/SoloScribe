@@ -25,6 +25,8 @@ import {
   Reza,
   Sam,
   Tom,
+  Gauss,
+  Vance,
 } from './presets/agents';
 import { themes } from './themes';
 import { FONT_OPTIONS, PLACEHOLDER_DOC } from './constants';
@@ -132,6 +134,8 @@ export const useAgent = create<{
         Ines,
         Olga,
         Luca,
+        Gauss,
+        Vance,
       ],
       availablePersonal: [],
 
@@ -255,8 +259,8 @@ export const useUI = create<{
   setAgentState: (state: string | null) => void;
   founderMood: 'great' | 'good' | 'neutral' | 'tired' | 'stressed' | 'overwhelmed' | null;
   setFounderMood: (mood: 'great' | 'good' | 'neutral' | 'tired' | 'stressed' | 'overwhelmed' | null) => void;
-  mainTab: 'document' | 'transcript' | 'minutes' | 'audio-log' | 'chatbot' | 'tools' | 'validation' | 'projections' | 'roadmap' | 'tasks' | 'marketing' | 'search';
-  setMainTab: (tab: 'document' | 'transcript' | 'minutes' | 'audio-log' | 'chatbot' | 'tools' | 'validation' | 'projections' | 'roadmap' | 'tasks' | 'marketing' | 'search') => void;
+  mainTab: 'document' | 'transcript' | 'minutes' | 'audio-log' | 'chatbot' | 'tools' | 'validation' | 'projections' | 'roadmap' | 'tasks' | 'marketing' | 'search' | 'compliance' | 'monetization';
+  setMainTab: (tab: 'document' | 'transcript' | 'minutes' | 'audio-log' | 'chatbot' | 'tools' | 'validation' | 'projections' | 'roadmap' | 'tasks' | 'marketing' | 'search' | 'compliance' | 'monetization') => void;
   documentTab: 'editor' | 'rendered';
   setDocumentTab: (tab: 'editor' | 'rendered') => void;
   speechBubbleText: string | null;
@@ -280,6 +284,10 @@ export const useUI = create<{
   setNotificationPreferences: (prefs: Partial<NotificationPreferences>) => void;
   webhookUrl: string;
   setWebhookUrl: (url: string) => void;
+  showTutorial: boolean;
+  setShowTutorial: (show: boolean) => void;
+  tutorialStep: number;
+  setTutorialStep: (step: number) => void;
 }>()(
   persist(
     (set) => ({
@@ -357,6 +365,10 @@ export const useUI = create<{
         })),
       webhookUrl: '',
       setWebhookUrl: (url: string) => set({ webhookUrl: url }),
+      showTutorial: false,
+      setShowTutorial: (show: boolean) => set({ showTutorial: show }),
+      tutorialStep: 0,
+      setTutorialStep: (step: number) => set({ tutorialStep: step }),
     }),
     {
       name: 'ui-storage',

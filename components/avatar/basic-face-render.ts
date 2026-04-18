@@ -25,9 +25,9 @@ export function renderBasicFace({
   const centerX = width / 2;
   const centerY = height / 2;
   
-  // Proportions based on an egg shape
+  // Proportions based on a round shape
   const radiusX = Math.min(width, height) / 2 - 15;
-  const radiusY = radiusX * 1.2; // Slightly taller than wide
+  const radiusY = radiusX; // Round body
 
   // Clear the canvas
   ctx.clearRect(0, 0, width, height);
@@ -40,38 +40,37 @@ export function renderBasicFace({
   ctx.fill();
   ctx.restore();
 
-  // 2. Body (Yellow Egg Shape)
+  // 2. Body (Yellow Round Shape with 3D gradient)
   ctx.save();
-  ctx.fillStyle = color;
-  ctx.strokeStyle = '#000000';
-  ctx.lineWidth = 6;
+  const gradient = ctx.createRadialGradient(
+    centerX - radiusX * 0.3, 
+    centerY - radiusY * 0.3, 
+    radiusX * 0.1, 
+    centerX, 
+    centerY, 
+    radiusX
+  );
+  gradient.addColorStop(0, '#FFF766'); // Lighter yellow highlight
+  gradient.addColorStop(1, color);     // Base yellow
+  ctx.fillStyle = gradient;
   ctx.beginPath();
-  ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, Math.PI * 2);
+  ctx.arc(centerX, centerY, radiusX, 0, Math.PI * 2);
   ctx.fill();
-  ctx.stroke();
-  
-  // Top-Left Highlight (Curved white shape)
-  ctx.save();
-  ctx.strokeStyle = '#FFFFFF';
-  ctx.lineWidth = 10;
-  ctx.lineCap = 'round';
-  ctx.globalAlpha = 0.8;
-  ctx.beginPath();
-  // Drawing a curve on the top left
-  ctx.arc(centerX - radiusX * 0.4, centerY - radiusY * 0.5, radiusX * 0.3, Math.PI * 0.8, Math.PI * 1.4);
-  ctx.stroke();
-  ctx.restore();
   ctx.restore();
 
-  // 3. Glasses (Thick Black Frames)
+  // 3. Glasses (Thick Black Frames with subtle shadow)
   ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.3)';
+  ctx.shadowBlur = 10;
+  ctx.shadowOffsetX = 5;
+  ctx.shadowOffsetY = 5;
   ctx.fillStyle = '#000000';
   
-  const gWidth = radiusX * 0.75;
-  const gHeight = radiusY * 0.45;
-  const gY = centerY - radiusY * 0.1;
-  const bridge = radiusX * 0.2;
-  const cornerRadius = 15;
+  const gWidth = radiusX * 0.5;
+  const gHeight = radiusY * 0.4;
+  const gY = centerY - radiusY * 0.15;
+  const bridge = radiusX * 0.1;
+  const cornerRadius = 10;
   
   // Left Frame
   drawRoundedRect(ctx, centerX - gWidth - bridge/2, gY, gWidth, gHeight, cornerRadius);
@@ -82,61 +81,45 @@ export function renderBasicFace({
   ctx.fill();
   
   // Bridge (Thick)
-  ctx.fillRect(centerX - bridge/2 - 2, gY + gHeight * 0.3, bridge + 4, gHeight * 0.25);
+  ctx.fillRect(centerX - bridge/2, gY + gHeight * 0.3, bridge, gHeight * 0.2);
+  ctx.restore();
   
-  // Side Wings (Extensions)
-  ctx.fillRect(centerX - gWidth - bridge/2 - 5, gY + 5, 10, gHeight * 0.4);
-  ctx.fillRect(centerX + gWidth + bridge/2 - 5, gY + 5, 10, gHeight * 0.4);
-
-  // 4. Lenses (Yellow interior of glasses)
-  ctx.fillStyle = color;
-  const lensPadding = 8;
-  drawRoundedRect(ctx, centerX - gWidth - bridge/2 + lensPadding, gY + lensPadding, gWidth - lensPadding * 2, gHeight - lensPadding * 2, cornerRadius - 5);
-  ctx.fill();
-  drawRoundedRect(ctx, centerX + bridge/2 + lensPadding, gY + lensPadding, gWidth - lensPadding * 2, gHeight - lensPadding * 2, cornerRadius - 5);
-  ctx.fill();
-  
-  // 5. Eyes (Inside Lenses - Vertical Ovals)
+  // 4. Eyes (Inside Glasses - Large surprised circles)
   ctx.fillStyle = '#000000';
   const eyeY = gY + gHeight / 2;
   const eyeXOffset = gWidth / 2;
+  const eyeRadius = 10;
   
   // Left Eye
   ctx.beginPath();
-  ctx.ellipse(centerX - bridge/2 - eyeXOffset, eyeY, 4, 8 * (0.8 + eyeScale * 0.4), 0, 0, Math.PI * 2);
+  ctx.arc(centerX - bridge/2 - eyeXOffset + gWidth/2, eyeY, eyeRadius, 0, Math.PI * 2);
   ctx.fill();
   
   // Right Eye
   ctx.beginPath();
-  ctx.ellipse(centerX + bridge/2 + eyeXOffset, eyeY, 4, 8 * (0.8 + eyeScale * 0.4), 0, 0, Math.PI * 2);
+  ctx.arc(centerX + bridge/2 + eyeXOffset - gWidth/2, eyeY, eyeRadius, 0, Math.PI * 2);
   ctx.fill();
   
   ctx.restore();
 
-  // 6. Mouth (Open oval with dark red interior)
+  // 5. Mouth (Open oval with dark red interior)
   ctx.save();
   ctx.fillStyle = '#000000';
-  ctx.strokeStyle = '#000000';
-  ctx.lineWidth = 4;
-  const mouthY = centerY + radiusY * 0.5;
+  const mouthY = centerY + radiusY * 0.4;
   
   // Dynamic mouth sizing based on audio volume
-  // We want it to go from a small slit to a wide open mouth
-  const mWidth = 12 + mouthScale * 8;
-  const mHeight = 4 + mouthScale * 24;
+  const mWidth = 15 + mouthScale * 5;
+  const mHeight = 20 + mouthScale * 15;
   
   ctx.beginPath();
   ctx.ellipse(centerX, mouthY, mWidth, mHeight, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.stroke();
   
-  // Interior (Dark red tongue/throat area) - only visible when mouth is open
-  if (mouthScale > 0.05) {
-    ctx.fillStyle = '#7A2F2F'; // Dark reddish
-    ctx.beginPath();
-    ctx.ellipse(centerX, mouthY + mHeight * 0.2, mWidth * 0.7, mHeight * 0.5, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
+  // Interior (Dark red tongue/throat area)
+  ctx.fillStyle = '#D9534F'; // Reddish
+  ctx.beginPath();
+  ctx.ellipse(centerX, mouthY + mHeight * 0.1, mWidth * 0.7, mHeight * 0.5, 0, 0, Math.PI * 2);
+  ctx.fill();
   
   ctx.restore();
 }

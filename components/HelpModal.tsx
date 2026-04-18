@@ -4,6 +4,7 @@
 */
 import Modal from './Modal';
 import { useUI } from '../lib/state';
+import { PlayCircle, Sparkles } from 'lucide-react';
 
 /**
  * A modal component that displays a comprehensive help guide for the user.
@@ -11,15 +12,37 @@ import { useUI } from '../lib/state';
  * conversational interaction, document management, and reviewing the session.
  */
 export default function HelpModal() {
-  const { setShowHelpModal } = useUI();
+  const { setShowHelpModal, setShowTutorial, setTutorialStep } = useUI();
 
   function onClose() {
     setShowHelpModal(false);
   }
 
+  const handleStartTour = () => {
+    setShowHelpModal(false);
+    setTutorialStep(0);
+    setShowTutorial(true);
+  };
+
   return (
     <Modal onClose={onClose} className="help-modal-container" title="Operational Manual">
       <div className="help-modal-content">
+        
+        <div className="help-section prominent-section bg-theme-accent/5 p-6 border-2 border-theme-accent mb-8">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h3 className="text-theme-accent mb-2">New to SoloScribe?</h3>
+              <p className="text-sm opacity-80">Take a guided tour of the interface to learn about key features and co-founder interaction.</p>
+            </div>
+            <button 
+              onClick={handleStartTour}
+              className="brutalist-button whitespace-nowrap"
+            >
+              <Sparkles size={18} />
+              START TOUR
+            </button>
+          </div>
+        </div>
 
         <div className="help-section">
           <h3>Getting Started</h3>
@@ -173,7 +196,7 @@ export default function HelpModal() {
         <div className="help-section">
           <h3>Changing Your Co-founder</h3>
           <p>
-            You can change the personality of your AI co-founder at any time. Click
+            You can change the personality of your InkLo at any time. Click
             the <strong>Co-founder's Name</strong> in the top-left corner to choose
             from a list of different creative partners, including specialized 
             co-founders for <strong>Financials (Newton)</strong>, and multi-lingual experts 

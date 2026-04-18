@@ -42,7 +42,7 @@ export const FONT_OPTIONS = [
   'Courier New',
 ];
 
-export const PLACEHOLDER_DOC = 'As you talk, your AI co-founder will draft your business plan, pitch deck, or strategy here...';
+export const PLACEHOLDER_DOC = 'As you talk, your InkLo will draft your business plan, pitch deck, or strategy here...';
 
 export const DOCUMENT_TEMPLATES = [
   {
@@ -68,5 +68,47 @@ export const DOCUMENT_TEMPLATES = [
     name: 'Product FAQ',
     description: 'Common questions and answers for your customers.',
     content: `# Product FAQ\n\n## General Questions\n\n### What is [Product Name]?\nAnswer here...\n\n### How do I get started?\nAnswer here...\n\n## Pricing & Billing\n\n### How much does it cost?\nAnswer here...\n\n### Do you offer a free trial?\nAnswer here...\n\n## Technical Support\n\n### Is my data secure?\nAnswer here...\n\n### How do I contact support?\nAnswer here...`
+  },
+  {
+    id: 'gtm-strategy',
+    name: 'Go-To-Market Strategy',
+    description: 'A plan for launching a product to a target market.',
+    content: `# Go-To-Market Strategy: [Product Name]\n\n## 1. Target Audience\nWho are your ideal customers?\n\n## 2. Value Proposition\nWhat problem are you solving and why is it better than alternatives?\n\n## 3. Pricing Strategy\nHow will you price your product?\n\n## 4. Distribution Channels\nWhere will you sell and promote your product?\n\n## 5. Marketing Plan\nHow will you generate awareness and leads?\n\n## 6. Sales Strategy\nHow will you convert leads into customers?\n\n## 7. Launch Timeline\nKey milestones for your launch.`
+  },
+  {
+    id: 'user-persona',
+    name: 'User Persona',
+    description: 'A profile of a typical user.',
+    content: `# User Persona: [Persona Name]\n\n## 1. Demographic Information\nAge, job title, location, etc.\n\n## 2. Goals & Motivations\nWhat are they trying to achieve?\n\n## 3. Pain Points\nWhat challenges do they face?\n\n## 4. Behaviors & Habits\nHow do they use technology? What are their daily routines?\n\n## 5. Needs & Expectations\nWhat do they need from your product?`
+  },
+  {
+    id: 'competitive-analysis',
+    name: 'Competitive Analysis',
+    description: 'A breakdown of your competitors and their strengths/weaknesses.',
+    content: `# Competitive Analysis\n\n## 1. Competitor Overview\nList your main competitors.\n\n## 2. Strengths & Weaknesses\nWhat are their strengths and weaknesses?\n\n## 3. Market Position\nHow do they position themselves in the market?\n\n## 4. Key Differentiators\nWhat makes your product different from theirs?\n\n## 5. Opportunities & Threats\nWhat opportunities and threats do they present?`
+  },
+  {
+    id: 'business-plan',
+    name: 'Business Plan',
+    description: 'A comprehensive document outlining business goals and strategy.',
+    content: `# Business Plan: [Company Name]\n\n## 1. Executive Summary\nOverview of the business.\n\n## 2. Company Description\nMission, vision, and values.\n\n## 3. Market Analysis\nIndustry overview and target market.\n\n## 4. Organization & Management\nStructure and key team members.\n\n## 5. Service or Product Line\nDescription of what you offer.\n\n## 6. Marketing & Sales Strategy\nHow you will reach and convert customers.\n\n## 7. Financial Projections\nRevenue, expenses, and profitability forecast.`
+  },
+  {
+    id: 'swot-analysis',
+    name: 'SWOT Analysis',
+    description: 'A framework for identifying Strengths, Weaknesses, Opportunities, and Threats.',
+    content: `# SWOT Analysis\n\n## Strengths\nInternal factors that give you an advantage.\n\n## Weaknesses\nInternal factors that place you at a disadvantage.\n\n## Opportunities\nExternal factors that you can exploit.\n\n## Threats\nExternal factors that could cause trouble.`
+  },
+  {
+    id: 'meeting-notes',
+    name: 'Meeting Notes',
+    description: 'A structured format for capturing meeting discussions and action items.',
+    content: `# Meeting Notes: [Meeting Topic]\n\n## Date: [Date]\n## Attendees: [Names]\n\n## Key Discussion Points\n- Point 1\n- Point 2\n\n## Decisions Made\n- Decision 1\n\n## Action Items\n- [ ] Action Item 1 (Owner: [Name], Due: [Date])`
+  },
+  {
+    id: 'project-charter',
+    name: 'Project Charter',
+    description: 'A document that formally authorizes a project.',
+    content: `# Project Charter: [Project Name]\n\n## 1. Project Purpose\nWhy are we doing this project?\n\n## 2. Objectives\nWhat are the measurable goals?\n\n## 3. Scope\nWhat is included and what is excluded?\n\n## 4. Key Stakeholders\nWho is involved and impacted?\n\n## 5. Milestones\nKey dates and deliverables.`
   }
 ];

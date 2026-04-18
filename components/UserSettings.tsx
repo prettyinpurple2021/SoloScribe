@@ -4,11 +4,12 @@
 */
 import Modal from './Modal';
 import { useAgent, useUI, useUser } from '../lib/state';
+import { useAuth } from '../contexts/AuthContext';
 import { Theme, themes } from '../lib/themes';
 import { FONT_OPTIONS, PLACEHOLDER_DOC } from '../lib/constants';
 import React, { useState, useRef } from 'react';
 import * as pdfjs from 'pdfjs-dist';
-import { FileUp, X, FileText, Loader2, ChevronDown, Sparkles, Bell, Settings, Camera, RefreshCw, Webhook } from 'lucide-react';
+import { FileUp, X, FileText, Loader2, ChevronDown, Sparkles, Bell, Settings, Camera, RefreshCw, Webhook, CreditCard, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { Tooltip } from './Tooltip';
 
@@ -74,7 +75,7 @@ function CameraCapture({ onCapture, initialImage }: { onCapture: (data: string |
         {isStreaming ? (
           <video ref={videoRef} autoPlay playsInline className="camera-preview" />
         ) : initialImage ? (
-          <img src={initialImage} alt="Profile" className="profile-picture-img" />
+          <img src={initialImage} alt="Profile" className="profile-picture-img" referrerPolicy="no-referrer" />
         ) : (
           <div className="flex items-center justify-center h-full opacity-20">
             <Camera size={48} />
@@ -199,6 +200,7 @@ export default function UserSettings() {
   } = useUI();
   // Hooks to manage agent state (needed for updating agent color on theme change)
   const { current: agent, update: updateAgent } = useAgent();
+  const { signOut } = useAuth();
 
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -446,6 +448,29 @@ export default function UserSettings() {
             </div>
           </div>
 
+          {/* Subscription Section */}
+          <div className="settings-section prominent-section bg-theme-accent/10">
+            <h3 className="section-title"><CreditCard size={16} /> SoloScribe Pro Subscription</h3>
+            <div className="p-4 border-2 border-black bg-white mb-4">
+              <div className="flex justify-between items-center mb-2">
+                <span className="font-black uppercase text-sm tracking-widest">Current Plan: Free</span>
+                <span className="bg-black text-white text-[10px] px-2 py-0.5 font-bold uppercase">Upgrade Needed</span>
+              </div>
+              <p className="text-xs opacity-70 mb-4">Unlock vertical-specific co-founders, unlimited projects, and advanced compliance auditing.</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-3 border-2 border-black hover:bg-theme-accent cursor-pointer transition-colors group">
+                  <p className="font-bold text-xs uppercase">Creator Pro</p>
+                  <p className="text-lg font-black">$19/mo</p>
+                </div>
+                <div className="p-3 border-2 border-black hover:bg-theme-accent cursor-pointer transition-colors group">
+                  <p className="font-bold text-xs uppercase">SaaS Founder</p>
+                  <p className="text-lg font-black">$49/mo</p>
+                </div>
+              </div>
+            </div>
+            <button type="button" className="brutalist-button w-full py-2 text-xs">MANAGE SUBSCRIPTION</button>
+          </div>
+
           <details style={{ marginTop: '15px' }}>
             <summary>Context & Documents (Optional)</summary>
             <div className="details-content">
@@ -550,6 +575,17 @@ export default function UserSettings() {
             >
               <Sparkles size={16} />
               <span>Replay Onboarding</span>
+            </button>
+            <button 
+              type="button" 
+              onClick={async () => {
+                await signOut();
+                setShowUserConfig(false);
+              }}
+              className="flex items-center gap-2 text-sm text-red-500 hover:text-red-700 transition-colors"
+            >
+              <LogOut size={16} />
+              <span>Sign Out</span>
             </button>
           </div>
         </form>

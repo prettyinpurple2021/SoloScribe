@@ -69,11 +69,9 @@ function ControlTray({ children }: ControlTrayProps) {
   const firstAudioChunkSentRef = useRef(false);
   const bufferedAudioRef = useRef<string[]>([]);
 
-  const { showAgentEdit, showUserConfig, theme, setTheme, setShowHelpModal } = useUI();
+  const { showAgentEdit, showUserConfig, theme, setShowHelpModal } = useUI();
   const { addLog: addPerfLog, startNewSession } = usePerfLogStore();
   const { client, connected, connect, disconnect, isConnecting } = useLiveAPIContext();
-
-  const isDarkMode = theme === 'Dark Theme';
 
   // Reset the "first audio chunk sent" flag and talking state on disconnect to prepare for the next session.
   useEffect(() => {

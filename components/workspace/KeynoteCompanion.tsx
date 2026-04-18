@@ -54,11 +54,13 @@ import { RoadmapTab } from './RoadmapTab';
 import TasksTab from './TasksTab';
 import MarketingTab from './MarketingTab';
 import { SearchTab } from './SearchTab';
+import ComplianceTab from './ComplianceTab';
+import MonetizationTab from './MonetizationTab';
 import { CopilotSidebar } from './CopilotSidebar';
 import { MinutesLoadingAnimation } from '../MinutesLoadingAnimation';
 import { useAuth } from '../../contexts/AuthContext';
 import { Tooltip } from '../Tooltip';
-import { db, handleFirestoreError, OperationType } from '../../firebase';
+import { db, handleFirestoreError, OperationType, getFriendlyErrorMessage } from '../../firebase';
 import { doc, setDoc, getDoc, serverTimestamp, collection, addDoc, query, orderBy, getDocs, Timestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { thinkDeeply } from '../../lib/ai-tools';
@@ -886,6 +888,20 @@ export default function KeynoteCompanion() {
   const lastSnapshotContentRef = useRef<string>('');
   const { user: authUser } = useAuth();
   const lastLoadedProjectIdRef = useRef<string | null>(null);
+  const lastSavedContentRef = useRef(documentContent);
+
+  // Auto-save logic
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!currentProjectId) return;
+      if (documentContent !== lastSavedContentRef.current) {
+        handleSaveToCloud();
+        lastSavedContentRef.current = documentContent;
+      }
+    }, 5000); // 5 seconds
+
+    return () => clearTimeout(timer);
+  }, [documentContent, currentProjectId]);
 
   // Load project from cloud on login or project change
   useEffect(() => {
@@ -976,6 +992,10 @@ export default function KeynoteCompanion() {
       toast.error('Please sign in to save your project to the cloud.');
       return;
     }
+    if (!currentProjectId) {
+      console.warn('Attempted to save to cloud without a project ID.');
+      return;
+    }
     setIsSavingToCloud(true);
     const projectId = currentProjectId;
     const path = `users/${authUser.uid}/projects/${projectId}`;
@@ -1022,7 +1042,7 @@ export default function KeynoteCompanion() {
       toast.success('Project saved to cloud successfully!');
     } catch (error) {
       console.error('Error saving to cloud:', error);
-      toast.error('Failed to save project to cloud.');
+      toast.error(getFriendlyErrorMessage(error));
       handleFirestoreError(error, OperationType.WRITE, path);
     } finally {
       setIsSavingToCloud(false);
@@ -1065,7 +1085,7 @@ export default function KeynoteCompanion() {
       setProjectVersions(versions);
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, versionsRef.path);
-      toast.error('Failed to load version history.');
+      toast.error(getFriendlyErrorMessage(error));
     } finally {
       setIsLoadingVersions(false);
     }
@@ -2963,7 +2983,7 @@ ${recentTranscript}`;
             const style = width
               ? `width: ${width}; max-width: 100%; display: block; margin: 0 auto;`
               : `max-width: 100%; display: block; margin: 0 auto;`;
-            replacement = `<img src="data:image/png;base64,${insert.data}" alt="${insert.prompt}" style="${style}" />`;
+            replacement = `<img src="data:image/png;base64,${insert.data}" alt="${insert.prompt}" style="${style}" referrerPolicy="no-referrer" />`;
           } else {
             replacement = `<!-- Image placeholder: ${id} -->`;
           }
@@ -3030,7 +3050,7 @@ Current Document Content:
 ${documentContent}
 ---`;
 
-      const prompt = `${context}\n\nAct as a strategic AI co-founder. Review the current document content provided above. 
+      const prompt = `${context}\n\nAct as a strategic InkLo. Review the current document content provided above. 
 Identify potential weaknesses, missing elements, or strategic opportunities. 
 Provide 3-5 actionable suggestions to improve the document and the overall business strategy. 
 Format your response in Markdown.`;
@@ -3293,12 +3313,13 @@ Format your response in Markdown.`;
                     </>
                   )}
                 </div>
-                <div className="document-editor-container">
+                <div className="document-editor-container" id="tour-editor">
                   <MdEditor
                     modelValue={documentContent}
                     onChange={handleDocumentChange}
                     theme="dark"
                     language="en-US"
+                    preview={true}
                     toolbars={[
                       'bold',
                       'underline',
@@ -3585,6 +3606,14 @@ Format your response in Markdown.`;
 
         {mainTab === 'search' && (
           <SearchTab />
+        )}
+
+        {mainTab === 'compliance' && (
+          <ComplianceTab />
+        )}
+
+        {mainTab === 'monetization' && (
+          <MonetizationTab />
         )}
       </div>
 

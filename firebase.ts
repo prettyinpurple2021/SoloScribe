@@ -83,6 +83,28 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   throw new Error(JSON.stringify(errInfo));
 }
 
+export function getFriendlyErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+    if (message.includes('permission-denied') || message.includes('missing or insufficient permissions')) {
+      return 'You do not have permission to perform this action.';
+    }
+    if (message.includes('unavailable') || message.includes('the client is offline')) {
+      return 'The service is currently unavailable. Please check your internet connection.';
+    }
+    if (message.includes('not-found')) {
+      return 'The requested document could not be found.';
+    }
+    if (message.includes('quota-exceeded')) {
+      return 'You have exceeded your quota. Please try again later.';
+    }
+    if (message.includes('deadline-exceeded')) {
+      return 'The request timed out. Please try again.';
+    }
+  }
+  return 'An unexpected error occurred. Please try again later.';
+}
+
 async function testConnection() {
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));

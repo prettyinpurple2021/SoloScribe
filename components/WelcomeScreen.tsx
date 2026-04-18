@@ -5,7 +5,7 @@
 import * as React from 'react';
 import { useEffect, useState, useMemo } from 'react';
 import { useUI } from '../lib/state';
-import { ArrowRight, LogIn, MessageSquare, Volume2, Edit3, Users, Sparkles, ChevronRight, ChevronLeft, Mail, User as UserIcon, Lock, Mic } from 'lucide-react';
+import { ArrowRight, LogIn, MessageSquare, Volume2, Edit3, Users, Sparkles, ChevronRight, ChevronLeft, Mail, User as UserIcon, Lock, Mic, Layout } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
@@ -19,27 +19,27 @@ const ONBOARDING_STEPS = [
     color: 'var(--theme-accent)'
   },
   {
-    title: 'MULTIMODAL PROTOCOL',
-    description: 'Talk to your agent using voice or text. SoloScribe uses the Gemini Live API for low-latency, natural conversations that feel like talking to a real partner.',
-    icon: <div className="flex gap-4"><Volume2 size={48} /><MessageSquare size={48} /></div>,
+    title: 'MULTIMODAL INPUT',
+    description: 'Communicate effortlessly using voice, text, or even sketches. SoloScribe processes your input in real-time, allowing for natural, fluid interaction.',
+    icon: <div className="flex gap-4"><Mic size={48} /><MessageSquare size={48} /></div>,
     color: 'var(--theme-accent-secondary)'
   },
   {
-    title: 'DYNAMIC ORCHESTRATION',
-    description: 'Watch as your agent builds and refines documents in real-time. From business plans to technical specs, your ideas take shape instantly.',
-    icon: <Edit3 size={64} />,
+    title: 'INKLO INTERFACE',
+    description: 'Experience InkLo, our proprietary canvas that bridges the gap between structured documents and free-form brainstorming, giving you total control over your creative process.',
+    icon: <Layout size={64} />,
     color: 'var(--theme-accent-tertiary)'
   },
   {
-    title: 'SPECIALIST SQUAD',
-    description: 'Choose from a diverse team of specialist agents, each with their own personality and expertise, to tackle different aspects of your business.',
-    icon: <Users size={64} />,
+    title: 'DOCUMENT EDITING',
+    description: 'Your co-founder writes directly into the editor, but you retain full control. Edit manually, rephrase, or restructure your documents at any time.',
+    icon: <Edit3 size={64} />,
     color: 'var(--theme-accent)'
   }
 ];
 
 export default function WelcomeScreen() {
-  const { setShowWelcomeScreen, setShowDisclaimer, hasCompletedOnboarding, setHasCompletedOnboarding } = useUI();
+  const { setShowWelcomeScreen, setShowDisclaimer, hasCompletedOnboarding, setHasCompletedOnboarding, setShowTutorial } = useUI();
   const { user, signIn, signInWithEmail, signUpWithEmail } = useAuth();
   const [isExiting, setIsExiting] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -113,7 +113,11 @@ export default function WelcomeScreen() {
       }
     } catch (error: any) {
       console.error(error);
-      toast.error(error.message || 'Authentication failed');
+      if (error.code === 'auth/operation-not-allowed') {
+        toast.error('Email/Password authentication is not enabled in the Firebase Console. Please enable it to continue.');
+      } else {
+        toast.error(error.message || 'Authentication failed');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -358,6 +362,19 @@ export default function WelcomeScreen() {
                       <ChevronRight size={20} />
                     </button>
                   </div>
+
+                  {step === ONBOARDING_STEPS.length - 1 && (
+                    <button 
+                      onClick={() => {
+                        setShowTutorial(true);
+                        handleClose();
+                      }}
+                      className="w-full mt-4 brutalist-button-outline border-theme-accent text-theme-accent hover:bg-theme-accent hover:text-black"
+                    >
+                      <Sparkles size={16} className="mr-2" />
+                      <span>START INTERACTIVE TOUR</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
