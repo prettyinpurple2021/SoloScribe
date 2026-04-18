@@ -163,8 +163,6 @@ export default function FloatingAvatar() {
         left: `${position.x}px`,
         top: `${position.y}px`,
         zIndex: 9999,
-        padding: '4px',
-        backgroundColor: 'transparent',
       }}
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
@@ -174,6 +172,7 @@ export default function FloatingAvatar() {
         radius={50}
         color={current.bodyColor}
         isTalking={isTalking}
+        volumeRef={volumeRef}
       />
       {/* Display the agent's current state (e.g., "Thinking...", "Listening...") or "INACTIVE" if disconnected */}
       {(agentState || !connected) && (

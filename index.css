@@ -2575,25 +2575,32 @@ header {
   flex-direction: column;
   align-items: center;
   cursor: grab;
-  background-color: #FFFFFF;
-  border: 4px solid #000000;
-  padding: 12px;
-  box-shadow: 8px 8px 0px #000000;
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  /* Removed white background and box border */
+  background-color: transparent;
+  border: none;
+  padding: 0;
+  box-shadow: none;
+  transition: transform 0.1s ease;
 }
 
 .basic-face-container-top:active {
   cursor: grabbing;
   transform: translate(2px, 2px);
-  box-shadow: 4px 4px 0px #000000;
+  /* Removed box-shadow when grabbing */
+  box-shadow: none;
 }
 
 .face-status-label {
   margin-top: 10px;
   font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--theme-accent);
-  text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+  font-size: 11px;
+  font-weight: 900;
+  color: #000;
+  background-color: var(--theme-accent);
+  padding: 4px 10px;
+  border-radius: 12px;
+  border: 2px solid #000;
+  box-shadow: 2px 2px 0px #000;
 }
 
 /* ==========================================================================
