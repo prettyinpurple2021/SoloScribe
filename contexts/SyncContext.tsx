@@ -6,7 +6,7 @@ import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firest
 
 export const SyncProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
-  const { name, info, topic, format, setName, setInfo, setTopic, setFormat } = useUser();
+  const { name, info, topic, format, memory, setName, setInfo, setTopic, setFormat, setMemory } = useUser();
   const { documentContent, setDocumentContent, transcript, setTranscript } = useUI();
   const isInitialLoadRef = useRef(true);
 
@@ -27,6 +27,7 @@ export const SyncProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (data.info) setInfo(data.info);
           if (data.topic) setTopic(data.topic);
           if (data.format) setFormat(data.format);
+          if (data.memory) setMemory(data.memory);
           if (data.documentContent) setDocumentContent(data.documentContent);
           if (data.transcript) setTranscript(data.transcript);
         } else {
@@ -49,7 +50,7 @@ export const SyncProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     loadUserData();
-  }, [user, setName, setInfo, setTopic, setFormat, setDocumentContent, setTranscript]);
+  }, [user, setName, setInfo, setTopic, setFormat, setMemory, setDocumentContent, setTranscript]);
 
   useEffect(() => {
     if (!user || isInitialLoadRef.current) return;
@@ -62,6 +63,7 @@ export const SyncProvider: React.FC<{ children: React.ReactNode }> = ({ children
           info,
           topic,
           format,
+          memory,
           documentContent,
           transcript,
         });
@@ -72,7 +74,7 @@ export const SyncProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const timeoutId = setTimeout(saveUserData, 1000); // Debounce saves
     return () => clearTimeout(timeoutId);
-  }, [user, name, info, topic, format, documentContent, transcript]);
+  }, [user, name, info, topic, format, memory, documentContent, transcript]);
 
   return <>{children}</>;
 };

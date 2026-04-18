@@ -49,6 +49,10 @@ ${currentDocument}
 Please acknowledge the existing content and continue from where you left off.`
     : '\n\n**COLD START:** This is a new session. The document is currently empty.';
 
+  const memoryPrompt = user.memory
+    ? `\n\n**LONG-TERM MEMORY / PREFERENCES:** \n${user.memory}\n\n(Use this information to personalize your interactions and remember past context. To update this memory, use the \`updateMemory\` tool.)`
+    : `\n\n**LONG-TERM MEMORY:** (Currently empty. Use the \`updateMemory\` tool to silently save important user preferences, past topics, or details about their business so you don't forget them in future sessions.)`;
+
   // Include the prompt version in the prompt itself for easier debugging from logs.
   const versionPrompt =
     promptVersion !== undefined ? `\n\nPrompt Version: ${promptVersion}` : '';
@@ -140,6 +144,7 @@ Example: To plot a projectile trajectory, use: [graph title="Trajectory" functio
 
 ${formatPrompt}
 ${documentPrompt}
+${memoryPrompt}
 ${roadmapPrompt}
 ${searchPrompt}
 ${dateTimePrompt}

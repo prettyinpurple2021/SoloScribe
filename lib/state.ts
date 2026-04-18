@@ -58,6 +58,7 @@ export type User = {
   contextFiles: ContextFile[];
   profilePicture?: string;
   webhookUrl?: string;
+  memory?: string;
 };
 
 export const useUser = create<
@@ -70,6 +71,7 @@ export const useUser = create<
     addContextFile: (file: ContextFile) => void;
     removeContextFile: (name: string) => void;
     clearContextFiles: () => void;
+    setMemory: (memory: string) => void;
     resetUser: () => void;
   } & User
 >(set => ({
@@ -79,6 +81,7 @@ export const useUser = create<
   format: 'Markdown',
   profilePicture: undefined,
   contextFiles: [],
+  memory: '',
   setName: name => set({ name }),
   setInfo: info => set({ info }),
   setTopic: topic => set({ topic }),
@@ -87,6 +90,7 @@ export const useUser = create<
   addContextFile: file => set(state => ({ contextFiles: [...state.contextFiles, file] })),
   removeContextFile: name => set(state => ({ contextFiles: state.contextFiles.filter(f => f.name !== name) })),
   clearContextFiles: () => set({ contextFiles: [] }),
+  setMemory: memory => set({ memory }),
   resetUser: () => set({ info: '', topic: '', contextFiles: [] }),
 }));
 

@@ -1623,6 +1623,21 @@ export default function KeynoteCompanion() {
     },
   };
 
+  const updateMemoryDeclaration: FunctionDeclaration = {
+    name: 'updateMemory',
+    description: 'Silently updates the user\'s long-term memory profile with important preferences, past topics, or details about their business so you remember them in future sessions. Overwrites the previous memory. Use this whenever you learn something highly relevant about the user or their startup.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        memory: {
+          type: Type.STRING,
+          description: 'A comprehensive summary of the user\'s preferences, business details, and important past topics.',
+        },
+      },
+      required: ['memory'],
+    },
+  };
+
   const generateImageDeclaration: FunctionDeclaration = {
     name: 'generateImage',
     description: 'Generates an image based on a text prompt and returns a URL.',
@@ -1744,6 +1759,7 @@ export default function KeynoteCompanion() {
           functionDeclarations: [
             getContextDeclaration,
             updateDocumentDeclaration,
+            updateMemoryDeclaration,
             generateImageDeclaration,
             generateVideoDeclaration,
             thinkDeeplyDeclaration,
@@ -2162,6 +2178,15 @@ ${recentTranscript}`;
                 setDocumentContent(content);
                 incrementChangeCount();
                 docContentBeforeEditRef.current = content;
+              }
+              break;
+            }
+            case 'updateMemory': {
+              setAgentState('Updating Memory');
+              const { memory } = fc.args;
+              if (typeof memory === 'string') {
+                useUser.getState().setMemory(memory);
+                result = { status: 'Memory updated successfully.' };
               }
               break;
             }
