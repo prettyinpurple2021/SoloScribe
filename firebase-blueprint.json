@@ -17,6 +17,7 @@
         "documentContent": { "type": "string" },
         "transcript": { "type": "array" },
         "webhookUrl": { "type": "string" },
+        "memory": { "type": "string" },
         "updatedAt": { "type": "string", "format": "date-time" }
       }
     },

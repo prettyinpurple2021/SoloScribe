@@ -141,7 +141,7 @@ service cloud.firestore {
     // ===============================================================
 
     function isValidUser() {
-      let allowedFields = ['uid', 'email', 'displayName', 'photoURL', 'role', 'createdAt', 'info', 'topic', 'format', 'documentContent', 'transcript', 'updatedAt', 'webhookUrl'];
+      let allowedFields = ['uid', 'email', 'displayName', 'photoURL', 'role', 'createdAt', 'info', 'topic', 'format', 'documentContent', 'transcript', 'updatedAt', 'webhookUrl', 'memory'];
       return hasOnlyAllowedFields(allowedFields) &&
              isValidString('uid', 1, 100) &&
              isValidString('email', 3, 100) &&
@@ -155,7 +155,8 @@ service cloud.firestore {
              isValidOptionalString('documentContent', 0, 1000000) && // 1MB limit
              isValidOptionalList('transcript', 10000) &&
              isOptionalTimestamp('updatedAt') &&
-             isValidOptionalString('webhookUrl', 0, 1000);
+             isValidOptionalString('webhookUrl', 0, 1000) &&
+             isValidOptionalString('memory', 0, 100000);
     }
 
     function isValidProject() {
