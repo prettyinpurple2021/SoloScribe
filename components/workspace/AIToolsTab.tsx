@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { generateSpeech, generateVideo, animateImage, thinkDeeply } from '../../lib/ai-tools';
-import { Play, Video, Image as ImageIcon, Loader2, LayoutDashboard, Sparkles, Search } from 'lucide-react';
+import { generateSpeech, generateVideo, animateImage, thinkDeeply, quickPolish, deepEnhance } from '../../lib/ai-tools';
+import { Play, Video, Image as ImageIcon, Loader2, LayoutDashboard, Sparkles, Search, Wand2, BrainCircuit } from 'lucide-react';
 import { toast } from 'sonner';
 import { Tooltip } from '../Tooltip';
 import { useUI } from '../../lib/state';
 import { marked } from 'marked';
 
 export const AIToolsTab: React.FC = () => {
-  const { documentContent } = useUI();
+  const { documentContent, setDocumentContent, incrementChangeCount } = useUI();
   const [speechText, setSpeechText] = useState('');
   const [speechUrl, setSpeechUrl] = useState<string | null>(null);
   const [isGeneratingSpeech, setIsGeneratingSpeech] = useState(false);
@@ -28,6 +28,41 @@ export const AIToolsTab: React.FC = () => {
   const [competitorQuery, setCompetitorQuery] = useState('');
   const [competitorAnalysis, setCompetitorAnalysis] = useState<string | null>(null);
   const [isAnalyzingCompetitors, setIsAnalyzingCompetitors] = useState(false);
+
+  const [isPolishing, setIsPolishing] = useState(false);
+  const [isEnhancing, setIsEnhancing] = useState(false);
+
+  const handleQuickPolish = async () => {
+    if (!documentContent.trim()) return;
+    setIsPolishing(true);
+    try {
+      const polished = await quickPolish(documentContent);
+      setDocumentContent(polished);
+      incrementChangeCount();
+      toast.success('Document polished successfully!', { icon: '✨' });
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to polish document.');
+    } finally {
+      setIsPolishing(false);
+    }
+  };
+
+  const handleDeepEnhance = async () => {
+    if (!documentContent.trim()) return;
+    setIsEnhancing(true);
+    try {
+      const enhanced = await deepEnhance(documentContent);
+      setDocumentContent(enhanced);
+      incrementChangeCount();
+      toast.success('Document deeply enhanced!', { icon: '🧠' });
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to enhance document.');
+    } finally {
+      setIsEnhancing(false);
+    }
+  };
 
   const handleGeneratePitchDeck = async () => {
     if (!documentContent.trim()) return;
@@ -131,6 +166,38 @@ export const AIToolsTab: React.FC = () => {
     <div className="ai-tools-tab" style={{ padding: '20px', overflowY: 'auto', height: '100%' }}>
       <h2 style={{ fontFamily: 'var(--font-display)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '10px' }}>AI Co-Founder Tools</h2>
       <p style={{ marginBottom: '20px', color: 'var(--theme-text)', opacity: 0.7, fontFamily: 'var(--font-mono)', fontSize: '12px' }}>POWERFUL TOOLS TO ACCELERATE YOUR STARTUP.</p>
+
+      {/* Document Enhancement Tools */}
+      <div className="tool-section" style={{ marginBottom: '40px', padding: '20px', border: '2px solid var(--theme-accent)', backgroundColor: 'var(--theme-surface)', boxShadow: '4px 4px 0px var(--theme-accent)' }}>
+        <h3 style={{ fontFamily: 'var(--font-display)', textTransform: 'uppercase', marginBottom: '15px' }}><Wand2 size={18} style={{ display: 'inline', marginRight: '8px' }} /> Document Enhancers</h3>
+        <p style={{ fontSize: '12px', color: 'var(--theme-text)', marginBottom: '15px', fontFamily: 'var(--font-mono)' }}>IMPROVE YOUR CURRENT WORKING DOCUMENT USING GEMINI INTELLIGENCE.</p>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+          <Tooltip content="Quickly fix typos and grammar (Gemini Flash Lite)" position="top">
+            <button
+              onClick={handleQuickPolish}
+              disabled={isPolishing || isEnhancing || !documentContent.trim() || documentContent.length < 10}
+              className={`brutalist-button ${isPolishing || isEnhancing || !documentContent.trim() ? '' : 'primary'}`}
+              style={{ padding: '15px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+            >
+              {isPolishing ? <Loader2 size={24} className="animate-spin" /> : <Sparkles size={24} />}
+              <span style={{ fontSize: '14px', fontWeight: 'bold' }}>QUICK POLISH</span>
+            </button>
+          </Tooltip>
+
+          <Tooltip content="Deeply analyze, structure, and expand the content (Gemini Pro + High Thinking)" position="top">
+            <button
+              onClick={handleDeepEnhance}
+              disabled={isPolishing || isEnhancing || !documentContent.trim() || documentContent.length < 10}
+              className={`brutalist-button ${isPolishing || isEnhancing || !documentContent.trim() ? '' : 'primary'}`}
+              style={{ padding: '15px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+            >
+              {isEnhancing ? <Loader2 size={24} className="animate-spin" /> : <BrainCircuit size={24} />}
+              <span style={{ fontSize: '14px', fontWeight: 'bold' }}>DEEP ENHANCE</span>
+            </button>
+          </Tooltip>
+        </div>
+      </div>
 
       {/* Text to Speech */}
       <div className="tool-section" style={{ marginBottom: '40px', padding: '20px', border: '2px solid var(--theme-accent)', backgroundColor: 'var(--theme-surface)', boxShadow: '4px 4px 0px var(--theme-accent)' }}>

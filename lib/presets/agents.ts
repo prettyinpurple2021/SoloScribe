@@ -682,7 +682,7 @@ export const Inklo: Agent = {
  */
 export const Sam: Agent = {
   id: 'sam',
-  name: 'Sam (Marketing & Growth)',
+  name: 'InkLo (Marketing)',
   personality: SCRIBE_PERSONALITY,
   bodyColor: '#fbbc04', // yellow
   voice: 'Fenrir',
@@ -694,9 +694,9 @@ export const Sam: Agent = {
  */
 export const Gauss: Agent = {
   id: 'gauss',
-  name: 'Gauss (Mathematics)',
+  name: 'InkLo (Math)',
   personality: GAUSS_PERSONALITY,
-  bodyColor: '#4285F4', // blue
+  bodyColor: '#ffd700', // yellow
   voice: 'Orus',
 };
 
@@ -706,9 +706,9 @@ export const Gauss: Agent = {
  */
 export const Irene: Agent = {
   id: 'irene',
-  name: 'Irene (Compliance & Risk)',
+  name: 'InkLo (Compliance)',
   personality: IRENE_PERSONALITY,
-  bodyColor: '#f538a0', // pink
+  bodyColor: '#ffd700', // pink
   voice: 'Zephyr',
 };
 
@@ -718,7 +718,7 @@ export const Irene: Agent = {
  */
 export const Vance: Agent = {
   id: 'vance',
-  name: 'Vance (Monetization)',
+  name: 'InkLo (Finance)',
   personality: VANCE_PERSONALITY,
   bodyColor: '#FFD700', // gold
   voice: 'Puck',
@@ -730,9 +730,9 @@ export const Vance: Agent = {
  */
 export const Tom: Agent = {
   id: 'tom',
-  name: 'Tom (Sales & Pitching)',
+  name: 'InkLo (Sales)',
   personality: SCRIBE_PERSONALITY,
-  bodyColor: '#fa7b17', // orange
+  bodyColor: '#ffd700', // orange
   voice: 'Charon',
 };
 
@@ -742,9 +742,9 @@ export const Tom: Agent = {
  */
 export const Rahul: Agent = {
   id: 'rahul',
-  name: 'Rahul (Hindi)',
+  name: 'InkLo (Hindi)',
   personality: RAHUL_PERSONALITY,
-  bodyColor: '#34a853', // green
+  bodyColor: '#ffd700', // green
   voice: 'Fenrir',
 };
 
@@ -754,9 +754,9 @@ export const Rahul: Agent = {
  */
 export const Ramon: Agent = {
   id: 'ramon',
-  name: 'Ramon (Spanish)',
+  name: 'InkLo (Spanish)',
   personality: RAMON_PERSONALITY,
-  bodyColor: '#4285F4', // blue (same as Newton)
+  bodyColor: '#ffd700', // blue (same as Newton)
   voice: 'Fenrir',
 };
 
@@ -766,9 +766,9 @@ export const Ramon: Agent = {
  */
 export const Amelie: Agent = {
   id: 'amelie',
-  name: 'Amelie (French)',
+  name: 'InkLo (French)',
   personality: AMELIE_PERSONALITY,
-  bodyColor: '#9C27B0', // purple
+  bodyColor: '#ffd700', // purple
   voice: 'Zephyr',
 };
 
@@ -778,9 +778,9 @@ export const Amelie: Agent = {
  */
 export const Ari: Agent = {
   id: 'ari',
-  name: 'Ari (Hebrew)',
+  name: 'InkLo (Hebrew)',
   personality: ARI_PERSONALITY,
-  bodyColor: '#FFF9C4', // pale yellow
+  bodyColor: '#ffd700', // pale yellow
   voice: 'Charon',
 };
 
@@ -790,9 +790,9 @@ export const Ari: Agent = {
  */
 export const Mei: Agent = {
   id: 'mei',
-  name: 'Mei (Chinese)',
+  name: 'InkLo (Chinese)',
   personality: MEI_PERSONALITY,
-  bodyColor: '#FFCDD2', // pale red/pink
+  bodyColor: '#ffd700', // pale red/pink
   voice: 'Kore',
 };
 
@@ -802,9 +802,9 @@ export const Mei: Agent = {
  */
 export const Hiro: Agent = {
   id: 'hiro',
-  name: 'Hiro (Japanese)',
+  name: 'InkLo (Japanese)',
   personality: HIRO_PERSONALITY,
-  bodyColor: '#fbbc04', // yellow
+  bodyColor: '#ffd700', // yellow
   voice: 'Fenrir',
 };
 
@@ -814,9 +814,9 @@ export const Hiro: Agent = {
  */
 export const Jiwon: Agent = {
   id: 'jiwon',
-  name: 'Ji-won (Korean)',
+  name: 'InkLo (Korean)',
   personality: JIWON_PERSONALITY,
-  bodyColor: '#F3E5F5', // pale purple
+  bodyColor: '#ffd700', // yellow
   voice: 'Aoede',
 };
 
@@ -826,9 +826,9 @@ export const Jiwon: Agent = {
  */
 export const Hans: Agent = {
   id: 'hans',
-  name: 'Hans (German)',
+  name: 'InkLo (German)',
   personality: HANS_PERSONALITY,
-  bodyColor: '#FFEB3B', // yellow
+  bodyColor: '#ffd700', // yellow
   voice: 'Orus',
 };
 
@@ -838,9 +838,9 @@ export const Hans: Agent = {
  */
 export const Newton: Agent = {
   id: 'newton',
-  name: 'Newton (Financials & Metrics)',
+  name: 'InkLo (Financials)',
   personality: NEWTON_PERSONALITY,
-  bodyColor: '#4285F4', // blue
+  bodyColor: '#ffd700', // yellow
   voice: 'Orus',
 };
 
@@ -850,9 +850,9 @@ export const Newton: Agent = {
  */
 export const Defne: Agent = {
   id: 'defne',
-  name: 'Defne (Turkish)',
+  name: 'InkLo (Turkish)',
   personality: DEFNE_PERSONALITY,
-  bodyColor: '#009688', // Teal
+  bodyColor: '#ffd700', // yellow
   voice: 'Zephyr',
 };
 
@@ -862,9 +862,9 @@ export const Defne: Agent = {
  */
 export const Karim: Agent = {
   id: 'karim',
-  name: 'Karim (Arabic)',
+  name: 'InkLo (Arabic)',
   personality: KARIM_PERSONALITY,
-  bodyColor: '#FFF9C4', // pale yellow (same as Ari)
+  bodyColor: '#ffd700', // yellow
   voice: 'Fenrir',
 };
 
@@ -874,9 +874,9 @@ export const Karim: Agent = {
  */
 export const Reza: Agent = {
   id: 'reza',
-  name: 'Reza (Farsi)',
+  name: 'InkLo (Persian)',
   personality: REZA_PERSONALITY,
-  bodyColor: '#fbbc04', // yellow
+  bodyColor: '#ffd700', // yellow
   voice: 'Fenrir',
 };
 
@@ -886,9 +886,9 @@ export const Reza: Agent = {
  */
 export const Ines: Agent = {
   id: 'ines',
-  name: 'Inês (Portuguese)',
+  name: 'InkLo (Portuguese)',
   personality: INES_PERSONALITY,
-  bodyColor: '#9C27B0', // purple (same as Amelie)
+  bodyColor: '#ffd700', // yellow
   voice: 'Zephyr',
 };
 
@@ -898,9 +898,9 @@ export const Ines: Agent = {
  */
 export const Olga: Agent = {
   id: 'olga',
-  name: 'Olga (Russian)',
+  name: 'InkLo (Russian)',
   personality: OLGA_PERSONALITY,
-  bodyColor: '#9C27B0', // purple (same as Amelie)
+  bodyColor: '#ffd700', // yellow
   voice: 'Zephyr',
 };
 
@@ -910,8 +910,8 @@ export const Olga: Agent = {
  */
 export const Luca: Agent = {
   id: 'luca',
-  name: 'Luca (Italian)',
+  name: 'InkLo (Italian)',
   personality: LUCA_PERSONALITY,
-  bodyColor: '#4285F4', // blue (same as Ramon)
+  bodyColor: '#ffd700', // yellow
   voice: 'Fenrir',
 };

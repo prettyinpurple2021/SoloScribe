@@ -15,6 +15,8 @@ type BasicFaceProps = {
   isTalking: boolean;
   /** Ref to the current audio output volume. Used to drive lip-sync. */
   volumeRef?: MutableRefObject<number>;
+  /** The active agent ID for customizing facial features. */
+  agentId?: string;
 };
 
 /**
@@ -25,6 +27,7 @@ export default function BasicFace({
   radius = 50,
   isTalking,
   volumeRef,
+  agentId,
 }: BasicFaceProps) {
   const mouthRef = useRef<SVGEllipseElement>(null);
 
@@ -114,11 +117,39 @@ export default function BasicFace({
         <path d="M 62 26 Q 68 22 74 26" fill="none" stroke="#8a6700" strokeWidth="2.5" strokeLinecap="round" />
 
         {/* Eyes */}
-        <ellipse cx="32" cy="45" rx="5" ry="8" fill="#111" />
-        <circle cx="31" cy="42" r="1.5" fill="#fff" />
-
-        <ellipse cx="68" cy="45" rx="5" ry="8" fill="#111" />
-        <circle cx="67" cy="42" r="1.5" fill="#fff" />
+        {(() => {
+          if (agentId === 'vance' || agentId === 'newton') {
+            return (
+              <>
+                <text x="32" y="52" fill="#2d6a4f" fontSize="24" fontFamily="monospace" fontWeight="bolder" textAnchor="middle">$</text>
+                <text x="68" y="52" fill="#2d6a4f" fontSize="24" fontFamily="monospace" fontWeight="bolder" textAnchor="middle">$</text>
+              </>
+            );
+          } else if (agentId === 'gauss') {
+            return (
+              <>
+                <text x="32" y="52" fill="#111" fontSize="24" fontFamily="serif" fontWeight="bold" textAnchor="middle">π</text>
+                <text x="68" y="52" fill="#111" fontSize="24" fontFamily="serif" fontWeight="bold" textAnchor="middle">π</text>
+              </>
+            );
+          } else if (agentId === 'tom') {
+            return (
+              <>
+                <path d="M 28 50 L 34 38 L 32 44 L 38 44 L 30 54 L 32 48 Z" fill="#fa7b17" />
+                <path d="M 64 50 L 70 38 L 68 44 L 74 44 L 66 54 L 68 48 Z" fill="#fa7b17" />
+              </>
+            );
+          }
+          return (
+            <>
+              <ellipse cx="32" cy="45" rx="5" ry="8" fill="#111" />
+              <circle cx="31" cy="42" r="1.5" fill="#fff" />
+      
+              <ellipse cx="68" cy="45" rx="5" ry="8" fill="#111" />
+              <circle cx="67" cy="42" r="1.5" fill="#fff" />
+            </>
+          );
+        })()}
 
         {/* Mouth */}
         <ellipse 

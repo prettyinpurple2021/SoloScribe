@@ -155,7 +155,7 @@ export default function Header() {
           </button>
         </Tooltip>
         <div className="roomName">
-          <Tooltip content="Switch Agent" position="bottom">
+          <Tooltip content="Switch InkLo Version" position="bottom">
             <button
               onClick={e => {
                 e.stopPropagation();
@@ -164,7 +164,7 @@ export default function Header() {
               style={{ background: 'none', border: 'none', padding: 0 }}
             >
               <h1 className={c({ active: showRoomList })}>
-                {current.name.split(' (')[0]}
+                {current.name}
                 {isSuperUser && (
                   <span
                     className="edit-agent-icon"

@@ -30,6 +30,27 @@ export const thinkDeeply = async (query: string): Promise<string> => {
   return response.text || "No thoughts generated.";
 };
 
+export const quickPolish = async (content: string): Promise<string> => {
+  const ai = getAi();
+  const response = await ai.models.generateContent({
+    model: "gemini-3.1-flash-lite-preview",
+    contents: `Please perform a quick polish on the following document. Fix any typos, improve grammar, and ensure a consistent, professional tone. Return ONLY the polished markdown content without any conversational filler.\n\n${content}`,
+  });
+  return response.text || content;
+};
+
+export const deepEnhance = async (content: string): Promise<string> => {
+   const ai = getAi();
+   const response = await ai.models.generateContent({
+      model: "gemini-3.1-pro-preview",
+      contents: `Please deeply analyze and enhance the following business document. Improve its structure, expand on weak points, add strategic insights, and make it highly compelling for investors or stakeholders. Use professional formatting (Markdown). Return ONLY the enhanced document.\n\n${content}`,
+      config: {
+        thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH }
+      }
+   });
+   return response.text || content;
+};
+
 export const generateImage = async (prompt: string): Promise<string> => {
   const ai = getAi();
   const response = await ai.models.generateContent({

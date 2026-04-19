@@ -168,6 +168,25 @@ export const useAgent = create<{
     }),
     {
       name: 'agent-storage',
+      merge: (persistedState: any, currentState: any) => {
+        // Find the updated preset for the current agent if it exists
+        let updatedCurrent = persistedState?.current;
+        if (updatedCurrent) {
+          const matchingPreset = currentState.availablePresets.find((a: any) => a.id === updatedCurrent.id);
+          if (matchingPreset) {
+            updatedCurrent = matchingPreset;
+          }
+        }
+
+        return {
+          ...currentState,
+          ...persistedState,
+          // Always use the latest presets from code to reflect name changes
+          availablePresets: currentState.availablePresets,
+          // Update current agent with preset changes if applicable
+          current: updatedCurrent || currentState.current,
+        };
+      },
     }
   ) as any
 );

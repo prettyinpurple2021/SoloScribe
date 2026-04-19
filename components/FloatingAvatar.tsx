@@ -173,6 +173,7 @@ export default function FloatingAvatar() {
         color={current.bodyColor}
         isTalking={isTalking}
         volumeRef={volumeRef}
+        agentId={current.id}
       />
       {/* Display the agent's current state (e.g., "Thinking...", "Listening...") or "INACTIVE" if disconnected */}
       {(agentState || !connected) && (

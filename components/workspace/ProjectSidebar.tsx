@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useUI, Project } from '../../lib/state';
+import { useUI, Project, useTaskStore, Task } from '../../lib/state';
 import { useAuth } from '../../contexts/AuthContext';
 import { db, handleFirestoreError, OperationType } from '../../firebase';
 import { 
@@ -11,7 +11,9 @@ import {
   setDoc, 
   deleteDoc, 
   serverTimestamp,
-  addDoc
+  addDoc,
+  updateDoc,
+  Timestamp
 } from 'firebase/firestore';
 import { 
   Folder, 
@@ -20,12 +22,229 @@ import {
   Edit3, 
   X, 
   FileText,
-  Search
+  Search,
+  CheckCircle2,
+  Circle,
+  Flag,
+  Clock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { ConfirmModal } from '../Modal';
 import { Tooltip } from '../Tooltip';
+import c from 'classnames';
+
+const SidebarTasks: React.FC<{ projectId: string; userId: string }> = ({ projectId, userId }) => {
+  const { tasks } = useTaskStore();
+  const [isAddingTask, setIsAddingTask] = useState(false);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskPriority, setNewTaskPriority] = useState<'low' | 'medium' | 'high'>('medium');
+  const [newTaskDueDate, setNewTaskDueDate] = useState('');
+
+  const projectTasks = tasks.filter(t => t.projectId === projectId);
+  
+  const sortedTasks = [...projectTasks].sort((a, b) => {
+    if (a.completed !== b.completed) return a.completed ? 1 : -1;
+    const priorityMap = { high: 0, medium: 1, low: 2 };
+    if (a.priority !== b.priority) return priorityMap[a.priority] - priorityMap[b.priority];
+    return a.dueDate.toMillis() - b.dueDate.toMillis();
+  });
+
+  const startEditTask = (task: Task) => {
+    setEditingTaskId(task.id);
+    setNewTaskTitle(task.title);
+    setNewTaskPriority(task.priority);
+    setNewTaskDueDate(task.dueDate instanceof Timestamp ? task.dueDate.toDate().toISOString().slice(0, 16) : task.dueDate);
+  };
+
+  const handleSaveTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTaskTitle.trim() || !newTaskDueDate) return;
+    try {
+      if (editingTaskId) {
+        const taskRef = doc(db, 'users', userId, 'projects', projectId, 'tasks', editingTaskId);
+        await updateDoc(taskRef, {
+          title: newTaskTitle,
+          priority: newTaskPriority,
+          dueDate: Timestamp.fromDate(new Date(newTaskDueDate)),
+          updatedAt: serverTimestamp(),
+        });
+        setEditingTaskId(null);
+        toast.success('Task updated');
+      } else {
+        const tasksRef = collection(db, 'users', userId, 'projects', projectId, 'tasks');
+        await addDoc(tasksRef, {
+          projectId,
+          userId,
+          title: newTaskTitle,
+          priority: newTaskPriority,
+          dueDate: Timestamp.fromDate(new Date(newTaskDueDate)),
+          completed: false,
+          notified: false,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+        setIsAddingTask(false);
+        toast.success('Task added');
+      }
+      setNewTaskTitle('');
+      setNewTaskDueDate('');
+    } catch (error) {
+      handleFirestoreError(error, editingTaskId ? OperationType.UPDATE : OperationType.CREATE, `users/${userId}/projects/${projectId}/tasks`);
+    }
+  };
+
+  const deleteTask = async (taskId: string) => {
+    try {
+      const taskRef = doc(db, 'users', userId, 'projects', projectId, 'tasks', taskId);
+      await deleteDoc(taskRef);
+      toast.success('Task deleted');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `users/${userId}/projects/${projectId}/tasks/${taskId}`);
+    }
+  };
+
+  const toggleTaskCompletion = async (task: Task) => {
+    try {
+      const taskRef = doc(db, 'users', userId, 'projects', projectId, 'tasks', task.id);
+      await updateDoc(taskRef, {
+        completed: !task.completed,
+        updatedAt: serverTimestamp(),
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${userId}/projects/${projectId}/tasks/${task.id}`);
+    }
+  };
+
+  const isOverdue = (dueDate: any) => dueDate.toMillis() < Date.now();
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'high': return 'text-red-500';
+      case 'medium': return 'text-yellow-500';
+      case 'low': return 'text-blue-500';
+      default: return 'text-muted-foreground';
+    }
+  };
+
+  return (
+    <div style={{ marginTop: '20px', borderTop: '1px solid var(--theme-border)', paddingTop: '20px' }}>
+      <div className="sidebar-content-header" style={{ padding: '0 20px', marginBottom: '10px' }}>
+        <span className="theme-label" style={{ fontSize: '10px' }}>Current Project Tasks</span>
+        <Tooltip content="Add Task" position="left">
+          <button 
+            onClick={() => {
+              setEditingTaskId(null);
+              setNewTaskTitle('');
+              setNewTaskDueDate('');
+              setIsAddingTask(!isAddingTask);
+            }}
+            className="brutalist-button mini"
+          >
+            <Plus size={12} /> ADD
+          </button>
+        </Tooltip>
+      </div>
+
+      {(isAddingTask || editingTaskId) && (
+        <form onSubmit={handleSaveTask} className="theme-card creation-card" style={{ margin: '0 20px 10px' }}>
+          <input 
+            autoFocus
+            type="text"
+            placeholder="TASK TITLE..."
+            value={newTaskTitle}
+            onChange={(e) => setNewTaskTitle(e.target.value)}
+            className="brutalist-input mini"
+            style={{ marginBottom: '8px' }}
+            required
+          />
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+            <select 
+              value={newTaskPriority}
+              onChange={(e) => setNewTaskPriority(e.target.value as any)}
+              className="brutalist-input mini"
+              style={{ flex: 1 }}
+            >
+              <option value="low">Low Priority</option>
+              <option value="medium">Medium Priority</option>
+              <option value="high">High Priority</option>
+            </select>
+            <input 
+              type="datetime-local"
+              value={newTaskDueDate}
+              onChange={(e) => setNewTaskDueDate(e.target.value)}
+              className="brutalist-input mini"
+              style={{ flex: 1 }}
+              required
+            />
+          </div>
+          <div className="creation-actions">
+            <button type="submit" className="brutalist-button primary">SAVE</button>
+            <button type="button" onClick={() => {
+              setIsAddingTask(false);
+              setEditingTaskId(null);
+            }} className="brutalist-button secondary">CANCEL</button>
+          </div>
+        </form>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        {sortedTasks.map(task => (
+          <div 
+            key={task.id}
+            className="project-item group"
+            style={{ opacity: task.completed ? 0.6 : 1, padding: '10px 20px', borderBottom: '1px solid var(--theme-border)', cursor: 'default', display: 'flex', justifyContent: 'space-between' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <button onClick={() => toggleTaskCompletion(task)} style={{ cursor: 'pointer', flexShrink: 0 }}>
+                {task.completed ? <CheckCircle2 size={16} className="text-primary" /> : <Circle size={16} />}
+              </button>
+              <div className="project-item-content" style={{ marginLeft: '10px' }}>
+                <div className="project-name" style={{ textDecoration: task.completed ? 'line-through' : 'none', fontSize: '13px' }}>
+                  {task.title}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '10px', marginTop: '4px' }}>
+                  <span className={getPriorityColor(task.priority)} style={{ display: 'flex', alignItems: 'center', gap: '2px', fontWeight: 'bold' }}>
+                    <Flag size={10} /> {task.priority.toUpperCase()}
+                  </span>
+                  <span className={!task.completed && isOverdue(task.dueDate) ? "text-destructive font-bold" : "text-muted-foreground"} style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                    <Clock size={10} />
+                    {task.dueDate.toDate().toLocaleDateString([], { hour: '2-digit', minute:'2-digit' })}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="project-actions" style={{ flexShrink: 0 }}>
+              <Tooltip content="Edit Task" position="top">
+                <button 
+                  onClick={() => startEditTask(task)}
+                  className="project-action-btn"
+                >
+                  <Edit3 size={14} />
+                </button>
+              </Tooltip>
+              <Tooltip content="Delete Task" position="top">
+                <button 
+                  onClick={() => deleteTask(task.id)}
+                  className="project-action-btn"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </Tooltip>
+            </div>
+          </div>
+        ))}
+        {sortedTasks.length === 0 && !isAddingTask && (
+          <div style={{ padding: '20px', textAlign: 'center', opacity: 0.5, fontSize: '12px', fontFamily: 'var(--font-mono)' }}>
+            NO TASKS FOUND FOR THIS PROJECT.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 export const ProjectSidebar: React.FC = () => {
   const { user } = useAuth();
@@ -318,6 +537,10 @@ export const ProjectSidebar: React.FC = () => {
                   </div>
                 )}
               </div>
+              
+              {currentProjectId && user && (
+                <SidebarTasks projectId={currentProjectId} userId={user.uid} />
+              )}
             </div>
 
             {/* Footer */}
