@@ -208,6 +208,17 @@ service cloud.firestore {
              isValidOptionalString('label', 0, 200);
     }
 
+    function isValidFeedback() {
+      let allowedFields = ['projectId', 'ownerId', 'content', 'authorName', 'createdAt'];
+      return hasOnlyAllowedFields(allowedFields) &&
+             hasRequiredFields(['projectId', 'ownerId', 'content', 'authorName']) &&
+             isValidString('projectId', 1, 100) &&
+             isValidString('ownerId', 1, 100) &&
+             isValidString('content', 1, 50000) &&
+             isValidString('authorName', 1, 200) &&
+             isOptionalTimestamp('createdAt');
+    }
+
     function isValidTask() {
       let allowedFields = ['id', 'projectId', 'userId', 'title', 'description', 'priority', 'dueDate', 'completed', 'notified', 'notifiedTimings', 'createdAt', 'updatedAt'];
       return hasOnlyAllowedFields(allowedFields) &&
@@ -308,10 +319,12 @@ service cloud.firestore {
     }
 
     match /projects/{projectId}/feedback/{feedbackId} {
-      // Only owner can read feedback
-      allow read: if isAuthenticated() && resource.data.ownerId == request.auth.uid;
+      // Anyone with the link can see feedback
+      allow read: if true;
       // Anyone can create feedback
-      allow create: if isValidInterviewResponse(); // Reusing similar validation or define isValidFeedback
+      allow create: if isValidFeedback();
+      // Only the owner (indicated by the ownerId in the document) or admin can delete
+      allow update, delete: if isAuthenticated() && (request.auth.uid == resource.data.ownerId || isAdmin());
     }
   }
 }

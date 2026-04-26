@@ -201,6 +201,30 @@ export type TranscriptEntry = {
   text: string;
 };
 
+/**
+ * Workspace Data Models
+ */
+export type GlobalVariable = {
+  id: string;
+  name: string;
+  value: string;
+  description?: string;
+};
+
+export type UserTemplate = {
+  id: string;
+  name: string;
+  description: string;
+  content: string;
+  createdAt: number;
+};
+
+export type WikiLink = {
+  sourceProjectId: string;
+  targetProjectId: string;
+  title: string;
+};
+
 export type Project = {
   id: string;
   name: string;
@@ -214,6 +238,56 @@ export type Project = {
   viewCount?: number;
   lastViewedAt?: any;
 };
+
+/**
+ * `useWorkspaceStore` Store
+ * Manages global variables, user templates, and cross-project links.
+ */
+export const useWorkspaceStore = create<{
+  variables: GlobalVariable[];
+  setVariables: (variables: GlobalVariable[]) => void;
+  updateVariable: (id: string, value: string) => void;
+  addVariable: (variable: GlobalVariable) => void;
+  removeVariable: (id: string) => void;
+  
+  userTemplates: UserTemplate[];
+  setUserTemplates: (templates: UserTemplate[]) => void;
+  addUserTemplate: (template: UserTemplate) => void;
+  removeUserTemplate: (id: string) => void;
+
+  wikiLinks: WikiLink[];
+  addWikiLink: (link: WikiLink) => void;
+  removeWikiLink: (source: string, target: string) => void;
+}>()(
+  persist(
+    (set) => ({
+      variables: [
+        { id: 'var_company', name: 'COMPANY_NAME', value: 'My Startup', description: 'Your startup name' },
+        { id: 'var_mission', name: 'MISSION', value: 'To solve X using Y', description: 'Your core mission' }
+      ],
+      setVariables: (variables) => set({ variables }),
+      updateVariable: (id, value) => set(state => ({
+        variables: state.variables.map(v => v.id === id ? { ...v, value } : v)
+      })),
+      addVariable: (v) => set(state => ({ variables: [...state.variables, v] })),
+      removeVariable: (id) => set(state => ({ variables: state.variables.filter(v => v.id !== id) })),
+
+      userTemplates: [],
+      setUserTemplates: (userTemplates) => set({ userTemplates }),
+      addUserTemplate: (t) => set(state => ({ userTemplates: [...state.userTemplates, t] })),
+      removeUserTemplate: (id) => set(state => ({ userTemplates: state.userTemplates.filter(t => t.id !== id) })),
+
+      wikiLinks: [],
+      addWikiLink: (link) => set(state => ({ wikiLinks: [...state.wikiLinks, link] })),
+      removeWikiLink: (source, target) => set(state => ({
+        wikiLinks: state.wikiLinks.filter(l => !(l.sourceProjectId === source && l.targetProjectId === target))
+      })),
+    }),
+    {
+      name: 'workspace-storage'
+    }
+  ) as any
+);
 
 export type Feedback = {
   id: string;
@@ -270,6 +344,8 @@ export const useUI = create<{
   setTheme: (themeName: string) => void;
   font: string;
   setFont: (fontName: string) => void;
+  exportTheme: 'brutalist' | 'corporate' | 'modern';
+  setExportTheme: (theme: 'brutalist' | 'corporate' | 'modern') => void;
   suppressRedundantLogs: boolean;
   setSuppressRedundantLogs: (suppress: boolean) => void;
   suppressStaleAgentResponses: boolean;
@@ -338,6 +414,8 @@ export const useUI = create<{
       setTheme: (themeName: string) => set({ theme: themeName }),
       font: 'Rajdhani',
       setFont: (fontName: string) => set({ font: fontName }),
+      exportTheme: 'brutalist',
+      setExportTheme: (exportTheme) => set({ exportTheme }),
       suppressRedundantLogs: false,
       setSuppressRedundantLogs: (suppress: boolean) => set({ suppressRedundantLogs: suppress }),
       suppressStaleAgentResponses: false,
@@ -399,6 +477,7 @@ export const useUI = create<{
         hasCompletedOnboarding: state.hasCompletedOnboarding,
         theme: state.theme,
         font: state.font,
+        exportTheme: state.exportTheme,
         outputModality: state.outputModality,
         currentProjectId: state.currentProjectId,
         notificationPreferences: state.notificationPreferences,

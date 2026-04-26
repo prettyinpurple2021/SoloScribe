@@ -29,6 +29,7 @@ import { marked } from 'marked';
 import * as htmlToImage from 'html-to-image';
 import { diffChars } from 'diff';
 import { jsPDF } from 'jspdf';
+import mermaid from 'mermaid';
 
 import { useLiveAPIContext } from '../../contexts/LiveAPIContext';
 import { createSystemInstructions } from '../../lib/prompts';
@@ -40,8 +41,10 @@ import {
   usePerfLogStore,
   useUI,
   useUser,
+  useWorkspaceStore,
   Insert,
   Project,
+  GlobalVariable,
 } from '../../lib/state';
 import { pcmToWav, combineArrayBuffers } from '../../lib/utils';
 import Modal, { ConfirmModal, PromptModal } from '../Modal';
@@ -98,6 +101,7 @@ import {
   Volume2,
   Wrench,
   ShieldAlert,
+  Plus,
   LineChart,
   Map as MapIcon,
   Undo2,
@@ -110,6 +114,10 @@ import {
   ChevronLeft
 } from 'lucide-react';
 import { ShareModal } from './ShareModal';
+
+import { AIAuditorTab } from './AIAuditorTab';
+import { ProjectGraph } from './ProjectGraph';
+import { exportThemes } from '../../lib/themes';
 
 // Defines the shape for an entry in the text-based conversation transcript.
 type TranscriptEntry = {
@@ -475,6 +483,43 @@ const getAudioDuration = (blob: Blob) => {
   return `${durationInSeconds.toFixed(1)}s`;
 };
 
+/**
+ * Mermaid Chart Component
+ */
+const MermaidChart: React.FC<{ code: string }> = ({ code }) => {
+  const chartRef = useRef<HTMLDivElement>(null);
+  const [svg, setSvg] = useState<string>('');
+
+  useEffect(() => {
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      securityLevel: 'loose',
+      fontFamily: 'Rajdhani',
+    });
+    
+    const renderChart = async () => {
+      try {
+        const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
+        const { svg } = await mermaid.render(id, code);
+        setSvg(svg);
+      } catch (err) {
+        console.error('Mermaid render error:', err);
+      }
+    };
+
+    renderChart();
+  }, [code]);
+
+  return (
+    <div
+      ref={chartRef}
+      className="mermaid-chart flex justify-center my-6 bg-black/20 p-6 border-b-4 border-r-4 border-black"
+      dangerouslySetInnerHTML={{ __html: svg }}
+    />
+  );
+};
+
 // =================================================================
 // DOCUMENT RENDERING COMPONENTS
 // =================================================================
@@ -612,29 +657,64 @@ const DocumentRenderer = memo(
     content,
     inserts,
     onElementResize,
+    onWikiLinkClick,
   }: {
     content: string;
     inserts: Insert[];
     onElementResize: (id: string, newWidth: string) => void;
+    onWikiLinkClick?: (projectId: string) => void;
   }) => {
-    const { html, embeds } = useMemo(() => {
-      if (!content) return { html: '', embeds: [] };
+    const { variables } = useWorkspaceStore();
+    const { projects } = useUI();
 
-      const embeds: { type: string; id: string; width: string | null; prompt: string | null; part: string; title?: string; body?: string }[] = [];
+    const processedContent = useMemo(() => {
+      if (!content) return '';
       
-      // "Smart" Content Splitter: Manual scan to find matching closing bracket
-      // while ignoring brackets inside quotes.
-      let processedContent = content;
+      // Replace Global Variables
+      let text = content;
+      variables.forEach(v => {
+        const regex = new RegExp(`{{${v.name}}}`, 'g');
+        text = text.replace(regex, v.value);
+      });
 
-      // Handle [collapse] blocks first
+      // Replace Wiki Links [[Doc Name]]
+      text = text.replace(/\[\[(.*?)\]\]/g, (match, title) => {
+        const project = projects.find(p => p.name.toLowerCase() === title.toLowerCase());
+        if (project) {
+          return `<a href="javascript:void(0)" class="wiki-link" data-project-id="${project.id}">${title}</a>`;
+        }
+        return `<span class="wiki-link-dead" title="Document not found">${title}</span>`;
+      });
+
+      return text;
+    }, [content, variables, projects]);
+
+    const { html, embeds } = useMemo(() => {
+      if (!processedContent) return { html: '', embeds: [] };
+
+      const embeds: { type: string; id: string; width: string | null; prompt: string | null; part: string; title?: string; body?: string; code?: string }[] = [];
+      
+      let intermediateContent = processedContent;
+
+      // Handle [collapse] blocks
       const collapseRegex = /\[collapse\s+title=(["'])((?:\\\1|.)*?)\1\]([\s\S]*?)\[\/collapse\]/g;
       let collapseMatch;
-      while ((collapseMatch = collapseRegex.exec(content)) !== null) {
+      while ((collapseMatch = collapseRegex.exec(processedContent)) !== null) {
         const id = `collapse_${embeds.length}`;
         const title = collapseMatch[2];
         const body = collapseMatch[3];
         embeds.push({ type: 'collapse', id, width: null, prompt: null, part: collapseMatch[0], title, body });
-        processedContent = processedContent.replace(collapseMatch[0], `<div id="soloscribe-embed-${id}" class="soloscribe-embed-placeholder"></div>`);
+        intermediateContent = intermediateContent.replace(collapseMatch[0], `<div id="soloscribe-embed-${id}" class="soloscribe-embed-placeholder"></div>`);
+      }
+
+      // Handle Mermaid Code Blocks
+      const mermaidRegex = /```mermaid([\s\S]*?)```/g;
+      let mermaidMatch;
+      while ((mermaidMatch = mermaidRegex.exec(processedContent)) !== null) {
+        const id = `mermaid_${embeds.length}_${Math.random().toString(36).substr(2, 5)}`;
+        const code = mermaidMatch[1].trim();
+        embeds.push({ type: 'mermaid', id, width: null, prompt: null, part: mermaidMatch[0], code });
+        intermediateContent = intermediateContent.replace(mermaidMatch[0], `<div id="soloscribe-embed-${id}" class="soloscribe-embed-placeholder"></div>`);
       }
 
       const tagRegex = /\[(illustration|graph)\s/g;
@@ -690,13 +770,13 @@ const DocumentRenderer = memo(
         }
         
         embeds.push({ type, id, width, prompt, part: fullMatch });
-        processedContent = processedContent.substring(0, start) + 
+        intermediateContent = intermediateContent.substring(0, start) + 
                            `<div id="soloscribe-embed-${id}" class="soloscribe-embed-placeholder"></div>` + 
-                           processedContent.substring(end + 1);
+                           intermediateContent.substring(end + 1);
       }
 
-      const cleanedWhitespace = stripLeadingWhitespace(processedContent);
-      const { protectedText, latexMap } = protectLatex(cleanedWhitespace);
+      const stripped = stripLeadingWhitespace(intermediateContent);
+      const { protectedText, latexMap } = protectLatex(stripped);
       
       // Configure marked with highlight.js
       marked.use({
@@ -713,13 +793,29 @@ const DocumentRenderer = memo(
       const finalHtml = restoreLatex(rawHtml, latexMap);
 
       return { html: finalHtml, embeds: embeds.reverse() };
-    }, [content]);
+    }, [content, variables, projects]);
+
+    // Handle wiki link clicks
+    useEffect(() => {
+      const handleClick = (e: MouseEvent) => {
+        const target = e.target as HTMLElement;
+        if (target && target.classList.contains('wiki-link')) {
+          const projectId = target.getAttribute('data-project-id');
+          if (projectId && onWikiLinkClick) {
+            onWikiLinkClick(projectId);
+          }
+        }
+      };
+
+      document.addEventListener('click', handleClick);
+      return () => document.removeEventListener('click', handleClick);
+    }, [onWikiLinkClick]);
 
     return (
       <>
         <MathJaxRenderer htmlContent={html} />
         {embeds.map((embed) => (
-          <EmbedPortal key={embed.id} id={embed.id} content={content}>
+          <EmbedPortal key={embed.id} id={embed.id} content={processedContent}>
             {embed.type === 'collapse' ? (
               <details className="collapsible-section">
                 <summary>{embed.title}</summary>
@@ -729,6 +825,8 @@ const DocumentRenderer = memo(
                   }} 
                 />
               </details>
+            ) : embed.type === 'mermaid' ? (
+              <MermaidChart code={embed.code || ''} />
             ) : embed.type === 'illustration' ? (() => {
               const insert = inserts.find(ins => ins.id === embed.id);
               if (!insert) {
@@ -847,6 +945,87 @@ export default function KeynoteCompanion() {
     projects: userProjects,
     setProjects: setUserProjects,
   } = useUI();
+  const { addUserTemplate: _retired } = useWorkspaceStore();
+  
+  // Selection/Slash Command state
+  const [selection, setSelection] = useState({ text: '', top: 0, left: 0, active: false });
+
+  const handleSaveAsTemplate = () => {
+    if (!documentContent || documentContent === PLACEHOLDER_DOC) {
+      toast.error('Cannot save empty document as template.');
+      return;
+    }
+    const name = prompt('Enter template name:');
+    if (name) {
+      addUserTemplate({
+        id: `tpl_${Date.now()}`,
+        name,
+        description: 'User defined template',
+        content: documentContent,
+        createdAt: Date.now()
+      });
+      toast.success(`Template "${name}" saved!`);
+    }
+  };
+
+  const handleProjectSelect = (projectId: string) => {
+    setCurrentProjectId(projectId);
+  };
+
+  const { 
+    variables, 
+    addVariable,
+    setVariables, 
+    updateVariable, 
+    addUserTemplate, 
+    userTemplates 
+  } = useWorkspaceStore();
+  const { exportTheme, setExportTheme } = useUI();
+  const [showWorkspaceModal, setShowWorkspaceModal] = useState(false);
+  const handleAIAction = async (p: string, mode: 'replace' | 'append' = 'replace') => {
+    if (!selection.text) return;
+    
+    setSelection({ ...selection, active: false });
+    toast.info('AI is thinking...');
+    
+    try {
+      const response = await thinkDeeply(`${p}\n\nCONTENT TO PROCESS:\n${selection.text}`);
+      if (mode === 'replace') {
+        const newContent = documentContent.replace(selection.text, response);
+        setDocumentContent(newContent);
+      } else {
+        const newContent = documentContent.replace(selection.text, `${selection.text}\n\n${response}`);
+        setDocumentContent(newContent);
+      }
+      toast.success('AI update complete!');
+    } catch (err) {
+      toast.error('AI action failed.');
+    }
+  };
+
+  /**
+   * Selection Handling
+   */
+  useEffect(() => {
+    const handleMouseUp = () => {
+      const sel = window.getSelection();
+      if (sel && sel.toString().trim().length > 0) {
+        const range = sel.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        setSelection({
+          text: sel.toString(),
+          top: rect.top + window.scrollY - 40,
+          left: rect.left + window.scrollX,
+          active: true
+        });
+      } else {
+        setSelection(s => ({ ...s, active: false }));
+      }
+    };
+
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => document.removeEventListener('mouseup', handleMouseUp);
+  }, []);
 
   // Update muted state when outputModality changes
   useEffect(() => {
@@ -874,7 +1053,56 @@ export default function KeynoteCompanion() {
   const [isSavingToCloud, setIsSavingToCloud] = useState(false);
   const [lastAutoSavedAt, setLastAutoSavedAt] = useState<Date | null>(null);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const handleDownloadHTML = () => {
+    const htmlContent = marked(documentContent);
+    const fullHtml = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>${user.topic || 'Document'}</title>
+<style>
+  body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; line-height: 1.6; }
+  pre { background: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+  code { font-family: monospace; }
+  img { max-width: 100%; height: auto; }
+</style>
+</head>
+<body>
+${htmlContent}
+</body>
+</html>`;
+    const blob = new Blob([fullHtml], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${user.topic || 'soloscribe-document'}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showOutline, setShowOutline] = useState(false);
   const [showTemplatesModal, setShowTemplatesModal] = useState(false);
+  const [selectedVersionForPreview, setSelectedVersionForPreview] = useState<any>(null);
+
+  const documentOutline = useMemo(() => {
+    const headings = [];
+    const lines = documentContent.split('\n');
+    let currentId = 0;
+    for (const line of lines) {
+      const match = line.match(/^(#{1,6})\s+(.*)$/);
+      if (match) {
+        headings.push({
+          id: `heading-${currentId++}`,
+          level: match[1].length,
+          text: match[2].trim(),
+        });
+      }
+    }
+    return headings;
+  }, [documentContent]);
   const [showDashboardModal, setShowDashboardModal] = useState(false);
   const [showConfirmReplaceModal, setShowConfirmReplaceModal] = useState<{ template: any } | null>(null);
   const [showPromptProjectName, setShowPromptProjectName] = useState<{ onConfirm: (name: string) => void } | null>(null);
@@ -1094,6 +1322,7 @@ export default function KeynoteCompanion() {
   const handleCloseHistoryModal = () => {
     setShowHistoryModal(false);
     setConfirmingVersionId(null);
+    setSelectedVersionForPreview(null);
   };
 
   const handleRestoreVersion = (version: any) => {
@@ -2424,7 +2653,7 @@ ${recentTranscript}`;
       }
     };
 
-    const handleTurnComplete = () => {
+    const handleTurnComplete = async () => {
       const now = Date.now();
       if (now - lastTurnCompleteTimestampRef.current < 500) {
         return;
@@ -2432,6 +2661,12 @@ ${recentTranscript}`;
       lastTurnCompleteTimestampRef.current = now;
       const userFinal = currentUserText.current.trim();
       const agentFinal = currentModelText.current.trim();
+
+      // Auto-Snapshot if agent made changes to document
+      if (agentFinal && documentContentRef.current !== lastSnapshotContentRef.current) {
+        handleCreateVersion(`InkLo Edit - ${new Date().toLocaleTimeString()}`);
+      }
+
       setTranscript(prev => {
         let nextTranscript = [...prev];
         if (userFinal) {
@@ -3120,11 +3355,11 @@ Format your response in Markdown.`;
   };
 
   return (
-    <div className="keynote-companion paper-graph">
+    <div className={c("keynote-companion", { "has-copilot": showCopilot && mainTab === 'document' && !isMobile })}>
       <div className="document-view-container">
         {mainTab === 'document' && (
-          <div style={{ display: 'flex', flexDirection: 'row', height: '100%', width: '100%' }}>
-            <div className="document-editor-container" style={{ flex: 1, overflow: 'hidden' }}>
+          <div className="flex flex-row h-full w-full overflow-hidden">
+            <div className="document-editor-container">
               {documentTab === 'editor' && (
               <>
                 <div className="document-toolbar">
@@ -3281,15 +3516,66 @@ Format your response in Markdown.`;
                       <div className="toolbar-divider"></div>
 
                       <div className="toolbar-group">
-                        <Tooltip content="Export as Markdown" position="bottom">
+                        <Tooltip content="Document Outline (TOC)" position="bottom">
                           <button 
-                            className="brutalist-button-sm"
-                            onClick={handleDownloadMarkdown}
+                            className={c("brutalist-button-sm", { "active": showOutline })}
+                            onClick={() => setShowOutline(!showOutline)}
                           >
-                            <Download size={14} />
-                            <span>Export MD</span>
+                            <List size={14} />
+                            <span>Outline</span>
                           </button>
                         </Tooltip>
+
+                        <div className="toolbar-divider"></div>
+
+                        <div style={{ position: 'relative' }}>
+                          <Tooltip content="Export Document" position="bottom">
+                            <button 
+                              className={c("brutalist-button-sm", { "active": showExportMenu })}
+                              onClick={() => setShowExportMenu(!showExportMenu)}
+                            >
+                              <Download size={14} />
+                              <span>Export</span>
+                            </button>
+                          </Tooltip>
+                          {showExportMenu && (
+                            <div className="dropdown-menu shadow-lg" style={{ position: 'absolute', top: '100%', left: 0, zIndex: 1000, background: 'var(--theme-bg)', border: '2px solid var(--theme-border)', minWidth: '180px' }}>
+                              <div className="p-2 border-b border-white/10 flex flex-col gap-1 bg-black/20">
+                                 <div className="text-[9px] font-mono text-white/50">BRANDING_ENGINE</div>
+                                 <select 
+                                    className="text-[10px] bg-black text-[#00f3ff] border border-[#00f3ff] p-1 font-mono outline-none"
+                                    value={exportTheme}
+                                    onChange={(e) => setExportTheme(e.target.value as any)}
+                                 >
+                                    <option value="brutalist">NEO-BRUTALIST</option>
+                                    <option value="corporate">EXECUTIVE_CORP</option>
+                                    <option value="modern">CLEAN_MODERN</option>
+                                 </select>
+                              </div>
+                              <button 
+                                className="brutalist-button-sm w-full text-left" 
+                                style={{ border: 'none', borderBottom: '1px solid var(--theme-border)' }}
+                                onClick={() => { handleDownloadMarkdown(); setShowExportMenu(false); }}
+                              >
+                                Export as Markdown (.md)
+                              </button>
+                              <button 
+                                className="brutalist-button-sm w-full text-left" 
+                                style={{ border: 'none', borderBottom: '1px solid var(--theme-border)' }}
+                                onClick={() => { handleDownloadHTML(); setShowExportMenu(false); }}
+                              >
+                                Export as HTML (.html)
+                              </button>
+                              <button 
+                                className="brutalist-button-sm w-full text-left"
+                                style={{ border: 'none' }}
+                                onClick={() => { handleDownloadPDF(renderedViewRef, user.topic || 'soloscribe-document'); setShowExportMenu(false); }}
+                              >
+                                Export as PDF (.pdf)
+                              </button>
+                            </div>
+                          )}
+                        </div>
 
                         <Tooltip content="Save to Cloud" position="bottom">
                           <button 
@@ -3338,7 +3624,33 @@ Format your response in Markdown.`;
                     </>
                   )}
                 </div>
-                <div className="document-editor-container" id="tour-editor">
+                <div className="flex-1 overflow-hidden" id="tour-editor">
+                  {showOutline && documentOutline.length > 0 && (
+                    <div className="document-outline-sidebar">
+                      <div className="outline-header">OUTLINE_NAV</div>
+                      <div className="outline-content">
+                        {documentOutline.map((heading) => (
+                          <div 
+                            key={heading.id} 
+                            className="outline-item"
+                            style={{ paddingLeft: `${(heading.level - 1) * 12 + 8}px` }}
+                            onClick={() => {
+                              // MdEditor uses IDs for headings, let's try to scroll to the text
+                              const elements = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
+                              for (const el of elements) {
+                                if (el.textContent?.trim() === heading.text) {
+                                  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                  break;
+                                }
+                              }
+                            }}
+                          >
+                            {heading.text}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <MdEditor
                     modelValue={documentContent}
                     onChange={handleDocumentChange}
@@ -3383,10 +3695,40 @@ Format your response in Markdown.`;
                       fontFamily: font 
                     }}
                     editorId="soloscribe-editor"
-                    placeholder="Start writing your solo venture documentation..."
+                    placeholder="Start writing... Tip: highlight text for AI actions or type / for templates."
                     noUploadImg
                     onSave={() => handleSaveToCloud()}
                   />
+                  
+                  {/* Selection AI Toolbar */}
+                  {selection.active && (
+                    <div 
+                      className="absolute z-[100] flex bg-black border-2 border-[#00f3ff] shadow-[4px_4px_0px_#000000] p-1 gap-1"
+                      style={{ top: selection.top, left: selection.left }}
+                    >
+                      <button 
+                        className="p-1 hover:bg-[#00f3ff] hover:text-black transition-colors"
+                        onClick={() => handleAIAction('Improve this writing and make it more professional')}
+                        title="Polish"
+                      >
+                        <Wand2 size={14} />
+                      </button>
+                      <button 
+                        className="p-1 hover:bg-[#00f3ff] hover:text-black transition-colors"
+                        onClick={() => handleAIAction('Simplify this content for clearly')}
+                        title="Simplify"
+                      >
+                        <Eraser size={14} />
+                      </button>
+                      <button 
+                        className="p-1 hover:bg-[#00f3ff] hover:text-black transition-colors"
+                        onClick={() => handleAIAction('Contrast this with opposing views')}
+                        title="Devil's Advocate"
+                      >
+                        <ShieldAlert size={14} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </>
             )}
@@ -3402,6 +3744,15 @@ Format your response in Markdown.`;
                       >
                         <Share2 size={14} />
                         <span>Share</span>
+                      </button>
+                    </Tooltip>
+                    <Tooltip content="Workspace Settings" position="bottom">
+                      <button
+                        className="brutalist-button-sm"
+                        onClick={() => setShowWorkspaceModal(true)}
+                      >
+                        <LayoutDashboard size={14} />
+                        <span>Workspace</span>
                       </button>
                     </Tooltip>
                     <Tooltip content="Download PDF" position="bottom">
@@ -3423,12 +3774,24 @@ Format your response in Markdown.`;
                         <span>Copy</span>
                       </button>
                     </Tooltip>
+                    <Tooltip content="Save as Template" position="bottom">
+                      <button
+                        className="brutalist-button-sm"
+                        onClick={handleSaveAsTemplate}
+                      >
+                        <FileText size={14} />
+                        <span>Save Tpl</span>
+                      </button>
+                    </Tooltip>
                   </div>
                 )}
                 <div
                   ref={renderedViewRef}
                   className={c('document-content prose-view', {
                     'placeholder-active': documentContent === PLACEHOLDER_DOC,
+                    'export-theme-brutalist': exportTheme === 'brutalist',
+                    'export-theme-corporate': exportTheme === 'corporate',
+                    'export-theme-modern': exportTheme === 'modern',
                   })}
                   onMouseDown={handleRenderedContentMouseDown}
                 >
@@ -3439,12 +3802,12 @@ Format your response in Markdown.`;
                       content={documentContent}
                       inserts={inserts}
                       onElementResize={handleElementResize}
+                      onWikiLinkClick={(pid) => handleProjectSelect(pid)}
                     />
                   )}
                 </div>
               </>
             )}
-            {showCopilot && <CopilotSidebar />}
             </div>
           </div>
         )}
@@ -3610,7 +3973,7 @@ Format your response in Markdown.`;
         )}
 
         {mainTab === 'validation' && (
-          <ValidationEngineTab />
+          <AIAuditorTab />
         )}
 
         {mainTab === 'projections' && (
@@ -3618,7 +3981,14 @@ Format your response in Markdown.`;
         )}
         
         {mainTab === 'roadmap' && (
-          <RoadmapTab />
+          <div className="h-full flex flex-col p-6 overflow-hidden">
+             <div className="flex-1 overflow-auto mb-6 border-b-2 border-white/10">
+               <RoadmapTab />
+             </div>
+             <div className="h-[400px] shrink-0">
+               <ProjectGraph />
+             </div>
+          </div>
         )}
 
         {mainTab === 'tasks' && (
@@ -3642,59 +4012,119 @@ Format your response in Markdown.`;
         )}
       </div>
 
+      {showCopilot && mainTab === 'document' && !isMobile && (
+        <CopilotSidebar />
+      )}
+
       {showHistoryModal && (
-        <Modal onClose={handleCloseHistoryModal} title="VERSION_HISTORY_LOG">
-          <div className="modalContent">
-            <div className="flex justify-between items-center mb-6">
+        <Modal 
+          onClose={handleCloseHistoryModal} 
+          title="VERSION_HISTORY_LOG"
+          className={selectedVersionForPreview ? 'modal-wide' : ''}
+        >
+          <div className="modalContent flex flex-col h-[70vh]">
+            <div className="flex justify-between items-center mb-6 shrink-0">
               <div className="grid-item-meta">DOCUMENT_SNAPSHOT_REPOSITORY</div>
-              <button 
-                onClick={() => handleCreateVersion()}
-                className="brutalist-button px-4 py-2 text-xs"
-              >
-                TAKE_SNAPSHOT
-              </button>
+              <div className="flex gap-2">
+                {selectedVersionForPreview && (
+                  <button 
+                    onClick={() => setSelectedVersionForPreview(null)}
+                    className="brutalist-button px-4 py-2 text-xs"
+                  >
+                    BACK_TO_LIST
+                  </button>
+                )}
+                <button 
+                  onClick={() => handleCreateVersion()}
+                  className="brutalist-button px-4 py-2 text-xs"
+                >
+                  TAKE_SNAPSHOT
+                </button>
+              </div>
             </div>
 
-            {isLoadingVersions ? (
-              <div className="flex justify-center p-10">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-theme-accent"></div>
-              </div>
-            ) : projectVersions.length === 0 ? (
-              <div className="text-center p-10 opacity-50 font-mono text-sm">
-                NO_VERSIONS_FOUND. INITIALIZE_SNAPSHOT_STREAM.
-              </div>
-            ) : (
-              <div className="flex flex-col gap-3">
-                {projectVersions.map((version) => (
-                  <div 
-                    key={version.id}
-                    className={c("grid-item", confirmingVersionId === version.id && "border-theme-accent")}
-                    onClick={() => {
-                      if (confirmingVersionId === version.id) {
-                        handleRestoreVersion(version);
-                        setConfirmingVersionId(null);
-                      } else {
-                        setConfirmingVersionId(version.id);
-                      }
-                    }}
-                  >
-                    <div className="flex justify-between items-center w-full">
-                      <div>
-                        <div className="grid-item-title">
-                          {confirmingVersionId === version.id ? "CONFIRM_RESTORE?" : (version.label || `SNAPSHOT_${version.id.slice(0, 8)}`)}
-                        </div>
-                        <div className="grid-item-meta">
-                          {confirmingVersionId === version.id ? "THIS_WILL_OVERWRITE_CURRENT_STATE" : `SYNC_TIME: ${version.createdAt?.toDate?.().toLocaleString() || 'TIMESTAMP_PENDING'}`}
+            <div className="flex-1 overflow-hidden min-h-0">
+              {isLoadingVersions ? (
+                <div className="flex justify-center p-10">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-theme-accent"></div>
+                </div>
+              ) : selectedVersionForPreview ? (
+                <div className="flex flex-col h-full">
+                   <div className="flex gap-4 h-full">
+                      <div className="flex-1 flex flex-col">
+                        <div className="text-[10px] font-mono opacity-50 mb-1">CURRENT_DOCUMENT</div>
+                        <div className="flex-1 border-2 border-black p-3 bg-white text-black font-mono text-xs overflow-auto scrollbar-brutalist">
+                          <pre className="whitespace-pre-wrap">{documentContent}</pre>
                         </div>
                       </div>
-                      <button className={c("brutalist-button px-3 py-1 text-xs", confirmingVersionId === version.id && "bg-theme-accent text-black")}>
-                        {confirmingVersionId === version.id ? "YES_RESTORE" : "RESTORE"}
+                      <div className="flex-1 flex flex-col">
+                        <div className="text-[10px] font-mono text-theme-accent mb-1">SNAPSHOT: {selectedVersionForPreview.label}</div>
+                        <div className="flex-1 border-2 border-theme-accent p-3 bg-theme-surface text-theme-text font-mono text-xs overflow-auto scrollbar-brutalist">
+                          <pre className="whitespace-pre-wrap">{selectedVersionForPreview.documentContent}</pre>
+                        </div>
+                      </div>
+                   </div>
+                   <div className="mt-4 flex justify-end gap-3 shrink-0">
+                      <button 
+                        onClick={() => handleRestoreVersion(selectedVersionForPreview)}
+                        className="brutalist-button px-6 py-2 bg-theme-accent text-black font-bold"
+                      >
+                        RESTORE_THIS_SNAPSHOT
                       </button>
+                   </div>
+                </div>
+              ) : projectVersions.length === 0 ? (
+                <div className="text-center p-10 opacity-50 font-mono text-sm">
+                  NO_VERSIONS_FOUND. INITIALIZE_SNAPSHOT_STREAM.
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3 overflow-y-auto pr-2 scrollbar-brutalist">
+                  {projectVersions.map((version) => (
+                    <div 
+                      key={version.id}
+                      className={c("grid-item", confirmingVersionId === version.id && "border-theme-accent")}
+                      onClick={() => setSelectedVersionForPreview(version)}
+                    >
+                      <div className="flex justify-between items-center w-full">
+                        <div>
+                          <div className="grid-item-title">
+                            {version.label || `SNAPSHOT_${version.id.slice(0, 8)}`}
+                          </div>
+                          <div className="grid-item-meta">
+                            SYNC_TIME: {version.createdAt?.toDate?.().toLocaleString() || 'TIMESTAMP_PENDING'}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                           <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedVersionForPreview(version);
+                            }}
+                            className="brutalist-button px-3 py-1 text-xs"
+                          >
+                            PREVIEW
+                          </button>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirmingVersionId === version.id) {
+                                handleRestoreVersion(version);
+                                setConfirmingVersionId(null);
+                              } else {
+                                setConfirmingVersionId(version.id);
+                              }
+                            }}
+                            className={c("brutalist-button px-3 py-1 text-xs", confirmingVersionId === version.id && "bg-theme-accent text-black")}
+                          >
+                            {confirmingVersionId === version.id ? "CONFIRM?" : "RESTORE"}
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </Modal>
       )}
@@ -3813,6 +4243,85 @@ Format your response in Markdown.`;
             )}
           </div>
         </div>
+      )}
+
+      {/* Workspace Modal */}
+      {showWorkspaceModal && (
+        <Modal onClose={() => setShowWorkspaceModal(false)} title="WORKSPACE_CONFIG" className="modal-wide">
+          <div className="flex flex-col h-[70vh] gap-6">
+            <div className="grid grid-cols-2 gap-6 flex-1 overflow-hidden">
+              {/* Global Variables */}
+              <div className="flex flex-col border-2 border-black p-4 bg-white/5">
+                <h3 className="font-display uppercase mb-4 text-[#00f3ff]">Global startup_variables</h3>
+                <div className="flex-1 overflow-auto flex flex-col gap-3 pr-2 scrollbar-brutalist">
+                  {variables.map(v => (
+                    <div key={v.id} className="p-3 border border-white/10 bg-black/20">
+                      <div className="text-[10px] font-mono text-white/50">{v.name}</div>
+                      <input 
+                        className="w-full bg-transparent border-b border-[#00f3ff] text-white py-1 font-mono text-sm"
+                        value={v.value}
+                        onChange={(e) => updateVariable(v.id, e.target.value)}
+                      />
+                    </div>
+                  ))}
+                  <button 
+                    onClick={() => {
+                        const name = prompt('Variable Name (UPPER_CASE):');
+                        if (name) addVariable({ id: `var_${Date.now()}`, name, value: '' });
+                    }}
+                    className="flex items-center gap-2 text-[10px] font-mono text-[#00f3ff] mt-2 hover:underline"
+                  >
+                    <Plus size={12} /> ADD_NEW_VAR
+                  </button>
+                </div>
+              </div>
+
+              {/* Custom Templates */}
+              <div className="flex flex-col border-2 border-black p-4 bg-white/5">
+                <h3 className="font-display uppercase mb-4 text-[#ff00ff]">My saved_templates</h3>
+                <div className="flex-1 overflow-auto flex flex-col gap-3 pr-2 scrollbar-brutalist">
+                  {userTemplates.length === 0 ? (
+                    <div className="text-center p-10 opacity-30 italic text-sm">NO_SAVED_TEMPLATES</div>
+                  ) : (
+                    userTemplates.map(t => (
+                      <div key={t.id} className="p-3 border border-white/10 bg-black/20 flex justify-between items-center">
+                        <div className="overflow-hidden">
+                          <div className="text-sm font-bold truncate">{t.name}</div>
+                          <div className="text-[10px] font-mono opacity-50">{new Date(t.createdAt).toLocaleDateString()}</div>
+                        </div>
+                        <button 
+                          onClick={() => handleSelectTemplate(t)}
+                          className="bg-[#ff00ff] text-white px-3 py-1 text-xs font-bold shrink-0"
+                        >
+                          APPLY
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-black/40 p-4 border-2 border-black flex justify-between items-center">
+              <div>
+                <h4 className="text-[10px] font-mono mb-1">USAGE_TIP</h4>
+                <p className="text-xs opacity-60">Use {"{{VARIABLE_NAME}}"} for global sync and {"[[Project Name]]"} for wiki-links.</p>
+              </div>
+              <div className="flex flex-col items-end">
+                 <h4 className="text-[10px] font-mono mb-1">EXPORT_THEME</h4>
+                 <select 
+                    className="bg-black border border-[#00f3ff] text-[#00f3ff] text-xs p-1"
+                    value={exportTheme}
+                    onChange={(e) => setExportTheme(e.target.value as any)}
+                 >
+                    {Object.entries(exportThemes).map(([key, t]) => (
+                      <option key={key} value={key}>{t.name}</option>
+                    ))}
+                 </select>
+              </div>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {/* Share Modal */}

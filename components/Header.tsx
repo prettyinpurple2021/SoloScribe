@@ -187,10 +187,31 @@ export default function Header() {
 
         {/* The agent selection dropdown list */}
         <div className={c('roomList', { active: showRoomList })}>
-          <div>
+          <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+            <div style={{ padding: '8px 16px', fontSize: '11px', color: '#666', fontWeight: 'bold', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+              Specialists
+            </div>
             <ul>
               {availablePresets
-                .filter(agent => agent.id !== current.id)
+                .filter(agent => !['rahul', 'ramon', 'amelie', 'ari', 'mei', 'hiro', 'jiwon', 'hans', 'defne', 'karim', 'reza', 'ines', 'olga', 'luca'].includes(agent.id) && agent.id !== current.id)
+                .map(agent => (
+                  <li
+                    key={agent.id}
+                    className={c({ active: agent.id === current.id })}
+                  >
+                    <button onClick={() => changeAgent(agent)}>
+                      {agent.name}
+                    </button>
+                  </li>
+                ))}
+            </ul>
+            
+            <div style={{ padding: '12px 16px 8px', fontSize: '11px', color: '#666', fontWeight: 'bold', letterSpacing: '0.5px', textTransform: 'uppercase', borderTop: '2px solid #eee', marginTop: '4px' }}>
+              Languages
+            </div>
+            <ul>
+              {availablePresets
+                .filter(agent => ['rahul', 'ramon', 'amelie', 'ari', 'mei', 'hiro', 'jiwon', 'hans', 'defne', 'karim', 'reza', 'ines', 'olga', 'luca'].includes(agent.id) && agent.id !== current.id)
                 .map(agent => (
                   <li
                     key={agent.id}

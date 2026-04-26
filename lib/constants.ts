@@ -46,69 +46,151 @@ export const PLACEHOLDER_DOC = 'As you talk, your InkLo will draft your business
 
 export const DOCUMENT_TEMPLATES = [
   {
-    id: 'pitch-deck',
-    name: 'Investor Pitch Deck',
-    description: 'A standard 10-slide structure for pitching to investors.',
-    content: `# Investor Pitch Deck Outline\n\n## 1. The Problem\nDescribe the pain point you are solving.\n\n## 2. The Solution\nHow your product solves this problem.\n\n## 3. Market Size\nTAM, SAM, and SOM analysis.\n\n## 4. Business Model\nHow you make money.\n\n## 5. Proprietary Tech / Magic\nWhat makes your solution unique?\n\n## 6. Competition\nYour competitive landscape.\n\n## 7. Marketing & Sales\nYour go-to-market strategy.\n\n## 8. Team\nWhy you are the right people to build this.\n\n## 9. Financial Projections\n3-5 year forecast.\n\n## 10. The Ask\nWhat you need from investors.`
-  },
-  {
-    id: 'prd',
-    name: 'Product Requirement Document (PRD)',
-    description: 'Detailed specifications for a new feature or product.',
-    content: `# Product Requirement Document: [Feature Name]\n\n## 1. Executive Summary\nBrief overview of the feature and its value.\n\n## 2. Goals & Objectives\nWhat are we trying to achieve?\n\n## 3. User Stories\n- As a [user], I want to [action] so that [benefit].\n\n## 4. Functional Requirements\n- Requirement 1...\n- Requirement 2...\n\n## 5. Non-Functional Requirements\nPerformance, security, etc.\n\n## 6. User Interface & UX\nDescription of the flow and key screens.\n\n## 7. Success Metrics\nHow will we measure success?`
+    id: 'yc-app',
+    name: 'Y Combinator Application',
+    description: 'A comprehensive draft for the YC application process.',
+    content: `
+# Y Combinator Application Draft
+
+## 1. Company Information
+- Company name: 
+- Company url: 
+- Describe what your company does in 50 characters or less: 
+
+## 2. Team
+- Founders: 
+- Why did you pick this idea to work on? Do you have domain expertise?
+- How long have the founders known one another and how did they meet?
+
+## 3. Product
+- What are you building?
+- How far along are you?
+- If you have already started working on it, how long have you been working and how many lines of code (if applicable) have you written?
+
+## 4. Market
+- Who are your competitors?
+- What do you understand about your business that other companies in it just don't get?
+- How do you make money?
+
+## 5. Traction
+- Do you have revenue?
+- How many users do you have?
+`
   },
   {
     id: 'lean-canvas',
     name: 'Lean Canvas',
     description: 'A 1-page business plan for rapid validation.',
-    content: `# Lean Canvas\n\n### Problem\nList the top 3 problems.\n\n### Solution\nTop 3 features.\n\n### Unique Value Proposition\nSingle, clear, compelling message.\n\n### Unfair Advantage\nSomething that cannot be easily copied or bought.\n\n### Customer Segments\nTarget customers.\n\n### Key Metrics\nKey activities you measure.\n\n### Channels\nPath to customers.\n\n### Cost Structure\nCustomer acquisition costs, distribution costs, etc.\n\n### Revenue Streams\nRevenue model, life-time value, etc.`
+    content: `
+# Lean Canvas
+
+## 1. Problem
+List your top 1-3 problems.
+- 
+
+**Existing Alternatives:** How are these problems solved today?
+
+## 2. Customer Segments
+List your target customers and users.
+- 
+
+**Early Adopters:** Who are your ideal early adopters?
+
+## 3. Unique Value Proposition
+Single, clear, compelling message that states why you are different and worth paying attention to.
+- 
+
+## 4. Solution
+Outline a possible solution for each problem.
+- 
+
+## 5. Channels
+List your path to customers (inbound or outbound).
+- 
+
+## 6. Revenue Streams
+List your sources of revenue.
+- 
+
+## 7. Cost Structure
+List your fixed and variable costs.
+- 
+
+## 8. Key Metrics
+List the key numbers that tell you how your business is doing.
+- 
+
+## 9. Unfair Advantage
+Something that cannot be easily copied or bought.
+- 
+`
   },
   {
-    id: 'faq',
-    name: 'Product FAQ',
-    description: 'Common questions and answers for your customers.',
-    content: `# Product FAQ\n\n## General Questions\n\n### What is [Product Name]?\nAnswer here...\n\n### How do I get started?\nAnswer here...\n\n## Pricing & Billing\n\n### How much does it cost?\nAnswer here...\n\n### Do you offer a free trial?\nAnswer here...\n\n## Technical Support\n\n### Is my data secure?\nAnswer here...\n\n### How do I contact support?\nAnswer here...`
+    id: 'prd',
+    name: 'Product Requirement Document (PRD)',
+    description: 'Detailed specifications for a new feature or product.',
+    content: `
+# Product Requirements Document (PRD)
+
+## 1. Overview
+Describe the goal and purpose of this product or feature.
+
+## 2. Target Audience
+Who is this for?
+
+## 3. User Stories
+- As a [type of user], I want to [action] so that [benefit/value].
+
+## 4. Key Features & Requirements
+| Feature | Priority (P0, P1, P2) | Description |
+|---|---|---|
+| | | |
+
+## 5. Out of Scope
+What are we NOT building?
+
+## 6. Milestones & Timeline
+- [ ] Phase 1: 
+- [ ] Phase 2: 
+
+## 7. Success Metrics
+How do we know this is successful? (KPIs)
+`
   },
   {
-    id: 'gtm-strategy',
-    name: 'Go-To-Market Strategy',
-    description: 'A plan for launching a product to a target market.',
-    content: `# Go-To-Market Strategy: [Product Name]\n\n## 1. Target Audience\nWho are your ideal customers?\n\n## 2. Value Proposition\nWhat problem are you solving and why is it better than alternatives?\n\n## 3. Pricing Strategy\nHow will you price your product?\n\n## 4. Distribution Channels\nWhere will you sell and promote your product?\n\n## 5. Marketing Plan\nHow will you generate awareness and leads?\n\n## 6. Sales Strategy\nHow will you convert leads into customers?\n\n## 7. Launch Timeline\nKey milestones for your launch.`
+    id: 'one-pager',
+    name: 'Investor One-Pager',
+    description: 'A 1-page summary of your business for investors.',
+    content: `
+# Investor One-Pager
+
+## Overview
+**Company:** 
+**Elevator Pitch:** 
+
+## The Problem
+What pain point are you solving?
+
+## The Solution
+How does your product solve it?
+
+## Market Opportunity
+TAM, SAM, SOM.
+
+## Traction
+Current revenue, users, or key milestones.
+
+## Team
+Brief bios of key founders and why they are the right people.
+
+## The Ask
+How much are you raising and what are the primary use cases for the funds?
+`
   },
   {
-    id: 'user-persona',
-    name: 'User Persona',
-    description: 'A profile of a typical user.',
-    content: `# User Persona: [Persona Name]\n\n## 1. Demographic Information\nAge, job title, location, etc.\n\n## 2. Goals & Motivations\nWhat are they trying to achieve?\n\n## 3. Pain Points\nWhat challenges do they face?\n\n## 4. Behaviors & Habits\nHow do they use technology? What are their daily routines?\n\n## 5. Needs & Expectations\nWhat do they need from your product?`
-  },
-  {
-    id: 'competitive-analysis',
-    name: 'Competitive Analysis',
-    description: 'A breakdown of your competitors and their strengths/weaknesses.',
-    content: `# Competitive Analysis\n\n## 1. Competitor Overview\nList your main competitors.\n\n## 2. Strengths & Weaknesses\nWhat are their strengths and weaknesses?\n\n## 3. Market Position\nHow do they position themselves in the market?\n\n## 4. Key Differentiators\nWhat makes your product different from theirs?\n\n## 5. Opportunities & Threats\nWhat opportunities and threats do they present?`
-  },
-  {
-    id: 'business-plan',
-    name: 'Business Plan',
-    description: 'A comprehensive document outlining business goals and strategy.',
-    content: `# Business Plan: [Company Name]\n\n## 1. Executive Summary\nOverview of the business.\n\n## 2. Company Description\nMission, vision, and values.\n\n## 3. Market Analysis\nIndustry overview and target market.\n\n## 4. Organization & Management\nStructure and key team members.\n\n## 5. Service or Product Line\nDescription of what you offer.\n\n## 6. Marketing & Sales Strategy\nHow you will reach and convert customers.\n\n## 7. Financial Projections\nRevenue, expenses, and profitability forecast.`
-  },
-  {
-    id: 'swot-analysis',
-    name: 'SWOT Analysis',
-    description: 'A framework for identifying Strengths, Weaknesses, Opportunities, and Threats.',
-    content: `# SWOT Analysis\n\n## Strengths\nInternal factors that give you an advantage.\n\n## Weaknesses\nInternal factors that place you at a disadvantage.\n\n## Opportunities\nExternal factors that you can exploit.\n\n## Threats\nExternal factors that could cause trouble.`
-  },
-  {
-    id: 'meeting-notes',
-    name: 'Meeting Notes',
-    description: 'A structured format for capturing meeting discussions and action items.',
-    content: `# Meeting Notes: [Meeting Topic]\n\n## Date: [Date]\n## Attendees: [Names]\n\n## Key Discussion Points\n- Point 1\n- Point 2\n\n## Decisions Made\n- Decision 1\n\n## Action Items\n- [ ] Action Item 1 (Owner: [Name], Due: [Date])`
-  },
-  {
-    id: 'project-charter',
-    name: 'Project Charter',
-    description: 'A document that formally authorizes a project.',
-    content: `# Project Charter: [Project Name]\n\n## 1. Project Purpose\nWhy are we doing this project?\n\n## 2. Objectives\nWhat are the measurable goals?\n\n## 3. Scope\nWhat is included and what is excluded?\n\n## 4. Key Stakeholders\nWho is involved and impacted?\n\n## 5. Milestones\nKey dates and deliverables.`
+    id: 'pitch-deck',
+    name: 'Investor Pitch Deck Outline',
+    description: 'A standard 10-slide structure for pitching.',
+    content: `# Investor Pitch Deck Outline\n\n## 1. The Problem\nDescribe the pain point you are solving.\n\n## 2. The Solution\nHow your product solves this problem.\n\n## 3. Market Size\nTAM, SAM, and SOM analysis.\n\n## 4. Business Model\nHow you make money.\n\n## 5. Proprietary Tech / Magic\nWhat makes your solution unique?\n\n## 6. Competition\nYour competitive landscape.\n\n## 7. Marketing & Sales\nYour go-to-market strategy.\n\n## 8. Team\nWhy you are the right people to build this.\n\n## 9. Financial Projections\n3-5 year forecast.\n\n## 10. The Ask\nWhat you need from investors.`
   }
 ];
