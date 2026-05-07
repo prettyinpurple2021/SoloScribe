@@ -49,7 +49,7 @@ export const AIAuditorTab: React.FC = () => {
   };
 
   return (
-    <div className="auditor-tab p-6 font-sans">
+    <div className="auditor-tab p-6 font-sans overflow-y-auto h-full pb-24">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h2 className="font-display uppercase text-xl">AI_STRATEGY_AUDITOR</h2>

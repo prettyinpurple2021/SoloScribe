@@ -40,7 +40,7 @@ export default function MonetizationTab() {
   const strategies = STRATEGIES[selectedVertical as keyof typeof STRATEGIES] || STRATEGIES.saas;
 
   return (
-    <div className="monetization-tab p-6 space-y-8">
+    <div className="monetization-tab p-6 pb-24 space-y-8 overflow-y-auto h-full">
       <header className="flex justify-between items-center border-b-4 border-black pb-4">
         <div>
           <h2 className="text-3xl font-black uppercase tracking-tighter flex items-center gap-2">

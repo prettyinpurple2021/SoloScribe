@@ -163,7 +163,7 @@ export const AIToolsTab: React.FC = () => {
   };
 
   return (
-    <div className="ai-tools-tab" style={{ padding: '20px', overflowY: 'auto', height: '100%' }}>
+    <div className="ai-tools-tab" style={{ padding: '20px 20px 100px 20px', overflowY: 'auto', height: '100%' }}>
       <h2 style={{ fontFamily: 'var(--font-display)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '10px' }}>AI Co-Founder Tools</h2>
       <p style={{ marginBottom: '20px', color: 'var(--theme-text)', opacity: 0.7, fontFamily: 'var(--font-mono)', fontSize: '12px' }}>POWERFUL TOOLS TO ACCELERATE YOUR STARTUP.</p>
 

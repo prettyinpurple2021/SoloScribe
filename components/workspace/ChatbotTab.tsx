@@ -53,7 +53,7 @@ Use this context to provide highly relevant and strategic advice.`;
   };
 
   return (
-    <div className="chatbot-tab" style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '20px' }}>
+    <div className="chatbot-tab" style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '20px 20px 100px 20px' }}>
       <div className="chat-messages" style={{ flex: 1, overflowY: 'auto', marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
         {messages.length === 0 ? (
           <div style={{ textAlign: 'center', color: 'var(--theme-text)', marginTop: '40px', opacity: 0.8 }}>

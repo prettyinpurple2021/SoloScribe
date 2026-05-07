@@ -175,7 +175,7 @@ export const ProjectionsTab: React.FC = () => {
 
   return (
     <div className="projections-tab" style={{ 
-      padding: '24px', 
+      padding: '24px 24px 100px 24px', 
       overflowY: 'auto', 
       height: '100%',
       backgroundColor: '#0a0a0a',

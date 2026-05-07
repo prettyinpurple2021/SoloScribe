@@ -22,72 +22,90 @@ import {
   FileText, 
   ArrowLeft,
   Globe,
-  Loader2
+  Loader2,
+  AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { marked } from 'marked';
+import { AppError } from '../AppError';
 
 export const PublicProjectView: React.FC = () => {
   const { shareId } = useParams<{ shareId: string }>();
   const [project, setProject] = useState<Project | null>(null);
   const [feedback, setFeedback] = useState<Feedback[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<any>(null);
   const [newFeedback, setNewFeedback] = useState('');
   const [authorName, setAuthorName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
+  const fetchProject = async () => {
     if (!shareId) return;
-
-    const fetchProject = async () => {
-      setIsLoading(true);
-      try {
-        const q = query(collection(db, 'public_projects'), where('shareId', '==', shareId));
-        const querySnapshot = await getDocs(q);
+    setIsLoading(true);
+    setError(null);
+    try {
+      const q = query(collection(db, 'public_projects'), where('shareId', '==', shareId));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        const docRef = querySnapshot.docs[0].ref;
+        const projectData = querySnapshot.docs[0].data() as Project;
+        setProject(projectData);
         
-        if (!querySnapshot.empty) {
-          const docRef = querySnapshot.docs[0].ref;
-          const projectData = querySnapshot.docs[0].data() as Project;
-          setProject(projectData);
-          
-          // Increment view count
-          try {
-            await updateDoc(docRef, {
-              viewCount: increment(1),
-              lastViewedAt: serverTimestamp()
-            });
-          } catch (err) {
-            console.warn('Failed to increment view count:', err);
-          }
-          
-          // Fetch feedback
-          const feedbackQuery = query(
-            collection(db, 'projects', projectData.id, 'feedback'),
-            orderBy('createdAt', 'desc')
-          );
-          
-          const unsubscribe = onSnapshot(feedbackQuery, (snapshot) => {
-            const feedbackData = snapshot.docs.map(doc => ({
-              id: doc.id,
-              ...doc.data()
-            })) as Feedback[];
-            setFeedback(feedbackData);
+        // Increment view count
+        try {
+          await updateDoc(docRef, {
+            viewCount: increment(1),
+            lastViewedAt: serverTimestamp()
           });
-
-          return () => unsubscribe();
-        } else {
-          toast.error('Project not found or no longer public.');
+        } catch (err) {
+          console.warn('Failed to increment view count:', err);
         }
-      } catch (error) {
-        handleFirestoreError(error, OperationType.GET, `public_projects/${shareId}`);
-        toast.error('Failed to load project');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+        
+        // Fetch feedback
+        const feedbackQuery = query(
+          collection(db, 'projects', projectData.id, 'feedback'),
+          orderBy('createdAt', 'desc')
+        );
+        
+        const unsubscribe = onSnapshot(feedbackQuery, (snapshot) => {
+          const feedbackData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as Feedback[];
+          setFeedback(feedbackData);
+        }, (err) => {
+          console.error("Feedback subscription error:", err);
+        });
 
-    fetchProject();
+        return unsubscribe;
+      } else {
+        setError({ code: 'not-found', message: 'The project you\'re looking for might have been made private or deleted by the owner.' });
+      }
+    } catch (err: any) {
+      console.error("Fetch error:", err);
+      // Try to parse JSON error from firestore handler if it threw
+      try {
+        const parsed = JSON.parse(err.message);
+        setError(parsed);
+      } catch (e) {
+        setError(err);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    let unsubscribe: any;
+    fetchProject().then(unsub => {
+      unsubscribe = unsub;
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, [shareId]);
 
   const handleSubmitFeedback = async (e: React.FormEvent) => {
@@ -132,35 +150,23 @@ export const PublicProjectView: React.FC = () => {
     );
   }
 
-  if (!project) {
+  if (error) {
     return (
-      <div style={{ 
-        height: '100vh', 
-        display: 'flex', 
-        flexDirection: 'column',
-        alignItems: 'center', 
-        justifyContent: 'center',
-        backgroundColor: 'var(--theme-bg)',
-        color: 'white',
-        padding: '20px',
-        textAlign: 'center'
-      }}>
-        <Globe size={64} color="rgba(255,255,255,0.1)" style={{ marginBottom: '20px' }} />
-        <h1 style={{ fontFamily: 'var(--font-display)', marginBottom: '10px' }}>Project Not Found</h1>
-        <p style={{ color: 'rgba(255,255,255,0.5)', width: '100%', marginBottom: '30px' }}>
-          The project you're looking for might have been made private or deleted by the owner.
-        </p>
-        <Link to="/" style={{ 
-          padding: '12px 30px', 
-          backgroundColor: 'var(--theme-accent)', 
-          color: 'black', 
-          borderRadius: '30px',
-          textDecoration: 'none',
-          fontWeight: 'bold'
-        }}>
-          Go to SoloScribe
-        </Link>
-      </div>
+      <AppError 
+        error={error}
+        onRetry={fetchProject}
+        type={error.code === 'not-found' ? '404' : 'error'}
+      />
+    );
+  }
+
+  if (!project && !isLoading) {
+    return (
+      <AppError 
+        type="404"
+        title="PROJECT_NOT_FOUND"
+        message="The project you're looking for might have been made private or deleted by the owner."
+      />
     );
   }
 

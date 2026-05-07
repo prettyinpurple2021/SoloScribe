@@ -57,6 +57,7 @@ const getApiKey = () => {
 
 import { BrowserRouter as Router, Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
 import { PublicProjectView } from './components/workspace/PublicProjectView';
+import { AppError } from './components/AppError';
 
 /**
  * Renders the main content of the application, including the header, modals,
@@ -198,7 +199,7 @@ function AppRoutes() {
           </LiveAPIProvider>
         </div>
       } />
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<AppError type="404" title="NOT_FOUND" message="The page you're looking for doesn't exist in this timeline." />} />
     </Routes>
   );
 }

@@ -167,7 +167,8 @@ body::after {
   width: 100%;
   display: flex;
   flex-direction: column;
-  padding-bottom: 120px; /* Space for floating ControlTray */
+  /* Removed padding-bottom here as it was cutting off scrollable children. 
+     Padding is now handled by the children themselves. */
 }
 
 /* ==========================================================================
@@ -614,9 +615,10 @@ header {
 }
 
 .document-content {
-  padding: 40px;
+  padding: 40px 40px 120px 40px;
   height: 100%;
   overflow-y: auto;
+  scrollbar-gutter: stable;
   font-family: var(--font-document);
   line-height: 1.7;
   color: var(--theme-text);
@@ -909,6 +911,7 @@ header {
   flex: 1;
   padding: 24px;
   overflow-y: auto;
+  padding-bottom: 100px;
 }
 
 .prose-view {
@@ -1158,7 +1161,7 @@ header {
 .sidebar-content {
   flex: 1;
   overflow-y: auto;
-  padding: 16px 24px;
+  padding: 16px 24px 100px 24px;
 }
 
 .sidebar-content-header {
@@ -1918,7 +1921,7 @@ header {
   display: grid;
   grid-template-columns: 1fr 400px;
   width: 100%;
-  padding: 40px;
+  padding: 40px 40px 140px 40px;
   gap: 40px;
 }
 
@@ -2036,7 +2039,7 @@ header {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 2000; /* Higher than control tray (1000) */
   padding: 20px;
 }
 
@@ -2046,10 +2049,17 @@ header {
   box-shadow: var(--soft-shadow);
   width: 100%;
   height: 100%;
+  max-width: 900px;
+  max-height: 85vh;
   display: flex;
   flex-direction: column;
   position: relative;
   border-radius: var(--border-radius);
+}
+
+.modal.modal-wide {
+  max-width: 1200px;
+  max-height: 90vh;
 }
 
 .modal-header {
@@ -2092,6 +2102,7 @@ header {
   padding: 30px;
   overflow-y: auto;
   flex: 1;
+  padding-bottom: 100px;
 }
 
 /* --- Form Elements --- */
@@ -2712,16 +2723,18 @@ header {
 /* Brutalist Scrollbar */
 .md-editor-content::-webkit-scrollbar {
   width: 12px;
+  height: 12px;
 }
 
 .md-editor-content::-webkit-scrollbar-track {
   background: var(--theme-surface-light);
-  border-left: var(--border-width) solid var(--line-color);
+  border: 1px solid var(--line-color);
 }
 
 .md-editor-content::-webkit-scrollbar-thumb {
   background: var(--line-color);
   border: 2px solid var(--theme-surface-light);
+  border-radius: 0;
 }
 
 .md-editor-content::-webkit-scrollbar-thumb:hover {
@@ -2938,24 +2951,103 @@ header {
   border-left-color: black;
 }
 
-.modal-wide {
-  max-width: 1000px !important;
-  width: 95vw !important;
+/* ==========================================================================
+   ERROR STATES & APP ERROR
+   ========================================================================== */
+
+.fullscreen-error {
+  background-color: var(--theme-bg);
+  background-image: 
+    linear-gradient(45deg, var(--grid-color) 25%, transparent 25%), 
+    linear-gradient(-45deg, var(--grid-color) 25%, transparent 25%), 
+    linear-gradient(45deg, transparent 75%, var(--grid-color) 75%), 
+    linear-gradient(-45deg, transparent 75%, var(--grid-color) 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+}
+
+@keyframes mascot-shake {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-5deg); }
+  75% { transform: rotate(5deg); }
+}
+
+.mascot-error-container {
+  animation: mascot-shake 4s infinite ease-in-out;
+}
+
+.error-technical-box {
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px dashed var(--line-color);
+  padding: 16px;
+  max-height: 200px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-align: left;
+  width: 100%;
+  margin-top: 24px;
+}
+
+.error-technical-box summary {
+  cursor: pointer;
+  font-weight: bold;
+  margin-bottom: 8px;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.error-technical-box summary::-webkit-details-marker {
+  display: none;
+}
+
+/* ==========================================================================
+   SCROLLBAR STYLES (Global)
+   ========================================================================== */
+
+::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--theme-surface-light);
+  border: 2px solid var(--line-color);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--line-color);
+  border: 2px solid var(--theme-surface-light);
+  border-radius: 0;
+  box-shadow: inset 0 0 0 1px var(--line-color);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--theme-accent);
+}
+
+/* For Firefox */
+* {
+  scrollbar-width: auto;
+  scrollbar-color: var(--line-color) var(--theme-surface-light);
+  scrollbar-gutter: stable;
 }
 
 .scrollbar-brutalist::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
 }
 
 .scrollbar-brutalist::-webkit-scrollbar-track {
   background: var(--theme-surface-light);
-  border-left: 2px solid var(--line-color);
+  border: 2px solid var(--line-color);
 }
 
 .scrollbar-brutalist::-webkit-scrollbar-thumb {
   background: var(--line-color);
-  border: 1px solid var(--theme-surface-light);
+  border: 2px solid var(--theme-surface-light);
 }
 
 .scrollbar-brutalist::-webkit-scrollbar-thumb:hover {

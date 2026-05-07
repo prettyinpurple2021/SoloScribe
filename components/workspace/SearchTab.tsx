@@ -116,7 +116,7 @@ export const SearchTab: React.FC = () => {
   };
 
   return (
-    <div className="search-tab-container" style={{ padding: '24px', height: '100%', overflowY: 'auto' }}>
+    <div className="search-tab-container" style={{ padding: '24px 24px 100px 24px', height: '100%', overflowY: 'auto' }}>
       <div style={{ maxWidth: '800px', margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: '40px' }}>
           <div style={{ 

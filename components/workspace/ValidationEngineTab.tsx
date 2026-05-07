@@ -123,7 +123,7 @@ export const ValidationEngineTab: React.FC = () => {
   };
 
   return (
-    <div className="validation-engine-tab" style={{ padding: '20px', overflowY: 'auto', height: '100%' }}>
+     <div className="validation-engine-tab" style={{ padding: '20px 20px 100px 20px', overflowY: 'auto', height: '100%' }}>
       <h2>Market Research & Validation Engine</h2>
       <p style={{ marginBottom: '20px', color: '#666' }}>Ensure you are building something people actually want.</p>
 

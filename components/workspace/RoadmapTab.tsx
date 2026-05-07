@@ -206,7 +206,7 @@ Format the response in Markdown. Include sections like Executive Summary, Key Ob
   const allItems = [...ROADMAP_ITEMS, ...customItems];
 
   return (
-    <div className="roadmap-tab" style={{ padding: '30px', height: '100%', overflowY: 'auto' }}>
+    <div className="roadmap-tab" style={{ padding: '30px 30px 100px 30px', height: '100%', overflowY: 'auto' }}>
       <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <h2 style={{ fontSize: '24px', fontFamily: 'var(--font-display)', color: 'var(--theme-accent)', marginBottom: '10px' }}>Startup Roadmap</h2>

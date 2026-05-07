@@ -109,7 +109,7 @@ export default function MarketingTab() {
   };
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-8 pb-20">
+    <div className="marketing-tab p-6 max-w-5xl mx-auto space-y-8 pb-32 overflow-y-auto h-full scrollbar-brutalist">
       <header>
         <div className="flex items-center gap-3 mb-2">
           <div className="p-2 bg-primary/10 rounded-lg text-primary">
