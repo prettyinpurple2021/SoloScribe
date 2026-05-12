@@ -240,7 +240,7 @@ export default function UserSettings() {
   };
 
   const toggleReminderTiming = (minutes: number) => {
-    const current = notificationPreferences.reminderTimings;
+    const current = notificationPreferences.reminderTimings || [];
     if (current.includes(minutes)) {
       setNotificationPreferences({ 
         reminderTimings: current.filter(m => m !== minutes) 
@@ -382,7 +382,7 @@ export default function UserSettings() {
                         key={mins}
                         type="button"
                         onClick={() => toggleReminderTiming(mins)}
-                        className={`timing-chip ${notificationPreferences.reminderTimings.includes(mins) ? 'active' : ''}`}
+                        className={`timing-chip ${(notificationPreferences.reminderTimings || []).includes(mins) ? 'active' : ''}`}
                       >
                         {mins < 60 ? `${mins}m` : mins === 1440 ? '1d' : `${mins / 60}h`}
                       </button>

@@ -42,8 +42,10 @@ import {
   useUI,
   useUser,
   useWorkspaceStore,
+  useTaskStore,
   Insert,
   Project,
+  Task,
   GlobalVariable,
 } from '../../lib/state';
 import { pcmToWav, combineArrayBuffers } from '../../lib/utils';
@@ -64,7 +66,7 @@ import { MinutesLoadingAnimation } from '../MinutesLoadingAnimation';
 import { useAuth } from '../../contexts/AuthContext';
 import { Tooltip } from '../Tooltip';
 import { db, handleFirestoreError, OperationType, getFriendlyErrorMessage } from '../../firebase';
-import { doc, setDoc, getDoc, serverTimestamp, collection, addDoc, query, orderBy, getDocs, Timestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp, collection, addDoc, query, orderBy, getDocs, Timestamp, onSnapshot } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { thinkDeeply } from '../../lib/ai-tools';
 import { 
@@ -1215,6 +1217,31 @@ ${htmlContent}
     return () => clearInterval(interval);
   }, [documentContent, transcript, authUser, currentProjectId, lastVersionSavedAt]);
   
+  const { setTasks } = useTaskStore();
+
+  // Task listener
+  useEffect(() => {
+    if (!authUser || !currentProjectId) {
+      setTasks([]);
+      return;
+    }
+
+    const tasksRef = collection(db, 'users', authUser.uid, 'projects', currentProjectId, 'tasks');
+    const q = query(tasksRef, orderBy('createdAt', 'desc'));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const updatedTasks = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Task[];
+      setTasks(updatedTasks);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, tasksRef.path);
+    });
+
+    return () => unsubscribe();
+  }, [authUser, currentProjectId, setTasks]);
+  
   const handleSaveToCloud = async () => {
     if (!authUser) {
       toast.error('Please sign in to save your project to the cloud.');
@@ -1483,6 +1510,10 @@ ${htmlContent}
   const isPostFlushSuppressedThisTurnRef = useRef(false);
   const isAgentSpeakingRef = useRef(false);
   const hasSearchedThisTurnRef = useRef(false);
+  const currentProjectIdRef = useRef(currentProjectId);
+  currentProjectIdRef.current = currentProjectId;
+  const authUserRef = useRef(authUser);
+  authUserRef.current = authUser;
   const userRef = useRef(user);
   userRef.current = user;
   const agentRef = useRef(current);
@@ -2807,6 +2838,41 @@ ${recentTranscript}`;
 
       currentUserText.current = '';
       currentModelText.current = '';
+
+      // Automated Task Extraction from conversation
+      if (userFinal || agentFinal) {
+        const fullText = (userFinal + ' ' + agentFinal).trim();
+        const todoLines = fullText.split(/[\n.]/);
+        
+        for (const line of todoLines) {
+          const match = line.match(/(?:TODO|ACTION ITEM|TASK|REMIND ME TO):\s*(.+)/i);
+          if (match && match[1] && authUserRef.current && currentProjectIdRef.current) {
+            const taskTitle = match[1].trim();
+            // Check if task already exists locally to avoid duplicates in rapid succession
+            const exists = useTaskStore.getState().tasks.some(t => 
+              t.projectId === currentProjectIdRef.current && 
+              t.title.toLowerCase() === taskTitle.toLowerCase()
+            );
+
+            if (!exists) {
+              const tasksRef = collection(db, 'users', authUserRef.current.uid, 'projects', currentProjectIdRef.current, 'tasks');
+              addDoc(tasksRef, {
+                projectId: currentProjectIdRef.current,
+                userId: authUserRef.current.uid,
+                title: taskTitle,
+                priority: 'medium',
+                dueDate: Timestamp.fromDate(new Date(Date.now() + 86400000)), // Default 24h
+                completed: false,
+                notified: false,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+              });
+              toast.info(`Task discovered: ${taskTitle}`, { position: 'bottom-right' });
+            }
+          }
+        }
+      }
+
       currentUserAudioChunks.current = [];
       currentAgentAudioChunks.current = [];
       selfInterruptionDetectedRef.current = false;
@@ -3973,7 +4039,7 @@ Format your response in Markdown.`;
         )}
 
         {mainTab === 'validation' && (
-          <AIAuditorTab />
+          <ValidationEngineTab />
         )}
 
         {mainTab === 'projections' && (

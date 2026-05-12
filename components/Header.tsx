@@ -129,7 +129,7 @@ export default function Header() {
       case 'audio-log': return 'Audio Log';
       case 'chatbot': return 'Chatbot';
       case 'tools': return 'AI Tools';
-      case 'validation': return 'Validation Engine';
+      case 'validation': return 'Evidence Locker';
       case 'projections': return 'Projections';
       case 'roadmap': return 'Roadmap';
       case 'tasks': return 'Tasks';
@@ -408,7 +408,7 @@ export default function Header() {
                   }}
                 >
                   <ShieldAlert size={16} />
-                  <span>Validation Engine</span>
+                  <span>Evidence Locker</span>
                 </button>
                 <button 
                   className={c('menu-item', { active: mainTab === 'projections' })}

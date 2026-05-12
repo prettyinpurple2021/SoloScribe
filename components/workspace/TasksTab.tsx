@@ -22,6 +22,7 @@ import { useUI, useTaskStore, Task } from '../../lib/state';
 import { useAuth } from '../../contexts/AuthContext';
 import { db, OperationType, handleFirestoreError } from '../../firebase';
 import { Tooltip } from '../Tooltip';
+import { thinkDeeply } from '../../lib/ai-tools';
 import { 
   collection, 
   addDoc, 
@@ -147,50 +148,70 @@ export default function TasksTab() {
   };
 
   const suggestTasksWithAi = async () => {
-    if (!documentContent || isAiGenerating) return;
+    if (!documentContent || isAiGenerating || !user || !currentProjectId) return;
     setIsAiGenerating(true);
     toast.info('CONSULTING_INTELLIGENCE: Mining task list...');
     
     try {
-      // In a real implementation, we'd call an AI service here.
-      // For this demo context, we'll simulate intelligent task extraction based on the document.
-      const prompt = `Based on this startup idea: "${documentContent.substring(0, 500)}", generate 3 critical next-step tasks for a solo founder. Return as JSON array of objects with {title, description, priority}.`;
+      const prompt = `Act as a precision-focused startup advisor. 
+Based on the following startup document, identify the next 3 most critical, high-impact tasks the founder must complete.
+Be specific and actionable. Avoid generic advice.
+
+DOCUMENT CONTENT:
+"""
+${documentContent.substring(0, 10000)}
+"""
+
+Format your response as a JSON array of exactly 3 objects. 
+Each object must have these exact keys:
+- title (string, max 50 chars)
+- description (string, max 200 chars)
+- priority (string, one of: "high", "medium", "low")
+
+Example:
+[
+  { "title": "Finalize UVP", "description": "Draft 3 versions of the UVP and test with target users.", "priority": "high" },
+  ...
+]
+
+Return ONLY the JSON array.`;
       
-      // Simulating AI response for speed in UI overhaul
-      setTimeout(() => {
-        const mockSuggestions = [
-          { title: "Define Core UVP", description: "Distill the unique value proposition into a single, punchy sentence.", priority: "high" },
-          { title: "Competitor Audit", description: "Identify the top 3 direct competitors and map their weaknesses.", priority: "medium" },
-          { title: "Landing Page Hack", description: "Deploy a simple waitlist page to gauge initial interest.", priority: "high" }
-        ];
+      const response = await thinkDeeply(prompt);
+      // Clean the response in case the model wrapped it in markdown code blocks
+      const cleanJson = response.replace(/```json|```/g, '').trim();
+      const suggestions = JSON.parse(cleanJson);
+      
+      if (!Array.isArray(suggestions)) throw new Error('Invalid AI response format');
+
+      const tasksRef = collection(db, 'users', user.uid, 'projects', currentProjectId, 'tasks');
+      const now = new Date();
+
+      for (let i = 0; i < suggestions.length; i++) {
+        const s = suggestions[i];
+        const dueDate = new Date(now);
+        dueDate.setDate(now.getDate() + (i + 2)); // Stagger due dates starting 2 days from now
         
-        mockSuggestions.forEach((s, i) => {
-          setTimeout(async () => {
-             const tasksRef = collection(db, 'users', user?.uid || '', 'projects', currentProjectId || '', 'tasks');
-             const dueDate = new Date();
-             dueDate.setDate(dueDate.getDate() + (i + 1)); // Stagger due dates
-             
-             await addDoc(tasksRef, {
-               projectId: currentProjectId,
-               userId: user?.uid,
-               title: s.title,
-               description: s.description,
-               priority: s.priority,
-               dueDate: Timestamp.fromDate(dueDate),
-               completed: false,
-               notified: false,
-               createdAt: serverTimestamp(),
-               updatedAt: serverTimestamp(),
-             });
-          }, i * 500);
+        await addDoc(tasksRef, {
+          id: `task_ai_${Date.now()}_${i}`,
+          projectId: currentProjectId,
+          userId: user.uid,
+          title: s.title,
+          description: s.description,
+          priority: s.priority || 'medium',
+          dueDate: Timestamp.fromDate(dueDate),
+          completed: false,
+          notified: false,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
         });
-        
-        toast.success('AI_SUGGESTIONS_DEPLOYED');
-        setIsAiGenerating(false);
-      }, 1500);
+      }
+      
+      toast.success('AI_SUGGESTIONS_DEPLOYED: Mission expanded.');
+      setIsAiGenerating(false);
 
     } catch (error) {
-      toast.error('FAILED_TO_CONSULT_AI');
+      console.error('AI Suggestion error:', error);
+      toast.error('FAILED_TO_CONSULT_AI: Communication line noisy.');
       setIsAiGenerating(false);
     }
   };
@@ -461,10 +482,10 @@ export default function TasksTab() {
               <div>
                 <label className="brutalist-label">Alert Interval</label>
                 <select
-                  value={notificationPreferences.reminderTimings[0] || 30}
+                  value={(notificationPreferences.reminderTimings || [])[0] || 30}
                   onChange={(e) => {
                     const mins = parseInt(e.target.value);
-                    const current = notificationPreferences.reminderTimings;
+                    const current = notificationPreferences.reminderTimings || [];
                     if (!current.includes(mins)) {
                       setNotificationPreferences({ reminderTimings: [mins, ...current.filter(m => m !== mins)].sort((a, b) => a - b) });
                     }

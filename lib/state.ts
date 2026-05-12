@@ -462,7 +462,13 @@ export const useUI = create<{
       },
       setNotificationPreferences: (prefs) =>
         set(state => ({
-          notificationPreferences: { ...state.notificationPreferences, ...prefs },
+          notificationPreferences: { 
+            enabled: true,
+            browserNotifications: false,
+            reminderTimings: [30],
+            ...state.notificationPreferences, 
+            ...prefs 
+          },
         })),
       webhookUrl: '',
       setWebhookUrl: (url: string) => set({ webhookUrl: url }),

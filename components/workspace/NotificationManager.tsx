@@ -58,7 +58,7 @@ export function NotificationManager() {
         const timeUntilDue = dueDateMs - now;
 
         // Check each reminder timing
-        for (const minutes of notificationPreferences.reminderTimings) {
+        for (const minutes of (notificationPreferences.reminderTimings || [])) {
           const reminderMs = minutes * 60 * 1000;
           const notificationKey = `${task.id}_${minutes}`;
 
