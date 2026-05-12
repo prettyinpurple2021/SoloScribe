@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { generateSpeech, generateVideo, animateImage, thinkDeeply, quickPolish, deepEnhance } from '../../lib/ai-tools';
-import { Play, Video, Image as ImageIcon, Loader2, LayoutDashboard, Sparkles, Search, Wand2, BrainCircuit } from 'lucide-react';
+import { Play, Video, Image as ImageIcon, Loader2, LayoutDashboard, Sparkles, Search, Wand2, BrainCircuit, Share2, ShieldAlert, Zap, Layers } from 'lucide-react';
 import { toast } from 'sonner';
 import { Tooltip } from '../Tooltip';
 import { useUI } from '../../lib/state';
-import { marked } from 'marked';
+import { MarkdownRenderer } from '../MarkdownRenderer';
+import { motion, AnimatePresence } from 'motion/react';
 
 export const AIToolsTab: React.FC = () => {
   const { documentContent, setDocumentContent, incrementChangeCount } = useUI();
@@ -31,6 +32,11 @@ export const AIToolsTab: React.FC = () => {
 
   const [isPolishing, setIsPolishing] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
+
+  const [isGeneratingViral, setIsGeneratingViral] = useState(false);
+  const [viralIdeas, setViralIdeas] = useState<string | null>(null);
+
+  const [activeCategory, setActiveCategory] = useState<'all' | 'creative' | 'strategic' | 'docs'>('all');
 
   const handleQuickPolish = async () => {
     if (!documentContent.trim()) return;
@@ -104,6 +110,28 @@ export const AIToolsTab: React.FC = () => {
     }
   };
 
+  const handleGenerateViralContent = async () => {
+    if (!documentContent.trim()) return;
+    setIsGeneratingViral(true);
+    try {
+      const prompt = `You are a viral growth hacker. Based on the following startup concept, generate 10 high-impact viral content ideas for TikTok, Reels, and X (formerly Twitter). 
+      Include hooks, storyboards, and distribution strategies.
+      
+      Business Details:
+      ${documentContent}
+      
+      Format your response in Markdown.`;
+      const response = await thinkDeeply(prompt);
+      setViralIdeas(response);
+      toast.success('Viral strategy generated!');
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to generate viral content.');
+    } finally {
+      setIsGeneratingViral(false);
+    }
+  };
+
   const handleGenerateSpeech = async () => {
     if (!speechText.trim()) return;
     setIsGeneratingSpeech(true);
@@ -162,190 +190,188 @@ export const AIToolsTab: React.FC = () => {
     }
   };
 
+  const filterTools = (category: typeof activeCategory) => {
+    if (activeCategory === 'all') return true;
+    return activeCategory === category;
+  };
+
   return (
-    <div className="ai-tools-tab" style={{ padding: '20px 20px 100px 20px', overflowY: 'auto', height: '100%' }}>
-      <h2 style={{ fontFamily: 'var(--font-display)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '10px' }}>AI Co-Founder Tools</h2>
-      <p style={{ marginBottom: '20px', color: 'var(--theme-text)', opacity: 0.7, fontFamily: 'var(--font-mono)', fontSize: '12px' }}>POWERFUL TOOLS TO ACCELERATE YOUR STARTUP.</p>
-
-      {/* Document Enhancement Tools */}
-      <div className="tool-section" style={{ marginBottom: '40px', padding: '20px', border: '2px solid var(--theme-accent)', backgroundColor: 'var(--theme-surface)', boxShadow: '4px 4px 0px var(--theme-accent)' }}>
-        <h3 style={{ fontFamily: 'var(--font-display)', textTransform: 'uppercase', marginBottom: '15px' }}><Wand2 size={18} style={{ display: 'inline', marginRight: '8px' }} /> Document Enhancers</h3>
-        <p style={{ fontSize: '12px', color: 'var(--theme-text)', marginBottom: '15px', fontFamily: 'var(--font-mono)' }}>IMPROVE YOUR CURRENT WORKING DOCUMENT USING GEMINI INTELLIGENCE.</p>
+    <div className="ai-tools-tab p-6 pb-40 overflow-y-auto h-full scrollbar-hidden">
+      <header className="mb-10">
+        <h2 className="text-3xl font-display uppercase tracking-widest text-theme-accent mb-2">Neural_Engine_v2</h2>
+        <p className="font-mono text-xs opacity-50 uppercase tracking-tighter">Accelerate your trajectory with Gemini-powered execution layers.</p>
         
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-          <Tooltip content="Quickly fix typos and grammar (Gemini Flash Lite)" position="top">
+        <div className="flex gap-4 mt-8 overflow-x-auto pb-2 border-b-2 border-theme-accent/20">
+          {(['all', 'creative', 'strategic', 'docs'] as const).map((cat) => (
             <button
-              onClick={handleQuickPolish}
-              disabled={isPolishing || isEnhancing || !documentContent.trim() || documentContent.length < 10}
-              className={`brutalist-button ${isPolishing || isEnhancing || !documentContent.trim() ? '' : 'primary'}`}
-              style={{ padding: '15px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+              key={cat}
+              onClick={() => setActiveCategory(cat)}
+              className={`
+                px-6 py-2 font-mono text-[10px] uppercase font-bold border-2 transition-all
+                ${activeCategory === cat ? 'bg-theme-accent text-black border-black translate-x-1 -translate-y-1 shadow-[-4px_4px_0px_var(--theme-text)]' : 'border-theme-accent/30 text-theme-accent hover:border-theme-accent'}
+              `}
             >
-              {isPolishing ? <Loader2 size={24} className="animate-spin" /> : <Sparkles size={24} />}
-              <span style={{ fontSize: '14px', fontWeight: 'bold' }}>QUICK POLISH</span>
+              {cat}
             </button>
-          </Tooltip>
-
-          <Tooltip content="Deeply analyze, structure, and expand the content (Gemini Pro + High Thinking)" position="top">
-            <button
-              onClick={handleDeepEnhance}
-              disabled={isPolishing || isEnhancing || !documentContent.trim() || documentContent.length < 10}
-              className={`brutalist-button ${isPolishing || isEnhancing || !documentContent.trim() ? '' : 'primary'}`}
-              style={{ padding: '15px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-            >
-              {isEnhancing ? <Loader2 size={24} className="animate-spin" /> : <BrainCircuit size={24} />}
-              <span style={{ fontSize: '14px', fontWeight: 'bold' }}>DEEP ENHANCE</span>
-            </button>
-          </Tooltip>
+          ))}
         </div>
-      </div>
+      </header>
 
-      {/* Text to Speech */}
-      <div className="tool-section" style={{ marginBottom: '40px', padding: '20px', border: '2px solid var(--theme-accent)', backgroundColor: 'var(--theme-surface)', boxShadow: '4px 4px 0px var(--theme-accent)' }}>
-        <h3 style={{ fontFamily: 'var(--font-display)', textTransform: 'uppercase', marginBottom: '15px' }}><Play size={18} style={{ display: 'inline', marginRight: '8px' }} /> Generate Speech (TTS)</h3>
-        <p style={{ fontSize: '12px', color: 'var(--theme-text)', marginBottom: '15px', fontFamily: 'var(--font-mono)' }}>CONVERT TEXT TO HIGH-QUALITY SPEECH USING GEMINI 2.5 FLASH TTS.</p>
-        <textarea
-          value={speechText}
-          onChange={e => setSpeechText(e.target.value)}
-          placeholder="ENTER TEXT TO SPEAK..."
-          className="brutalist-textarea"
-          style={{ width: '100%', minHeight: '80px', marginBottom: '15px' }}
-        />
-        <Tooltip content="Generate Speech from Text" position="top">
-          <button
-            onClick={handleGenerateSpeech}
-            disabled={isGeneratingSpeech || !speechText.trim()}
-            className={`brutalist-button ${isGeneratingSpeech || !speechText.trim() ? '' : 'primary'}`}
-            style={{ width: '100%' }}
-          >
-            {isGeneratingSpeech ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
-            {isGeneratingSpeech ? 'GENERATING...' : 'GENERATE SPEECH'}
-          </button>
-        </Tooltip>
-        {speechUrl && (
-          <div style={{ marginTop: '20px', border: '2px solid var(--theme-accent)', padding: '10px' }}>
-            <audio src={speechUrl} controls style={{ width: '100%' }} />
+      <div className="space-y-12">
+        {/* Document Enhancement Tools */}
+        {filterTools('docs') && (
+          <section className="bg-theme-surface border-4 border-black p-8 shadow-[8px_8px_0px_var(--theme-accent)]">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 bg-black text-theme-accent">
+                <Wand2 size={24} />
+              </div>
+              <div>
+                <h3 className="text-xl font-display uppercase">Document Layers</h3>
+                <p className="text-[10px] font-mono opacity-60">OPTIMIZE_INPUT_STRUCTURE_AND_VOICE</p>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <button
+                onClick={handleQuickPolish}
+                disabled={isPolishing || isEnhancing || !documentContent.trim()}
+                className="group p-6 border-2 border-black bg-white/5 hover:bg-theme-accent hover:text-black transition-all flex flex-col items-center text-center gap-4 relative overflow-hidden"
+              >
+                {isPolishing ? <Loader2 size={32} className="animate-spin" /> : <Sparkles size={32} className="group-hover:scale-110 transition-transform" />}
+                <div className="z-10">
+                  <span className="block font-display text-lg uppercase mb-1">QUICK POLISH</span>
+                  <span className="block font-mono text-[9px] opacity-70">GRAMMAR // CLARITY // IMPACT</span>
+                </div>
+              </button>
+
+              <button
+                onClick={handleDeepEnhance}
+                disabled={isPolishing || isEnhancing || !documentContent.trim()}
+                className="group p-6 border-2 border-black bg-white/5 hover:bg-theme-accent hover:text-black transition-all flex flex-col items-center text-center gap-4 relative overflow-hidden"
+              >
+                {isEnhancing ? <Loader2 size={32} className="animate-spin" /> : <BrainCircuit size={32} className="group-hover:scale-110 transition-transform" />}
+                <div className="z-10">
+                  <span className="block font-display text-lg uppercase mb-1">DEEP ENHANCE</span>
+                  <span className="block font-mono text-[9px] opacity-70">RESTRUCTURING // EXPANSION // DATA_DRIVEN</span>
+                </div>
+              </button>
+            </div>
+          </section>
+        )}
+
+        {/* Strategic Analysis */}
+        {filterTools('strategic') && (
+          <section className="bg-theme-surface border-4 border-black p-8 shadow-[8px_8px_0px_var(--theme-accent)]">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 bg-black text-theme-accent">
+                <Search size={24} />
+              </div>
+              <div>
+                <h3 className="text-xl font-display uppercase">Strategic Core</h3>
+                <p className="text-[10px] font-mono opacity-60">IDENTIFY_COMPETITIVE_EDGES_AND_MARKET_GAPS</p>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={competitorQuery}
+                  onChange={e => setCompetitorQuery(e.target.value)}
+                  placeholder="INDUSTRY OR COMPETITOR NAMES..."
+                  className="flex-1 bg-black/20 border-2 border-black p-4 font-mono text-sm uppercase focus:outline-none focus:border-theme-accent"
+                />
+                <button
+                  onClick={handleAnalyzeCompetitors}
+                  disabled={isAnalyzingCompetitors || !competitorQuery.trim()}
+                  className="bg-theme-accent text-black p-4 border-2 border-black hover:bg-white font-bold uppercase text-xs"
+                >
+                  {isAnalyzingCompetitors ? <Loader2 size={20} className="animate-spin" /> : <Search size={20} />}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <button
+                  onClick={handleGeneratePitchDeck}
+                  disabled={isGeneratingPitchDeck || !documentContent.trim()}
+                  className="p-4 border-2 border-black bg-white/5 hover:bg-theme-accent hover:text-black transition-all flex items-center gap-4"
+                >
+                  <LayoutDashboard size={20} />
+                  <span className="font-display text-sm uppercase">PITCH DECK ORCHESTRATOR</span>
+                </button>
+
+                <button
+                  onClick={handleGenerateViralContent}
+                  disabled={isGeneratingViral || !documentContent.trim()}
+                  className="p-4 border-2 border-black bg-white/5 hover:bg-theme-accent hover:text-black transition-all flex items-center gap-4"
+                >
+                  <Share2 size={20} />
+                  <span className="font-display text-sm uppercase">VIRAL_GROWTH_ENGINE</span>
+                </button>
+              </div>
+
+              {(competitorAnalysis || pitchDeck || viralIdeas) && (
+                <div className="mt-8 p-6 bg-black text-theme-accent border-2 border-theme-accent overflow-auto max-h-[500px] scrollbar-brutalist">
+                  <div className="markdown-body">
+                    <MarkdownRenderer content={competitorAnalysis || pitchDeck || viralIdeas || ''} />
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* Creative Assets */}
+        {filterTools('creative') && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            {/* Speech Generation */}
+            <section className="bg-theme-surface border-4 border-black p-8 shadow-[8px_8px_0px_var(--theme-accent)]">
+              <h4 className="flex items-center gap-2 font-display uppercase mb-6"><Play size={18} /> VOCAL_SYNTHESIS</h4>
+              <textarea
+                value={speechText}
+                onChange={e => setSpeechText(e.target.value)}
+                placeholder="INPUT_VOICE_OVER_TEXT..."
+                className="w-full bg-black/10 border-2 border-black p-4 font-mono text-xs mb-4 min-h-[120px] focus:outline-none"
+              />
+              <button
+                onClick={handleGenerateSpeech}
+                disabled={isGeneratingSpeech || !speechText.trim()}
+                className="w-full bg-black text-theme-accent p-4 border-2 border-black hover:bg-theme-accent hover:text-black font-bold uppercase transition-all"
+              >
+                {isGeneratingSpeech ? 'GENERATING...' : 'GENERATE AUDIO'}
+              </button>
+              {speechUrl && (
+                <div className="mt-6 border-2 border-black p-2 bg-white/5">
+                  <audio src={speechUrl} controls className="w-full h-8" />
+                </div>
+              )}
+            </section>
+
+            {/* Video Generation */}
+            <section className="bg-theme-surface border-4 border-black p-8 shadow-[8px_8px_0px_var(--theme-accent)]">
+              <h4 className="flex items-center gap-2 font-display uppercase mb-6"><Video size={18} /> CINEMATIC_GEN</h4>
+              <textarea
+                value={videoPrompt}
+                onChange={e => setVideoPrompt(e.target.value)}
+                placeholder="DESCRIBE_THE_SCENE..."
+                className="w-full bg-black/10 border-2 border-black p-4 font-mono text-xs mb-4 min-h-[120px] focus:outline-none"
+              />
+              <button
+                onClick={handleGenerateVideo}
+                disabled={isGeneratingVideo || !videoPrompt.trim()}
+                className="w-full bg-black text-theme-accent p-4 border-2 border-black hover:bg-theme-accent hover:text-black font-bold uppercase transition-all"
+              >
+                {isGeneratingVideo ? 'PROCESSING...' : 'GENERATE VIDEO'}
+              </button>
+              {videoUrl && (
+                <div className="mt-6 border-4 border-black bg-black">
+                  <video src={videoUrl} controls className="w-full" />
+                </div>
+              )}
+            </section>
           </div>
         )}
       </div>
-
-      {/* Video Generation */}
-      <div className="tool-section" style={{ marginBottom: '40px', padding: '20px', border: '2px solid var(--theme-accent)', backgroundColor: 'var(--theme-surface)', boxShadow: '4px 4px 0px var(--theme-accent)' }}>
-        <h3 style={{ fontFamily: 'var(--font-display)', textTransform: 'uppercase', marginBottom: '15px' }}><Video size={18} style={{ display: 'inline', marginRight: '8px' }} /> Prompt-Based Video Generation</h3>
-        <p style={{ fontSize: '12px', color: 'var(--theme-text)', marginBottom: '15px', fontFamily: 'var(--font-mono)' }}>GENERATE 16:9 VIDEOS USING VEO 3.1 FAST GENERATE.</p>
-        <textarea
-          value={videoPrompt}
-          onChange={e => setVideoPrompt(e.target.value)}
-          placeholder="DESCRIBE THE VIDEO YOU WANT TO GENERATE..."
-          className="brutalist-textarea"
-          style={{ width: '100%', minHeight: '80px', marginBottom: '15px' }}
-        />
-        <Tooltip content="Generate Video from Prompt" position="top">
-          <button
-            onClick={handleGenerateVideo}
-            disabled={isGeneratingVideo || !videoPrompt.trim()}
-            className={`brutalist-button ${isGeneratingVideo || !videoPrompt.trim() ? '' : 'primary'}`}
-            style={{ width: '100%' }}
-          >
-            {isGeneratingVideo ? <Loader2 size={16} className="animate-spin" /> : <Video size={16} />}
-            {isGeneratingVideo ? 'GENERATING VIDEO...' : 'GENERATE VIDEO'}
-          </button>
-        </Tooltip>
-        {videoUrl && (
-          <div style={{ marginTop: '20px', border: '2px solid var(--theme-accent)', boxShadow: '4px 4px 0px var(--theme-accent)' }}>
-            <video src={videoUrl} controls style={{ width: '100%', display: 'block' }} />
-          </div>
-        )}
-      </div>
-
-      {/* Image Animation */}
-      <div className="tool-section" style={{ marginBottom: '40px', padding: '20px', border: '2px solid var(--theme-accent)', backgroundColor: 'var(--theme-surface)', boxShadow: '4px 4px 0px var(--theme-accent)' }}>
-        <h3 style={{ fontFamily: 'var(--font-display)', textTransform: 'uppercase', marginBottom: '15px' }}><ImageIcon size={18} style={{ display: 'inline', marginRight: '8px' }} /> Animate Images with Veo</h3>
-        <p style={{ fontSize: '12px', color: 'var(--theme-text)', marginBottom: '15px', fontFamily: 'var(--font-mono)' }}>UPLOAD AN IMAGE AND DESCRIBE HOW TO ANIMATE IT.</p>
-        
-        <input type="file" accept="image/*" onChange={handleImageUpload} className="brutalist-input" style={{ marginBottom: '15px', width: '100%' }} />
-        {animateImageBase64 && (
-          <div style={{ marginBottom: '15px', border: '2px solid var(--theme-accent)', display: 'inline-block', padding: '4px' }}>
-            <img src={`data:${animateMimeType};base64,${animateImageBase64}`} alt="Preview" style={{ maxWidth: '200px', maxHeight: '200px', display: 'block' }} referrerPolicy="no-referrer" />
-          </div>
-        )}
-        
-        <textarea
-          value={animatePrompt}
-          onChange={e => setAnimatePrompt(e.target.value)}
-          placeholder="DESCRIBE HOW TO ANIMATE THE IMAGE..."
-          className="brutalist-textarea"
-          style={{ width: '100%', minHeight: '80px', marginBottom: '15px' }}
-        />
-        <Tooltip content="Animate Uploaded Image" position="top">
-          <button
-            onClick={handleAnimateImage}
-            disabled={isAnimatingImage || !animatePrompt.trim() || !animateImageBase64}
-            className={`brutalist-button ${isAnimatingImage || !animatePrompt.trim() || !animateImageBase64 ? '' : 'primary'}`}
-            style={{ width: '100%' }}
-          >
-            {isAnimatingImage ? <Loader2 size={16} className="animate-spin" /> : <Video size={16} />}
-            {isAnimatingImage ? 'ANIMATING IMAGE...' : 'ANIMATE IMAGE'}
-          </button>
-        </Tooltip>
-        {animatedVideoUrl && (
-          <div style={{ marginTop: '20px', border: '2px solid var(--theme-accent)', boxShadow: '4px 4px 0px var(--theme-accent)' }}>
-            <video src={animatedVideoUrl} controls style={{ width: '100%', display: 'block' }} />
-          </div>
-        )}
-      </div>
-
-      {/* Pitch Deck Orchestrator */}
-      <div className="tool-section" style={{ marginBottom: '40px', padding: '20px', border: '2px solid var(--theme-accent)', backgroundColor: 'var(--theme-surface)', boxShadow: '4px 4px 0px var(--theme-accent)' }}>
-        <h3 style={{ fontFamily: 'var(--font-display)', textTransform: 'uppercase', marginBottom: '15px' }}><LayoutDashboard size={18} style={{ display: 'inline', marginRight: '8px' }} /> Pitch Deck Orchestrator</h3>
-        <p style={{ fontSize: '12px', color: 'var(--theme-text)', marginBottom: '15px', fontFamily: 'var(--font-mono)' }}>GENERATE A PROFESSIONAL PITCH DECK OUTLINE AND SLIDE CONTENT BASED ON YOUR CURRENT PROJECT.</p>
-        <Tooltip content="Generate Pitch Deck Outline" position="top">
-          <button
-            onClick={handleGeneratePitchDeck}
-            disabled={isGeneratingPitchDeck || !documentContent.trim()}
-            className={`brutalist-button ${isGeneratingPitchDeck || !documentContent.trim() ? '' : 'primary'}`}
-            style={{ width: '100%' }}
-          >
-            {isGeneratingPitchDeck ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-            {isGeneratingPitchDeck ? 'ORCHESTRATING...' : 'GENERATE PITCH DECK'}
-          </button>
-        </Tooltip>
-        {pitchDeck && (
-          <div style={{ marginTop: '20px', border: '2px solid var(--theme-accent)', padding: '15px', backgroundColor: 'rgba(255,255,255,0.02)' }}>
-            <div className="markdown-body" dangerouslySetInnerHTML={{ __html: marked.parse(pitchDeck) as string }} />
-          </div>
-        )}
-      </div>
-
-      {/* Competitor Intelligence Hub */}
-      <div className="tool-section" style={{ marginBottom: '40px', padding: '20px', border: '2px solid var(--theme-accent)', backgroundColor: 'var(--theme-surface)', boxShadow: '4px 4px 0px var(--theme-accent)' }}>
-        <h3 style={{ fontFamily: 'var(--font-display)', textTransform: 'uppercase', marginBottom: '15px' }}><Search size={18} style={{ display: 'inline', marginRight: '8px' }} /> Competitor Intelligence Hub</h3>
-        <p style={{ fontSize: '12px', color: 'var(--theme-text)', marginBottom: '15px', fontFamily: 'var(--font-mono)' }}>ANALYZE YOUR COMPETITORS AND IDENTIFY YOUR UNIQUE VALUE PROPOSITION.</p>
-        <input
-          type="text"
-          value={competitorQuery}
-          onChange={e => setCompetitorQuery(e.target.value)}
-          placeholder="ENTER COMPETITOR NAMES OR INDUSTRY..."
-          className="brutalist-input"
-          style={{ width: '100%', marginBottom: '15px' }}
-        />
-        <Tooltip content="Analyze Competitors" position="top">
-          <button
-            onClick={handleAnalyzeCompetitors}
-            disabled={isAnalyzingCompetitors || !competitorQuery.trim()}
-            className={`brutalist-button ${isAnalyzingCompetitors || !competitorQuery.trim() ? '' : 'primary'}`}
-            style={{ width: '100%' }}
-          >
-            {isAnalyzingCompetitors ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
-            {isAnalyzingCompetitors ? 'ANALYZING...' : 'ANALYZE COMPETITORS'}
-          </button>
-        </Tooltip>
-        {competitorAnalysis && (
-          <div style={{ marginTop: '20px', border: '2px solid var(--theme-accent)', padding: '15px', backgroundColor: 'rgba(255,255,255,0.02)' }}>
-            <div className="markdown-body" dangerouslySetInnerHTML={{ __html: marked.parse(competitorAnalysis) as string }} />
-          </div>
-        )}
-      </div>
-
     </div>
   );
 };

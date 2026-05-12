@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useUI } from '../../lib/state';
 import { thinkDeeply } from '../../lib/ai-tools';
-import { Loader2, Lightbulb, Sparkles } from 'lucide-react';
-import { marked } from 'marked';
+import { Loader2, Lightbulb, Sparkles, Brain, Zap } from 'lucide-react';
 import { Tooltip } from '../Tooltip';
 import { FounderHealthCheck } from './FounderHealthCheck';
+import { MarkdownRenderer } from '../MarkdownRenderer';
 
 export const CopilotSidebar: React.FC = () => {
   const { documentContent } = useUI();
@@ -18,79 +18,83 @@ export const CopilotSidebar: React.FC = () => {
       if (documentContent.trim().length > 100 && !suggestions && !isLoading) {
         generateSuggestions(true);
       }
-    }, 5000); // 5 seconds after typing stops
+    }, 10000);
     return () => clearTimeout(timer);
   }, [documentContent]);
 
   const generateSuggestions = async (isProactive = false) => {
     if (!documentContent.trim()) return;
     setIsLoading(true);
-    if (!isProactive) setSuggestions(null); // Keep old suggestions while loading if proactive
+    if (!isProactive) setSuggestions(null);
     try {
-      const prompt = `You are an expert AI Co-pilot for a startup founder. Review the following business plan/document.
-      
+      const prompt = `Review this business plan.
 User Goals: ${goals || 'Make the document more persuasive, complete, and professional.'}
-
-Document Content:
+Content:
 ${documentContent}
-
-Provide 3 specific, actionable suggestions for improvements or content additions. For each suggestion, provide a brief explanation of WHY it's needed, and a short snippet of WHAT to add. Format your response in Markdown.`;
+Provide 3 actionable suggestions in Markdown.`;
       
       const response = await thinkDeeply(prompt);
       setSuggestions(response);
     } catch (error) {
       console.error(error);
-      if (!isProactive) setSuggestions('Failed to generate suggestions. Please try again.');
+      if (!isProactive) setSuggestions('FAILED_TO_SYNC_CO_FOUNDER_BRAIN');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="copilot-sidebar">
-      <div className="copilot-header">
-        <Sparkles size={18} color="var(--theme-accent)" />
-        <h3>AI Co-pilot</h3>
+    <div className="copilot-sidebar scrollbar-brutalist" style={{ height: '100%', overflowY: 'auto', backgroundColor: '#000', color: '#fff' }}>
+      <div style={{ padding: '24px', borderBottom: '4px solid var(--theme-accent)', backgroundColor: '#111' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <Brain size={24} color="var(--theme-accent)" />
+          <h3 style={{ fontFamily: 'var(--font-display)', textTransform: 'uppercase', fontSize: '20px', margin: 0, letterSpacing: '-1px' }}>AI_CO_PILOT</h3>
+        </div>
       </div>
       
-      <div className="copilot-content">
+      <div style={{ padding: '24px' }}>
         <FounderHealthCheck />
         
-        <div style={{ marginBottom: '1.5rem' }}>
-          <label className="brutalist-label">YOUR GOALS (OPTIONAL)</label>
+        <div style={{ marginBottom: '32px' }}>
+          <label className="brutalist-label" style={{ color: 'var(--theme-accent)', borderColor: 'var(--theme-accent)' }}>TACTICAL_GOALS</label>
           <textarea 
             value={goals}
             onChange={e => setGoals(e.target.value)}
-            placeholder="E.G., I WANT TO SOUND MORE TECHNICAL, OR I NEED TO FOCUS ON MONETIZATION..."
+            placeholder="Focus on monetization... Technical audit..."
             className="brutalist-textarea"
-            style={{ minHeight: '80px' }}
+            style={{ minHeight: '80px', backgroundColor: '#222', color: '#fff', border: '2px solid #444' }}
           />
         </div>
         
-        <Tooltip content="Get AI Suggestions for your Document" position="top">
+        <Tooltip content="Get AI Suggestions" position="top">
           <button 
             onClick={() => generateSuggestions(false)}
             disabled={isLoading || !documentContent.trim()}
-            className={`brutalist-button ${isLoading || !documentContent.trim() ? '' : 'primary'}`}
-            style={{ width: '100%' }}
+            className="brutalist-button primary"
+            style={{ width: '100%', padding: '16px' }}
           >
-            {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Lightbulb size={16} />}
-            {isLoading ? 'ANALYZING...' : 'GET SUGGESTIONS'}
+            {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Zap size={18} />}
+            <span style={{ marginLeft: '12px' }}>{isLoading ? 'ANALYZING...' : 'SYNC_INTELLIGENCE'}</span>
           </button>
         </Tooltip>
 
         {!documentContent.trim() && (
-          <p style={{ fontSize: '12px', color: 'var(--theme-text)', opacity: 0.6, marginTop: '1.5rem', textAlign: 'center', fontStyle: 'italic', fontFamily: 'var(--font-mono)' }}>
-            WRITE SOME CONTENT TO INITIALIZE SUGGESTIONS.
+          <p style={{ fontSize: '10px', color: '#666', marginTop: '24px', textAlign: 'center', fontFamily: 'var(--font-mono)', border: '1px dashed #444', padding: '16px' }}>
+            AWAITING_DATA_INPUT...
           </p>
         )}
 
         {suggestions && (
-          <div style={{ marginTop: '2rem' }}>
-            <h4 style={{ fontSize: '14px', marginBottom: '1rem', color: 'var(--theme-accent)', borderBottom: '2px solid var(--theme-accent)', paddingBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '1px', fontFamily: 'var(--font-display)' }}>
-              SUGGESTIONS_LOG
-            </h4>
-            <div className="markdown-body copilot-markdown" style={{ color: 'var(--theme-text)' }} dangerouslySetInnerHTML={{ __html: marked.parse(suggestions) as string }} />
+          <div style={{ marginTop: '40px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', borderBottom: '2px solid #333', paddingBottom: '8px' }}>
+               <Sparkles size={14} color="var(--theme-accent)" />
+               <h4 style={{ fontSize: '12px', margin: 0, color: '#fff', textTransform: 'uppercase', letterSpacing: '1px', fontFamily: 'var(--font-mono)' }}>
+                SUGGESTIONS_TRANSCRIPT
+               </h4>
+            </div>
+            <div className="copilot-results" style={{ fontSize: '13px', borderLeft: '2px solid var(--theme-accent)', paddingLeft: '16px' }}>
+              <MarkdownRenderer content={suggestions} />
+            </div>
           </div>
         )}
       </div>

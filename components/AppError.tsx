@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { 
   AlertTriangle, 
   Search, 
@@ -30,8 +30,6 @@ export const AppError: React.FC<AppErrorProps> = ({
   onRetry,
   showHomeButton = true
 }) => {
-  const navigate = useNavigate();
-  
   // Parse error if it's a Firestore JSON error
   let parsedErrorMessage = message || getFriendlyErrorMessage(error);
   let errorType = type;

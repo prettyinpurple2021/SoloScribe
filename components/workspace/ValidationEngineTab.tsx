@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useUI } from '../../lib/state';
 import { thinkDeeply } from '../../lib/ai-tools';
-import { Users, Loader2, Plus, Link as LinkIcon, MessageSquare } from 'lucide-react';
-import { marked } from 'marked';
+import { Users, Loader2, Plus, Link as LinkIcon, MessageSquare, Send } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Tooltip } from '../Tooltip';
 import { db, OperationType, handleFirestoreError } from '../../firebase';
 import { collection, doc, setDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
+import { MarkdownRenderer } from '../MarkdownRenderer';
 
 export const ValidationEngineTab: React.FC = () => {
   const { documentContent } = useUI();
@@ -119,240 +119,269 @@ export const ValidationEngineTab: React.FC = () => {
   const copyLink = (id: string) => {
     const url = `${window.location.origin}/?interview=${id}`;
     navigator.clipboard.writeText(url);
-    toast.success('Interview link copied to clipboard! Share this on social media or with potential users.');
+    toast.success('Interview link copied to clipboard!');
   };
 
   return (
-     <div className="validation-engine-tab" style={{ padding: '20px 20px 100px 20px', overflowY: 'auto', height: '100%' }}>
-      <h2>Market Research & Validation Engine</h2>
-      <p style={{ marginBottom: '20px', color: '#666' }}>Ensure you are building something people actually want.</p>
-
-      <div style={{ display: 'flex', gap: '15px', marginBottom: '30px', borderBottom: '1px solid #eee', paddingBottom: '15px', flexWrap: 'wrap' }}>
-        <Tooltip content="Manage Interview Campaigns" position="bottom">
-          <button
-            onClick={() => setActiveTool('interviews')}
-            style={{ padding: '10px 20px', borderRadius: '0px', backgroundColor: activeTool === 'interviews' ? 'var(--theme-accent)' : 'transparent', color: activeTool === 'interviews' ? 'var(--theme-bg)' : 'var(--theme-text)', border: '2px solid var(--theme-text)', cursor: 'pointer', fontWeight: 'bold', fontFamily: 'var(--font-mono)', fontSize: '12px' }}
-          >
-            AI Interview Campaigns
-          </button>
-        </Tooltip>
-        <Tooltip content="Test Business Hypotheses" position="bottom">
-          <button
-            onClick={() => { setActiveTool('hypothesis-tester'); setResult(null); }}
-            style={{ padding: '10px 20px', borderRadius: '0px', backgroundColor: activeTool === 'hypothesis-tester' ? 'var(--theme-accent)' : 'transparent', color: activeTool === 'hypothesis-tester' ? 'var(--theme-bg)' : 'var(--theme-text)', border: '2px solid var(--theme-text)', cursor: 'pointer', fontWeight: 'bold', fontFamily: 'var(--font-mono)', fontSize: '12px' }}
-          >
-            Hypothesis Tester
-          </button>
-        </Tooltip>
-        <Tooltip content="Get AI Business Plan Review" position="bottom">
-          <button
-            onClick={() => runValidation('plan-reviewer')}
-            style={{ padding: '10px 20px', borderRadius: '0px', backgroundColor: activeTool === 'plan-reviewer' ? 'var(--theme-accent)' : 'transparent', color: activeTool === 'plan-reviewer' ? 'var(--theme-bg)' : 'var(--theme-text)', border: '2px solid var(--theme-text)', cursor: 'pointer', fontWeight: 'bold', fontFamily: 'var(--font-mono)', fontSize: '12px' }}
-          >
-            Business Plan Reviewer
-          </button>
-        </Tooltip>
-        <Tooltip content="Validate with 'The Mom Test' Principles" position="bottom">
-          <button
-            onClick={() => runValidation('mom-test')}
-            style={{ padding: '10px 20px', borderRadius: '0px', backgroundColor: activeTool === 'mom-test' ? 'var(--theme-accent)' : 'transparent', color: activeTool === 'mom-test' ? 'var(--theme-bg)' : 'var(--theme-text)', border: '2px solid var(--theme-text)', cursor: 'pointer', fontWeight: 'bold', fontFamily: 'var(--font-mono)', fontSize: '12px' }}
-          >
-            The Mom Test
-          </button>
-        </Tooltip>
+    <div className="validation-engine-tab scrollbar-brutalist" style={{ padding: '40px', overflowY: 'auto', height: '100%', backgroundColor: 'var(--theme-bg)' }}>
+      <div style={{ marginBottom: '40px', borderLeft: '8px solid var(--theme-accent)', paddingLeft: '24px' }}>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '48px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-2px', margin: 0 }}>
+          Evidence Locker
+        </h1>
+        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', color: 'var(--theme-text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+          Stop guessing. Start knowing. Market validation lab.
+        </p>
       </div>
 
-      {activeTool === 'interviews' && (
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h3>Your Interview Campaigns</h3>
-            <Tooltip content="Create New Interview Campaign" position="left">
-              <button 
-                onClick={() => setShowCreateCampaign(!showCreateCampaign)}
-                className="brutalist-button"
-                style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 16px' }}
-              >
-                <Plus size={16} /> New Campaign
-              </button>
-            </Tooltip>
-          </div>
+      {/* Primary Navigation */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '40px' }}>
+        {[
+          { id: 'interviews', label: 'Interview Campaigns', icon: <Users size={20} />, activeColor: 'var(--theme-accent)' },
+          { id: 'hypothesis-tester', label: 'Hypothesis Lab', icon: <Loader2 size={20} />, activeColor: '#a855f7' },
+          { id: 'plan-reviewer', label: 'Pitch Stress-Test', icon: <Plus size={20} />, activeColor: '#22c55e' },
+          { id: 'mom-test', label: 'The Mom Test', icon: <Send size={20} />, activeColor: '#f59e0b' }
+        ].map(item => (
+          <button
+            key={item.id}
+            onClick={() => { 
+              if (item.id === 'plan-reviewer' || item.id === 'mom-test') runValidation(item.id as any);
+              else { setActiveTool(item.id as any); setResult(null); }
+            }}
+            className={`brutalist-button ${activeTool === item.id ? 'active' : ''}`}
+            style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center', 
+              gap: '12px', 
+              padding: '24px',
+              backgroundColor: activeTool === item.id ? item.activeColor : 'var(--theme-surface)',
+              color: activeTool === item.id ? '#000' : 'var(--theme-text)',
+              transform: activeTool === item.id ? 'translate(4px, 4px)' : 'none',
+              boxShadow: activeTool === item.id ? 'none' : '4px 4px 0px #000'
+            }}
+          >
+            {item.icon}
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 900, textTransform: 'uppercase' }}>{item.label}</span>
+          </button>
+        ))}
+      </div>
 
-          {!user && (
-            <div style={{ padding: '20px', backgroundColor: '#fff3cd', color: '#856404', borderRadius: '8px', marginBottom: '20px' }}>
-              <strong>Note:</strong> You must be signed in to create and manage AI Interview Campaigns.
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '40px' }}>
+        {/* Active Tool Workspace */}
+        <div style={{ backgroundColor: 'var(--theme-surface)', border: '4px solid #000', padding: '40px', boxShadow: '12px 12px 0px #000', position: 'relative' }}>
+          
+          {activeTool === 'interviews' && (
+            <div className="interview-manager">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', borderBottom: '2px solid #000', paddingBottom: '16px' }}>
+                <h2 style={{ fontFamily: 'var(--font-display)', textTransform: 'uppercase', margin: 0, fontSize: '24px' }}>Live Campaigns</h2>
+                <button 
+                  onClick={() => setShowCreateCampaign(!showCreateCampaign)}
+                  className="brutalist-button primary"
+                  style={{ fontSize: '12px' }}
+                >
+                  <Plus size={16} /> Deploy New Agent
+                </button>
+              </div>
+
+              {!user && (
+                <div style={{ padding: '24px', backgroundColor: '#fef3c7', border: '3px solid #f59e0b', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <Users size={24} style={{ color: '#f59e0b' }} />
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700 }}>AUTHENTICATION_REQUIRED: Sign in to manage interview bots.</span>
+                </div>
+              )}
+
+              {showCreateCampaign && user && (
+                <div style={{ padding: '32px', backgroundColor: 'var(--theme-surface-light)', border: '2px dashed #000', marginBottom: '32px' }}>
+                  <h3 style={{ fontFamily: 'var(--font-mono)', fontSize: '16px', fontWeight: 900, textTransform: 'uppercase', marginBottom: '24px' }}>[ NEW_CAMPAIGN_PROTOCOL ]</h3>
+                  
+                  <div style={{ display: 'grid', gap: '24px' }}>
+                    <div>
+                      <label className="brutalist-label">Codename / Title</label>
+                      <input 
+                        className="brutalist-input"
+                        placeholder="e.g., PH_EARLY_ADOPTERS_01"
+                        value={newCampaign.title}
+                        onChange={e => setNewCampaign({...newCampaign, title: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <label className="brutalist-label">Intelligence Goal</label>
+                      <textarea 
+                        className="brutalist-textarea"
+                        placeholder="Define the specific insight we are mining for..."
+                        style={{ minHeight: '100px' }}
+                        value={newCampaign.goal}
+                        onChange={e => setNewCampaign({...newCampaign, goal: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <label className="brutalist-label">Core Interrogation Suite (Questions)</label>
+                      <textarea 
+                        className="brutalist-textarea"
+                        placeholder="1. How do you current solve X?&#10;2. What was the last time you bought Y?"
+                        style={{ minHeight: '120px' }}
+                        value={newCampaign.questions}
+                        onChange={e => setNewCampaign({...newCampaign, questions: e.target.value})}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', gap: '16px', justifyContent: 'flex-end' }}>
+                      <button onClick={() => setShowCreateCampaign(false)} className="brutalist-button">Abort</button>
+                      <button onClick={handleCreateCampaign} disabled={isLoading} className="brutalist-button primary">Execute Deployment</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'grid', gap: '20px' }}>
+              {campaigns.map(campaign => (
+                <div key={campaign.id} style={{ border: '3px solid #000', padding: '24px', backgroundColor: selectedCampaign?.id === campaign.id ? 'var(--theme-surface-light)' : 'var(--theme-surface)', transition: 'all 0.2s' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                      <h4 style={{ margin: '0 0 8px 0', fontSize: '20px', fontFamily: 'var(--font-display)', textTransform: 'uppercase' }}>{campaign.title}</h4>
+                      <p style={{ margin: 0, fontSize: '14px', fontFamily: 'var(--font-mono)', opacity: 0.7 }}>GOAL: {campaign.goal}</p>
+                    </div>
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      <button onClick={() => copyLink(campaign.id)} className="brutalist-button-sm">
+                        <LinkIcon size={14} /> <span>Link</span>
+                      </button>
+                      <button 
+                        onClick={() => {
+                          setSelectedCampaign(selectedCampaign?.id === campaign.id ? null : campaign);
+                          if (selectedCampaign?.id !== campaign.id) fetchResponses(campaign.id);
+                        }}
+                        className={`brutalist-button-sm ${selectedCampaign?.id === campaign.id ? 'active' : ''}`}
+                      >
+                        <MessageSquare size={14} /> <span>Data</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {selectedCampaign?.id === campaign.id && (
+                    <div style={{ marginTop: '24px', padding: '24px', backgroundColor: '#fff', border: '2px solid #000', boxShadow: '4px 4px 0px #000' }}>
+                      <h5 style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', textTransform: 'uppercase', marginBottom: '16px' }}>RECOVERED_DATA:</h5>
+                      {campaignResponses.length === 0 ? (
+                        <p style={{ fontSize: '13px', color: '#666', fontStyle: 'italic' }}>PENDING_RESPONSE... No incoming transmissions yet.</p>
+                      ) : (
+                        <div style={{ display: 'grid', gap: '24px' }}>
+                          {campaignResponses.map((response, idx) => (
+                            <div key={response.id} style={{ borderLeft: '4px solid #000', paddingLeft: '20px' }}>
+                              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 900, marginBottom: '8px' }}>EVIDENCE_LOG_#{idx + 1}</div>
+                              <div style={{ fontSize: '14px', marginBottom: '12px', lineHeight: 1.6 }}>
+                                <strong style={{ textTransform: 'uppercase', fontSize: '11px' }}>AI_INTEL:</strong> {response.summary}
+                              </div>
+                              <details style={{ cursor: 'pointer' }}>
+                                <summary style={{ fontSize: '11px', fontWeight: 900, color: 'var(--theme-accent)' }}>[ VIEW_FULL_RAW_TRANSCRIPT ]</summary>
+                                <div style={{ marginTop: '12px', padding: '16px', background: 'var(--theme-surface-light)', fontFamily: 'var(--font-mono)', fontSize: '12px', maxHeight: '300px', overflowY: 'auto', border: '1px solid #000' }}>
+                                  {response.transcript.map((t: any, i: number) => (
+                                    <div key={i} style={{ marginBottom: '12px' }}>
+                                      <span style={{ color: t.role === 'model' ? 'var(--theme-accent)' : '#ef4444' }}>{t.role === 'model' ? '[BOT]' : '[USER]'}: </span>
+                                      {t.text}
+                                    </div>
+                                  ))}
+                                </div>
+                              </details>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+              </div>
             </div>
           )}
 
-          {showCreateCampaign && user && (
-            <div style={{ backgroundColor: 'var(--theme-surface)', padding: '20px', borderRadius: '0px', marginBottom: '20px', border: '3px solid var(--theme-text)', boxShadow: '8px 8px 0px var(--theme-text)' }}>
-              <h4 style={{ fontFamily: 'var(--font-display)', textTransform: 'uppercase' }}>Create New AI Interview Campaign</h4>
-              <p style={{ fontSize: '12px', color: 'var(--theme-text)', marginBottom: '15px', fontFamily: 'var(--font-mono)', opacity: 0.7 }}>Create a custom AI interviewer. Share the link, and the AI will conduct real interviews with people and report back to you.</p>
+          {activeTool === 'hypothesis-tester' && (
+            <div className="hypothesis-tester">
+              <h2 style={{ fontFamily: 'var(--font-display)', textTransform: 'uppercase', margin: '0 0 32px 0', fontSize: '24px' }}>Hypothesis Stress Test</h2>
+              <p style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', marginBottom: '32px' }}>Define a falsifiable business assumption. We will generate a scientific validation protocol.</p>
               
-              <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 'bold', fontFamily: 'var(--font-display)' }}>Campaign Title</label>
-                <input 
-                  type="text" 
-                  value={newCampaign.title}
-                  onChange={e => setNewCampaign({...newCampaign, title: e.target.value})}
-                  placeholder="e.g., Freelancer Pain Points Interview"
-                  className="brutalist-input"
-                  style={{ width: '100%' }}
-                />
-              </div>
-              
-              <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 'bold', fontFamily: 'var(--font-display)' }}>Interview Goal</label>
-                <textarea 
-                  value={newCampaign.goal}
-                  onChange={e => setNewCampaign({...newCampaign, goal: e.target.value})}
-                  placeholder="What are you trying to learn? e.g., I want to understand the biggest challenges freelancers face when managing their invoices."
-                  className="brutalist-textarea"
-                  style={{ width: '100%', minHeight: '80px' }}
-                />
-              </div>
-
-              <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 'bold', fontFamily: 'var(--font-display)' }}>Key Questions for the AI to Ask</label>
-                <textarea 
-                  value={newCampaign.questions}
-                  onChange={e => setNewCampaign({...newCampaign, questions: e.target.value})}
-                  placeholder="1. How do you currently track your invoices?&#10;2. What is the most frustrating part of getting paid?&#10;3. Have you ever paid for a tool to solve this?"
-                  className="brutalist-textarea"
-                  style={{ width: '100%', minHeight: '100px' }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                <button onClick={() => setShowCreateCampaign(false)} className="brutalist-button-outline">Cancel</button>
-                <button onClick={handleCreateCampaign} disabled={isLoading} className={`brutalist-button ${isLoading ? '' : 'primary'}`}>
-                  {isLoading ? 'Creating...' : 'Create Campaign'}
+              <div style={{ display: 'grid', gap: '24px', marginBottom: '32px' }}>
+                <div>
+                  <label className="brutalist-label">Core Assumption</label>
+                  <textarea
+                    className="brutalist-textarea"
+                    placeholder="e.g., 'Target users will switch from Paper to Digital if the app has a pen-feel-shading feature...'"
+                    style={{ minHeight: '120px' }}
+                    value={hypothesis}
+                    onChange={e => setHypothesis(e.target.value)}
+                  />
+                </div>
+                <button
+                  onClick={() => runValidation('hypothesis-tester')}
+                  disabled={isLoading || !hypothesis.trim()}
+                  className="brutalist-button primary"
+                  style={{ width: '100%', padding: '20px' }}
+                >
+                  {isLoading ? 'PROTOCOL_RUNNING...' : 'GENERATE_VALIDATION_MATRIX'}
                 </button>
               </div>
             </div>
           )}
 
-          {campaigns.length === 0 && !showCreateCampaign && user && (
-            <div style={{ textAlign: 'center', padding: '40px', color: '#666', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
-              <Users size={48} style={{ opacity: 0.5, marginBottom: '10px' }} />
-              <p>You haven't created any interview campaigns yet.</p>
-              <p style={{ fontSize: '14px', marginTop: '5px' }}>Create one to start gathering real user feedback via AI.</p>
-            </div>
-          )}
+          {/* Results Area for AI Tools */}
+          {(activeTool === 'mom-test' || activeTool === 'plan-reviewer' || activeTool === 'hypothesis-tester') && (
+            <div style={{ marginTop: activeTool === 'hypothesis-tester' ? '0' : '32px' }}>
+              {isLoading && (
+                <div style={{ height: '300px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px', backgroundColor: 'var(--theme-surface-light)', border: '3px solid #000' }}>
+                  <div style={{ width: '40px', height: '40px', border: '4px solid #000', borderTopColor: 'var(--theme-accent)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                  <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 900, textTransform: 'uppercase' }}>Analyzing Current Business State...</span>
+                </div>
+              )}
 
-          <div style={{ display: 'grid', gap: '15px' }}>
-            {campaigns.map(campaign => (
-              <div key={campaign.id} style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '8px', border: '1px solid #eee', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div>
-                    <h4 style={{ margin: '0 0 5px 0', fontSize: '18px' }}>{campaign.title}</h4>
-                    <p style={{ margin: 0, fontSize: '14px', color: '#666' }}>{campaign.goal}</p>
+              {result && !isLoading && (
+                <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', paddingBottom: '16px', borderBottom: '3px solid #000' }}>
+                    <h3 style={{ fontFamily: 'var(--font-display)', textTransform: 'uppercase', fontSize: '20px', margin: 0 }}>
+                      {activeTool === 'mom-test' ? 'Mom Test Analysis' : activeTool === 'hypothesis-tester' ? 'Validation Protocol' : 'Structural Review'}
+                    </h3>
                   </div>
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <Tooltip content="Copy Public Interview Link" position="top">
-                      <button 
-                        onClick={() => copyLink(campaign.id)}
-                        style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', backgroundColor: '#f1f3f4', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
-                      >
-                        <LinkIcon size={14} /> Copy Public Link
-                      </button>
-                    </Tooltip>
-                    <Tooltip content="View Interview Responses" position="top">
-                      <button 
-                        onClick={() => {
-                          setSelectedCampaign(selectedCampaign?.id === campaign.id ? null : campaign);
-                          if (selectedCampaign?.id !== campaign.id) {
-                            fetchResponses(campaign.id);
-                          }
-                        }}
-                        style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', backgroundColor: '#e8f0fe', color: '#1a73e8', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
-                      >
-                        <MessageSquare size={14} /> View Responses
-                      </button>
-                    </Tooltip>
+                  <div className="markdown-body" style={{ fontSize: '15px' }}>
+                    <MarkdownRenderer content={result} />
                   </div>
                 </div>
+              )}
+            </div>
+          )}
+        </div>
 
-                {selectedCampaign?.id === campaign.id && (
-                  <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #eee' }}>
-                    <h5 style={{ marginBottom: '15px' }}>Interview Responses</h5>
-                    {campaignResponses.length === 0 ? (
-                      <p style={{ fontSize: '14px', color: '#666', fontStyle: 'italic' }}>No responses yet. Share your link to get started!</p>
-                    ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                        {campaignResponses.map((response, idx) => (
-                          <div key={response.id} style={{ backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '8px', border: '1px solid #ddd' }}>
-                            <div style={{ fontWeight: 'bold', marginBottom: '10px', fontSize: '14px' }}>Participant #{idx + 1}</div>
-                            <div style={{ fontSize: '14px', marginBottom: '10px' }}>
-                              <strong>AI Summary:</strong> {response.summary}
-                            </div>
-                            <details>
-                              <summary style={{ cursor: 'pointer', fontSize: '12px', color: '#1a73e8' }}>View Full Transcript</summary>
-                              <div style={{ marginTop: '10px', padding: '10px', backgroundColor: '#fff', borderRadius: '4px', fontSize: '12px', maxHeight: '200px', overflowY: 'auto' }}>
-                                {response.transcript.map((t: any, i: number) => (
-                                  <div key={i} style={{ marginBottom: '8px' }}>
-                                    <strong style={{ color: t.role === 'model' ? '#1a73e8' : '#333' }}>{t.role === 'model' ? 'AI Interviewer' : 'Participant'}:</strong> {t.text}
-                                  </div>
-                                ))}
-                              </div>
-                            </details>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
+        {/* Global Evidence Sidebar / Tips */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+          <div style={{ border: '3px solid #000', padding: '24px', backgroundColor: 'var(--theme-surface)' }}>
+            <h4 style={{ fontFamily: 'var(--font-mono)', textTransform: 'uppercase', fontSize: '13px', borderBottom: '2px solid #000', paddingBottom: '8px', marginBottom: '16px' }}>Validation Status</h4>
+            <div style={{ display: 'grid', gap: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontFamily: 'var(--font-mono)' }}>
+                <span>Interviews Conducted:</span>
+                <span style={{ fontWeight: 900 }}>{campaignResponses.length}</span>
               </div>
-            ))}
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontFamily: 'var(--font-mono)' }}>
+                <span>Evidence Grade:</span>
+                <span style={{ fontWeight: 900, color: campaignResponses.length > 5 ? 'var(--theme-accent-tertiary)' : '#ef4444' }}>
+                  {campaignResponses.length === 0 ? 'UNVERIFIED' : campaignResponses.length < 5 ? 'WEAK' : 'STRENGTHENING'}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div style={{ border: '3px solid #000', padding: '24px', backgroundColor: 'var(--theme-surface)' }}>
+            <h4 style={{ fontFamily: 'var(--font-mono)', textTransform: 'uppercase', fontSize: '13px', borderBottom: '2px solid #000', paddingBottom: '8px', marginBottom: '16px' }}>Pro Tip</h4>
+            <p style={{ fontSize: '13px', lineHeight: 1.5, margin: 0 }}>
+              Build an audience before you build a product. Use the <strong>Interviews</strong> tab to find where your users hang out and what they really struggle with.
+            </p>
           </div>
         </div>
-      )}
+      </div>
 
-      {activeTool === 'hypothesis-tester' && (
-        <div style={{ marginBottom: '20px' }}>
-          <div style={{ backgroundColor: '#f8f9fa', padding: '20px', borderRadius: '8px', border: '1px solid #ddd', marginBottom: '20px' }}>
-            <h3 style={{ marginBottom: '10px' }}>Test a Business Hypothesis</h3>
-            <p style={{ fontSize: '14px', color: '#666', marginBottom: '15px' }}>Enter a core assumption about your business (e.g., "Freelancers will pay $10/mo for automated invoice chasing"). We'll generate a complete validation plan including interview and survey questions.</p>
-            <textarea
-              value={hypothesis}
-              onChange={e => setHypothesis(e.target.value)}
-              placeholder="Enter your hypothesis here..."
-              style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ccc', minHeight: '80px', marginBottom: '15px' }}
-            />
-            <button
-              onClick={() => runValidation('hypothesis-tester')}
-              disabled={isLoading || !hypothesis.trim()}
-              style={{ padding: '8px 16px', backgroundColor: '#1a73e8', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', opacity: (!hypothesis.trim() || isLoading) ? 0.5 : 1 }}
-            >
-              {isLoading ? 'Generating Plan...' : 'Generate Validation Plan'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {(activeTool === 'mom-test' || activeTool === 'plan-reviewer' || activeTool === 'hypothesis-tester') && (
-        <>
-          {!documentContent.trim() && (
-            <div style={{ padding: '20px', backgroundColor: '#fff3cd', color: '#856404', borderRadius: '8px', marginBottom: '20px' }}>
-              <strong>Note:</strong> You need to write some details about your startup in the Document tab first before running validations.
-            </div>
-          )}
-
-          {isLoading && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '20px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
-              <Loader2 className="animate-spin" /> {activeTool === 'hypothesis-tester' ? 'Generating validation plan...' : 'Analyzing your business plan...'}
-            </div>
-          )}
-
-          {result && !isLoading && (
-            <div className="validation-result" style={{ padding: '20px', backgroundColor: '#fff', border: '1px solid #eee', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-              <h3 style={{ marginBottom: '15px', borderBottom: '1px solid #eee', paddingBottom: '10px' }}>
-                {activeTool === 'mom-test' ? 'Mom Test Validation' : activeTool === 'hypothesis-tester' ? 'Hypothesis Validation Plan' : 'Business Plan Review'}
-              </h3>
-              <div className="markdown-body" dangerouslySetInnerHTML={{ __html: marked.parse(result) as string }} />
-            </div>
-          )}
-        </>
-      )}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .brutalist-button.active {
+          background-color: var(--theme-accent);
+          transform: translate(2px, 2px);
+          box-shadow: 1px 1px 0px #000;
+        }
+      `}} />
     </div>
   );
 };
+

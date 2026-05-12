@@ -1,6 +1,11 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    // Default deny-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
 
     // ===============================================================
     // Assumed Data Model
@@ -88,52 +93,59 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    function isValidId(id) {
+       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
     function isAdmin() {
       return isAuthenticated() &&
         (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
           (request.auth.token.email == "prettyinpurple2021@gmail.com" && request.auth.token.email_verified == true));
     }
 
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
     function hasOnlyAllowedFields(fields) {
-      return request.resource.data.keys().hasOnly(fields);
+      return incoming().keys().hasOnly(fields);
     }
 
     function hasRequiredFields(fields) {
-      return request.resource.data.keys().hasAll(fields);
+      return incoming().keys().hasAll(fields);
     }
 
     function isValidString(field, minLen, maxLen) {
-      return request.resource.data[field] is string &&
-        request.resource.data[field].size() >= minLen &&
-        request.resource.data[field].size() <= maxLen;
+      return incoming()[field] is string &&
+        incoming()[field].size() >= minLen &&
+        incoming()[field].size() <= maxLen;
     }
 
     function isValidOptionalString(field, minLen, maxLen) {
-      return !(field in request.resource.data) ||
-             (request.resource.data[field] is string &&
-              request.resource.data[field].size() >= minLen &&
-              request.resource.data[field].size() <= maxLen);
+      return !(field in incoming()) ||
+             (incoming()[field] is string &&
+              incoming()[field].size() >= minLen &&
+              incoming()[field].size() <= maxLen);
     }
 
     function isValidList(field, maxSize) {
-      return request.resource.data[field] is list && request.resource.data[field].size() <= maxSize;
+      return incoming()[field] is list && incoming()[field].size() <= maxSize;
     }
 
     function isValidOptionalList(field, maxSize) {
-      return !(field in request.resource.data) ||
-             (request.resource.data[field] is list && request.resource.data[field].size() <= maxSize);
+      return !(field in incoming()) ||
+             (incoming()[field] is list && incoming()[field].size() <= maxSize);
     }
 
     function isTimestamp(field) {
-      return request.resource.data[field] is timestamp;
+      return incoming()[field] is timestamp;
     }
 
     function isOptionalTimestamp(field) {
-      return !(field in request.resource.data) || request.resource.data[field] is timestamp;
+      return !(field in incoming()) || incoming()[field] is timestamp;
     }
 
     function areImmutableFieldsUnchanged(fields) {
-      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+      return !incoming().diff(existing()).affectedKeys().hasAny(fields);
     }
 
     // ===============================================================
@@ -141,13 +153,13 @@ service cloud.firestore {
     // ===============================================================
 
     function isValidUser() {
-      let allowedFields = ['uid', 'email', 'displayName', 'photoURL', 'role', 'createdAt', 'info', 'topic', 'format', 'documentContent', 'transcript', 'updatedAt', 'webhookUrl', 'memory'];
+      let allowedFields = ['uid', 'email', 'displayName', 'photoURL', 'role', 'createdAt', 'info', 'topic', 'format', 'documentContent', 'transcript', 'updatedAt', 'webhookUrl', 'memory', 'isVerified'];
       return hasOnlyAllowedFields(allowedFields) &&
              isValidString('uid', 1, 100) &&
              isValidString('email', 3, 100) &&
              isValidOptionalString('displayName', 0, 100) &&
              isValidOptionalString('photoURL', 0, 500) &&
-             request.resource.data.role in ['user', 'admin'] &&
+             incoming().role in ['user', 'admin'] &&
              isOptionalTimestamp('createdAt') &&
              isValidOptionalString('info', 0, 5000) &&
              isValidOptionalString('topic', 0, 1000) &&
@@ -156,7 +168,8 @@ service cloud.firestore {
              isValidOptionalList('transcript', 10000) &&
              isOptionalTimestamp('updatedAt') &&
              isValidOptionalString('webhookUrl', 0, 1000) &&
-             isValidOptionalString('memory', 0, 100000);
+             isValidOptionalString('memory', 0, 100000) &&
+             (!( 'isVerified' in incoming() ) || incoming().isVerified is bool);
     }
 
     function isValidProject() {
@@ -170,9 +183,9 @@ service cloud.firestore {
              isValidList('transcript', 10000) &&
              isTimestamp('updatedAt') &&
              isOptionalTimestamp('createdAt') &&
-             (!( 'isPublic' in request.resource.data ) || request.resource.data.isPublic is bool) &&
+             (!( 'isPublic' in incoming() ) || incoming().isPublic is bool) &&
              isValidOptionalString('shareId', 0, 100) &&
-             (!( 'viewCount' in request.resource.data ) || request.resource.data.viewCount is int) &&
+             (!( 'viewCount' in incoming() ) || incoming().viewCount is int) &&
              isOptionalTimestamp('lastViewedAt');
     }
 
@@ -228,10 +241,10 @@ service cloud.firestore {
              isValidString('userId', 1, 100) &&
              isValidString('title', 1, 500) &&
              isValidOptionalString('description', 0, 5000) &&
-             request.resource.data.priority in ['low', 'medium', 'high'] &&
+             incoming().priority in ['low', 'medium', 'high'] &&
              isTimestamp('dueDate') &&
-             request.resource.data.completed is bool &&
-             (!( 'notified' in request.resource.data ) || request.resource.data.notified is bool) &&
+             incoming().completed is bool &&
+             (!( 'notified' in incoming() ) || incoming().notified is bool) &&
              isValidOptionalList('notifiedTimings', 10) &&
              isOptionalTimestamp('createdAt') &&
              isOptionalTimestamp('updatedAt');
@@ -247,13 +260,13 @@ service cloud.firestore {
       
       // Users can create their own profile. They cannot create an admin role unless they are already an admin.
       allow create: if isOwner(userId) && isValidUser() && 
-                    ((request.resource.data.role == 'user') || isAdmin());
+                    ((incoming().role == 'user') || isAdmin());
                     
       // Users can update their own profile. They cannot change their role unless they are an admin.
       // They cannot change their uid.
       allow update: if isOwner(userId) && isValidUser() && 
                     areImmutableFieldsUnchanged(['uid', 'createdAt']) &&
-                    ((!('role' in request.resource.data) || request.resource.data.role == resource.data.role) || isAdmin());
+                    ((!('role' in incoming()) || incoming().role == resource.data.role) || isAdmin());
                     
       allow delete: if isOwner(userId) || isAdmin();
 
@@ -261,7 +274,7 @@ service cloud.firestore {
         allow read: if isOwner(userId);
         
         // Ensure the userId inside the document matches the path userId
-        allow create: if isOwner(userId) && isValidProject() && request.resource.data.userId == userId;
+        allow create: if isOwner(userId) && isValidProject() && incoming().userId == userId;
         
         allow update: if isOwner(userId) && isValidProject() && 
                       areImmutableFieldsUnchanged(['id', 'userId', 'createdAt']);
@@ -276,7 +289,7 @@ service cloud.firestore {
 
         match /tasks/{taskId} {
           allow read: if isOwner(userId);
-          allow create: if isOwner(userId) && isValidTask() && request.resource.data.userId == userId && request.resource.data.projectId == projectId;
+          allow create: if isOwner(userId) && isValidTask() && incoming().userId == userId && incoming().projectId == projectId;
           allow update: if isOwner(userId) && isValidTask() && 
                         areImmutableFieldsUnchanged(['id', 'userId', 'projectId', 'createdAt']);
           allow delete: if isOwner(userId);
@@ -289,7 +302,7 @@ service cloud.firestore {
       allow read: if true;
       
       // Only authenticated users can create an interview, and they must set themselves as the owner
-      allow create: if isAuthenticated() && isValidInterview() && request.resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && isValidInterview() && incoming().userId == request.auth.uid;
       
       // Only the owner can update or delete
       allow update: if isAuthenticated() && resource.data.userId == request.auth.uid && isValidInterview() &&
@@ -313,7 +326,7 @@ service cloud.firestore {
       allow read: if true;
       // Allow public to increment viewCount and update lastViewedAt
       // OR allow owner to update everything
-      allow update: if (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount', 'lastViewedAt']) &&
+      allow update: if (incoming().diff(existing()).affectedKeys().hasOnly(['viewCount', 'lastViewedAt']) &&
                        (resource.data.userId == request.auth.uid || true)) || 
                        (isAuthenticated() && resource.data.userId == request.auth.uid && isValidProject());
     }

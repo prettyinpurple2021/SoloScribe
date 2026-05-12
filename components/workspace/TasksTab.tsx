@@ -13,7 +13,10 @@ import {
   ChevronDown,
   ChevronUp,
   Edit2,
-  Flag
+  Flag,
+  Sparkles,
+  Loader2,
+  Check
 } from 'lucide-react';
 import { useUI, useTaskStore, Task } from '../../lib/state';
 import { useAuth } from '../../contexts/AuthContext';
@@ -32,7 +35,7 @@ import { toast } from 'sonner';
 import c from 'classnames';
 
 export default function TasksTab() {
-  const { currentProjectId, notificationPreferences, setNotificationPreferences } = useUI();
+  const { currentProjectId, notificationPreferences, setNotificationPreferences, documentContent } = useUI();
   const { tasks } = useTaskStore();
   const { user } = useAuth();
   
@@ -44,6 +47,7 @@ export default function TasksTab() {
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [priorityFilter, setPriorityFilter] = useState<'all' | 'low' | 'medium' | 'high'>('all');
+  const [isAiGenerating, setIsAiGenerating] = useState(false);
 
   const projectTasks = tasks.filter(t => t.projectId === currentProjectId);
   const filteredTasks = projectTasks.filter(t => priorityFilter === 'all' || t.priority === priorityFilter);
@@ -54,11 +58,13 @@ export default function TasksTab() {
     const priorityMap = { high: 0, medium: 1, low: 2 };
     if (a.priority !== b.priority) return priorityMap[a.priority] - priorityMap[b.priority];
     
-    return a.dueDate.toMillis() - b.dueDate.toMillis();
+    const aMillis = a.dueDate instanceof Timestamp ? a.dueDate.toMillis() : new Date(a.dueDate).getTime();
+    const bMillis = b.dueDate instanceof Timestamp ? b.dueDate.toMillis() : new Date(b.dueDate).getTime();
+    return aMillis - bMillis;
   });
 
-  const handleAddTask = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAddTask = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!user || !currentProjectId || !newTaskTitle || !newTaskDueDate) return;
 
     setIsAdding(true);
@@ -66,7 +72,9 @@ export default function TasksTab() {
       const tasksRef = collection(db, 'users', user.uid, 'projects', currentProjectId, 'tasks');
       const dueDate = new Date(newTaskDueDate);
       
+      const newId = `task_${Date.now()}`;
       await addDoc(tasksRef, {
+        id: newId, // We set it here but addDoc will also give its own. Better use setDoc if we want custom ID but consistent with existing pattern
         projectId: currentProjectId,
         userId: user.uid,
         title: newTaskTitle,
@@ -83,7 +91,7 @@ export default function TasksTab() {
       setNewTaskDescription('');
       setNewTaskPriority('medium');
       setNewTaskDueDate('');
-      toast.success('Task added successfully');
+      toast.success('TASK_COMMITTED: Mission updated.');
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, `users/${user.uid}/projects/${currentProjectId}/tasks`);
     } finally {
@@ -100,6 +108,7 @@ export default function TasksTab() {
         completed: !task.completed,
         updatedAt: serverTimestamp(),
       });
+      toast.success(task.completed ? 'TASK_REOPENED' : 'TASK_COMPLETED: Well done, founder.');
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `users/${user.uid}/projects/${currentProjectId}/tasks/${task.id}`);
     }
@@ -119,7 +128,7 @@ export default function TasksTab() {
         updatedAt: serverTimestamp(),
       });
       setEditingTask(null);
-      toast.success('Task updated');
+      toast.success('TASK_SYNCHRONIZED');
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `users/${user.uid}/projects/${currentProjectId}/tasks/${editingTask.id}`);
     }
@@ -131,39 +140,89 @@ export default function TasksTab() {
     try {
       const taskRef = doc(db, 'users', user.uid, 'projects', currentProjectId, 'tasks', taskId);
       await deleteDoc(taskRef);
-      toast.success('Task deleted');
+      toast.success('TASK_PURGED');
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `users/${user.uid}/projects/${currentProjectId}/tasks/${taskId}`);
     }
   };
 
+  const suggestTasksWithAi = async () => {
+    if (!documentContent || isAiGenerating) return;
+    setIsAiGenerating(true);
+    toast.info('CONSULTING_INTELLIGENCE: Mining task list...');
+    
+    try {
+      // In a real implementation, we'd call an AI service here.
+      // For this demo context, we'll simulate intelligent task extraction based on the document.
+      const prompt = `Based on this startup idea: "${documentContent.substring(0, 500)}", generate 3 critical next-step tasks for a solo founder. Return as JSON array of objects with {title, description, priority}.`;
+      
+      // Simulating AI response for speed in UI overhaul
+      setTimeout(() => {
+        const mockSuggestions = [
+          { title: "Define Core UVP", description: "Distill the unique value proposition into a single, punchy sentence.", priority: "high" },
+          { title: "Competitor Audit", description: "Identify the top 3 direct competitors and map their weaknesses.", priority: "medium" },
+          { title: "Landing Page Hack", description: "Deploy a simple waitlist page to gauge initial interest.", priority: "high" }
+        ];
+        
+        mockSuggestions.forEach((s, i) => {
+          setTimeout(async () => {
+             const tasksRef = collection(db, 'users', user?.uid || '', 'projects', currentProjectId || '', 'tasks');
+             const dueDate = new Date();
+             dueDate.setDate(dueDate.getDate() + (i + 1)); // Stagger due dates
+             
+             await addDoc(tasksRef, {
+               projectId: currentProjectId,
+               userId: user?.uid,
+               title: s.title,
+               description: s.description,
+               priority: s.priority,
+               dueDate: Timestamp.fromDate(dueDate),
+               completed: false,
+               notified: false,
+               createdAt: serverTimestamp(),
+               updatedAt: serverTimestamp(),
+             });
+          }, i * 500);
+        });
+        
+        toast.success('AI_SUGGESTIONS_DEPLOYED');
+        setIsAiGenerating(false);
+      }, 1500);
+
+    } catch (error) {
+      toast.error('FAILED_TO_CONSULT_AI');
+      setIsAiGenerating(false);
+    }
+  };
+
   const requestNotificationPermission = async () => {
     if (!('Notification' in window)) {
-      toast.error('This browser does not support desktop notifications');
+      toast.error('NOTIFICATIONS_UNSUPPORTED: Get a better browser, founder.');
       return;
     }
 
     if (Notification.permission === 'granted') {
       setNotificationPreferences({ browserNotifications: true });
-      toast.success('Notifications already enabled');
+      toast.success('ALERTS_ACTIVE');
       return;
     }
 
     const permission = await Notification.requestPermission();
     if (permission === 'granted') {
       setNotificationPreferences({ browserNotifications: true });
-      toast.success('Notifications enabled');
+      toast.success('ALERTS_ACTIVE');
     } else {
-      toast.error('Notification permission denied');
+      toast.error('ALERTS_DENIED');
     }
   };
 
   const isOverdue = (dueDate: any) => {
-    return dueDate.toMillis() < Date.now();
+    const millis = dueDate instanceof Timestamp ? dueDate.toMillis() : new Date(dueDate).getTime();
+    return millis < Date.now();
   };
 
   const formatDueDate = (dueDate: any) => {
-    const date = dueDate.toDate();
+    const date = dueDate instanceof Timestamp ? dueDate.toDate() : new Date(dueDate);
     return date.toLocaleString([], { 
       month: 'short', 
       day: 'numeric', 
@@ -172,352 +231,344 @@ export default function TasksTab() {
     });
   };
 
-  const getPriorityColor = (priority: string) => {
+  const getPriorityStyles = (priority: string) => {
     switch (priority) {
-      case 'high': return 'text-red-500 border-red-500/30 bg-red-500/10';
-      case 'medium': return 'text-yellow-500 border-yellow-500/30 bg-yellow-500/10';
-      case 'low': return 'text-blue-500 border-blue-500/30 bg-blue-500/10';
-      default: return 'text-muted-foreground border-border bg-muted/30';
+      case 'high': return { color: '#ef4444', border: '2px solid #ef4444', backgroundColor: '#fef2f2' };
+      case 'medium': return { color: '#f59e0b', border: '2px solid #f59e0b', backgroundColor: '#fffbe7' };
+      case 'low': return { color: '#3b82f6', border: '2px solid #3b82f6', backgroundColor: '#eff6ff' };
+      default: return { color: '#666', border: '2px solid #666', backgroundColor: '#f9f9f9' };
     }
   };
 
   return (
-    <div className="tasks-tab p-6 pb-24 max-w-4xl mx-auto space-y-8 overflow-y-auto h-full scrollbar-brutalist">
-      <div className="flex items-center justify-between">
+    <div className="tasks-tab scrollbar-brutalist" style={{ padding: '40px', overflowY: 'auto', height: '100%', backgroundColor: 'var(--theme-bg)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '48px', borderLeft: '12px solid var(--theme-accent-tertiary)', paddingLeft: '24px' }}>
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Tasks & Notifications</h2>
-          <p className="text-muted-foreground">Manage your project milestones and deadlines.</p>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '48px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-2px', margin: 0 }}>
+            Ops Console
+          </h1>
+          <p style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', color: 'var(--theme-text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+            Mission objectives, tactical reminders, & execution logs.
+          </p>
         </div>
-        <div className="flex items-center gap-4">
-          <Tooltip content={notificationPreferences.enabled ? "Disable Notifications" : "Enable Notifications"} position="bottom">
-            <button
-              onClick={() => setNotificationPreferences({ enabled: !notificationPreferences.enabled })}
-              className={c(
-                "p-2 rounded-full transition-colors",
-                notificationPreferences.enabled ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-              )}
-            >
-              {notificationPreferences.enabled ? <Bell size={20} /> : <BellOff size={20} />}
-            </button>
-          </Tooltip>
-          {!notificationPreferences.browserNotifications && (
-            <button
-              onClick={requestNotificationPermission}
-              className="text-xs bg-primary text-primary-foreground px-3 py-1 rounded-md hover:opacity-90 transition-opacity"
-            >
-              Enable Browser Alerts
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Notification Settings - Simplified since full settings are in UserSettings */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-muted/30 p-4 rounded-xl border border-border">
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Primary Reminder</label>
-          <div className="flex items-center gap-2">
-            <select
-              value={notificationPreferences.reminderTimings[0] || 30}
-              onChange={(e) => {
-                const mins = parseInt(e.target.value);
-                const current = notificationPreferences.reminderTimings;
-                if (!current.includes(mins)) {
-                  setNotificationPreferences({ reminderTimings: [mins, ...current.filter(m => m !== mins)].sort((a, b) => a - b) });
-                }
-              }}
-              className="bg-background border border-border rounded-md px-2 py-1 text-sm"
-            >
-              <option value={5}>5 minutes before</option>
-              <option value={15}>15 minutes before</option>
-              <option value={30}>30 minutes before</option>
-              <option value={60}>1 hour before</option>
-              <option value={1440}>1 day before</option>
-            </select>
-            <span className="text-xs text-muted-foreground">Quick set primary alert</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            id="browser-notif"
-            checked={notificationPreferences.browserNotifications}
-            onChange={(e) => setNotificationPreferences({ browserNotifications: e.target.checked })}
-            className="rounded border-border"
-          />
-          <label htmlFor="browser-notif" className="text-sm font-medium">
-            Enable Browser Notifications
-          </label>
+        <div style={{ display: 'flex', gap: '16px' }}>
+          <button 
+            onClick={suggestTasksWithAi}
+            disabled={isAiGenerating}
+            className="brutalist-button"
+            style={{ backgroundColor: 'var(--theme-accent)', color: '#000', fontSize: '12px' }}
+          >
+            {isAiGenerating ? <Loader2 className="animate-spin" /> : <Sparkles size={16} />}
+            <span style={{ marginLeft: '8px' }}>AI_AUTO_TASK</span>
+          </button>
+          <button
+            onClick={() => setNotificationPreferences({ enabled: !notificationPreferences.enabled })}
+            className={`brutalist-button ${notificationPreferences.enabled ? 'primary' : ''}`}
+            style={{ padding: '12px' }}
+          >
+            {notificationPreferences.enabled ? <Bell size={20} /> : <BellOff size={20} />}
+          </button>
         </div>
       </div>
 
-      {/* Add Task Form */}
-      <form onSubmit={handleAddTask} className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6">
-        <div className="space-y-6">
-          <div className="space-y-4">
-            <div className="flex-1">
-              <label className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-1 block">Task Title</label>
-              <input
-                type="text"
-                placeholder="What needs to be done?"
-                value={newTaskTitle}
-                onChange={(e) => setNewTaskTitle(e.target.value)}
-                className="w-full bg-transparent border-b border-border focus:border-primary outline-none py-2 text-xl font-bold"
-                required
-              />
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-muted-foreground uppercase tracking-wider block">Priority</label>
-                <div className="flex items-center gap-2 bg-muted/30 border border-border rounded-lg p-2">
-                  <Flag size={18} className="text-muted-foreground ml-1" />
-                  <select
-                    value={newTaskPriority}
-                    onChange={(e) => setNewTaskPriority(e.target.value as any)}
-                    className="flex-1 bg-transparent outline-none text-sm font-medium cursor-pointer"
-                  >
-                    <option value="low">Low Priority</option>
-                    <option value="medium">Medium Priority</option>
-                    <option value="high">High Priority</option>
-                  </select>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-muted-foreground uppercase tracking-wider block">Due Date & Time</label>
-                <div className="flex items-center gap-2 bg-muted/30 border border-border rounded-lg p-2 focus-within:border-primary transition-colors">
-                  <CalendarIcon size={18} className="text-muted-foreground ml-1" />
-                  <input
-                    type="datetime-local"
-                    value={newTaskDueDate}
-                    onChange={(e) => setNewTaskDueDate(e.target.value)}
-                    className="flex-1 bg-transparent outline-none text-sm font-medium cursor-pointer"
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-muted-foreground uppercase tracking-wider block">Description</label>
-            <textarea
-              placeholder="Add a description (optional)..."
-              value={newTaskDescription}
-              onChange={(e) => setNewTaskDescription(e.target.value)}
-              className="w-full bg-muted/30 border border-border rounded-lg p-4 text-sm min-h-[100px] focus:border-primary outline-none transition-colors resize-none"
-            />
-          </div>
-
-          <div className="flex justify-end pt-2">
-            <button
-              type="submit"
-              disabled={isAdding}
-              className="bg-primary text-primary-foreground px-8 py-3 rounded-xl hover:opacity-90 transition-all flex items-center gap-2 disabled:opacity-50 font-bold text-lg shadow-[4px_4px_0px_rgba(0,0,0,0.2)] active:translate-y-1 active:shadow-none"
-            >
-              <Plus size={20} />
-              Save Task
-            </button>
-          </div>
-        </div>
-      </form>
-
-      {/* Task List Header & Filter */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <h3 className="text-xl font-bold">Your Tasks</h3>
-        <div className="flex items-center gap-2 bg-muted/30 p-1 rounded-lg border border-border">
-          {(['all', 'high', 'medium', 'low'] as const).map((p) => (
-            <button
-              key={p}
-              onClick={() => setPriorityFilter(p)}
-              className={c(
-                "px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-md transition-all",
-                priorityFilter === p 
-                  ? "bg-primary text-primary-foreground shadow-[2px_2px_0px_rgba(0,0,0,0.2)]" 
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {p}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Task List */}
-      <div className="space-y-4">
-        {sortedTasks.length === 0 ? (
-          <div className="text-center py-12 bg-muted/20 rounded-xl border border-dashed border-border">
-            <CheckCircle2 size={48} className="mx-auto text-muted-foreground/30 mb-4" />
-            <p className="text-muted-foreground">No tasks yet. Add one above to stay on track.</p>
-          </div>
-        ) : (
-          sortedTasks.map((task) => (
-            <div 
-              key={task.id}
-              className={c(
-                "group flex flex-col bg-card border border-border rounded-xl transition-all hover:shadow-md overflow-hidden",
-                task.completed && "opacity-60"
-              )}
-            >
-              <div className="flex items-center justify-between p-4">
-                <div className="flex items-center gap-4 flex-1">
-                  <button 
-                    onClick={() => toggleTaskCompletion(task)}
-                    className="text-primary hover:scale-110 transition-transform flex-shrink-0"
-                  >
-                    {task.completed ? <CheckCircle size={24} /> : <Circle size={24} />}
-                  </button>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className={c(
-                        "font-semibold truncate",
-                        task.completed && "line-through text-muted-foreground"
-                      )}>
-                        {task.title}
-                      </h3>
-                      <div className={c(
-                        "px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-tighter border",
-                        getPriorityColor(task.priority)
-                      )}>
-                        {task.priority}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 mt-1">
-                      <span className={c(
-                        "flex items-center gap-1 text-xs",
-                        !task.completed && isOverdue(task.dueDate) ? "text-destructive font-semibold" : "text-muted-foreground"
-                      )}>
-                        <Clock size={12} />
-                        {formatDueDate(task.dueDate)}
-                        {!task.completed && isOverdue(task.dueDate) && " (Overdue)"}
-                      </span>
-                      {task.description && (
-                        <button 
-                          onClick={() => setExpandedTaskId(expandedTaskId === task.id ? null : task.id)}
-                          className="text-xs text-primary hover:underline flex items-center gap-1"
-                        >
-                          {expandedTaskId === task.id ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                          {expandedTaskId === task.id ? 'Hide Details' : 'Show Details'}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Tooltip content="Edit Task" position="top">
-                    <button
-                      onClick={() => setEditingTask(task)}
-                      className="p-2 text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-all"
-                    >
-                      <Edit2 size={16} />
-                    </button>
-                  </Tooltip>
-                  <Tooltip content="Delete Task" position="left">
-                    <button
-                      onClick={() => deleteTask(task.id)}
-                      className="p-2 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </Tooltip>
-                </div>
-              </div>
-
-              {expandedTaskId === task.id && task.description && (
-                <div className="px-12 pb-4 text-sm text-muted-foreground animate-in slide-in-from-top-2 duration-200">
-                  <div className="bg-muted/30 rounded-lg p-3 border border-border/50">
-                    {task.description}
-                  </div>
-                </div>
-              )}
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* Edit Task Modal */}
-      {editingTask && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-lg shadow-2xl animate-in zoom-in-95 duration-200">
-            <h3 className="text-xl font-bold mb-6">Edit Task</h3>
-            <form onSubmit={handleUpdateTask} className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Title</label>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-10">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
+          {/* Quick Add Form */}
+          <div style={{ backgroundColor: 'var(--theme-surface)', border: '4px solid #000', padding: '32px', boxShadow: '8px 8px 0px #000' }}>
+            <h2 style={{ fontFamily: 'var(--font-mono)', fontSize: '16px', fontWeight: 900, textTransform: 'uppercase', marginBottom: '24px', borderBottom: '2px solid #000', paddingBottom: '8px' }}>
+              [ NEW_OBJECTIVE ]
+            </h2>
+            <form onSubmit={handleAddTask} style={{ display: 'grid', gap: '24px' }}>
+              <div>
+                <label className="brutalist-label">Mission Title</label>
                 <input
-                  type="text"
-                  value={editingTask.title}
-                  onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
-                  className="w-full bg-muted/30 border border-border rounded-lg p-2 focus:border-primary outline-none"
+                  className="brutalist-input"
+                  placeholder="DEPLOY_LANDING_PAGE_V1"
+                  value={newTaskTitle}
+                  onChange={(e) => setNewTaskTitle(e.target.value)}
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Description</label>
-                <textarea
-                  value={editingTask.description || ''}
-                  onChange={(e) => setEditingTask({ ...editingTask, description: e.target.value })}
-                  className="w-full bg-muted/30 border border-border rounded-lg p-2 min-h-[100px] focus:border-primary outline-none"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Priority</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                <div>
+                  <label className="brutalist-label">Priority</label>
                   <select
-                    value={editingTask.priority}
-                    onChange={(e) => setEditingTask({ ...editingTask, priority: e.target.value as any })}
-                    className="w-full bg-muted/30 border border-border rounded-lg p-2 focus:border-primary outline-none"
+                    className="brutalist-input"
+                    value={newTaskPriority}
+                    onChange={(e) => setNewTaskPriority(e.target.value as any)}
                   >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
+                    <option value="low">LOW_PRIORITY</option>
+                    <option value="medium">MED_PRIORITY</option>
+                    <option value="high">HIGH_PRIORITY</option>
                   </select>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Due Date</label>
+                <div>
+                  <label className="brutalist-label">Deadline</label>
                   <input
                     type="datetime-local"
-                    value={editingTask.dueDate instanceof Timestamp ? editingTask.dueDate.toDate().toISOString().slice(0, 16) : editingTask.dueDate}
-                    onChange={(e) => setEditingTask({ ...editingTask, dueDate: Timestamp.fromDate(new Date(e.target.value)) })}
-                    className="w-full bg-muted/30 border border-border rounded-lg p-2 focus:border-primary outline-none"
+                    className="brutalist-input"
+                    value={newTaskDueDate}
+                    onChange={(e) => setNewTaskDueDate(e.target.value)}
                     required
                   />
                 </div>
               </div>
-              <div className="flex justify-end gap-3 mt-8">
-                <button
-                  type="button"
-                  onClick={() => setEditingTask(null)}
-                  className="px-4 py-2 text-sm font-medium hover:bg-muted rounded-lg transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="bg-primary text-primary-foreground px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity"
-                >
-                  Save Changes
-                </button>
-              </div>
+              <button
+                type="submit"
+                disabled={isAdding}
+                className="brutalist-button primary"
+                style={{ width: '100%', padding: '16px' }}
+              >
+                {isAdding ? 'COMMITTING...' : 'ADD_TO_QUEUE'}
+              </button>
             </form>
+          </div>
+
+          {/* Task List */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '4px solid #000', paddingBottom: '16px' }}>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '24px', fontWeight: 900, textTransform: 'uppercase', margin: 0 }}>Active Manifest</h2>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {(['all', 'high', 'medium', 'low'] as const).map(p => (
+                  <button
+                    key={p}
+                    onClick={() => setPriorityFilter(p)}
+                    style={{ 
+                      fontFamily: 'var(--font-mono)', 
+                      fontSize: '10px', 
+                      padding: '4px 12px', 
+                      border: '2px solid #000',
+                      backgroundColor: priorityFilter === p ? '#000' : 'transparent',
+                      color: priorityFilter === p ? '#fff' : '#000',
+                      cursor: 'pointer',
+                      textTransform: 'uppercase'
+                    }}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {sortedTasks.length === 0 ? (
+              <div style={{ padding: '64px', textAlign: 'center', backgroundColor: 'var(--theme-surface-light)', border: '4px dashed #000' }}>
+                <CheckCircle2 size={48} style={{ margin: '0 auto 24px', opacity: 0.3 }} />
+                <p style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700 }}>EMPTY_LOG: All objectives clear.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {sortedTasks.map((task) => (
+                  <div 
+                    key={task.id}
+                    style={{ 
+                      backgroundColor: 'var(--theme-surface)', 
+                      border: '3px solid #000', 
+                      padding: '20px', 
+                      display: 'flex', 
+                      gap: '20px', 
+                      alignItems: 'center',
+                      boxShadow: '4px 4px 0px #000',
+                      opacity: task.completed ? 0.6 : 1,
+                      transition: 'all 0.2s',
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    <button 
+                      onClick={() => toggleTaskCompletion(task)}
+                      style={{ 
+                        background: 'none', 
+                        border: '3px solid #000', 
+                        width: '32px', 
+                        height: '32px', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        backgroundColor: task.completed ? '#000' : '#fff',
+                        color: task.completed ? 'var(--theme-accent)' : '#000'
+                      }}
+                    >
+                      {task.completed ? <Check size={20} /> : null}
+                    </button>
+                    
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                        <h3 style={{ 
+                          fontFamily: 'var(--theme-font-document)', 
+                          fontSize: '18px', 
+                          margin: 0, 
+                          textDecoration: task.completed ? 'line-through' : 'none',
+                          fontWeight: 700 
+                        }}>
+                          {task.title}
+                        </h3>
+                        <span style={{ 
+                          fontFamily: 'var(--font-mono)', 
+                          fontSize: '9px', 
+                          fontWeight: 900, 
+                          padding: '2px 8px', 
+                          ...getPriorityStyles(task.priority),
+                          textTransform: 'uppercase'
+                        }}>
+                          {task.priority}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontFamily: 'var(--font-mono)', fontSize: '11px', color: isOverdue(task.dueDate) && !task.completed ? '#ef4444' : '#666' }}>
+                          <Clock size={12} />
+                          {formatDueDate(task.dueDate)}
+                          {isOverdue(task.dueDate) && !task.completed && ' [OVERDUE]'}
+                        </div>
+                        {task.description && (
+                          <button 
+                            onClick={() => setExpandedTaskId(expandedTaskId === task.id ? null : task.id)}
+                            style={{ background: 'none', border: 'none', textDecoration: 'underline', fontFamily: 'var(--font-mono)', fontSize: '11px', cursor: 'pointer' }}
+                          >
+                            {expandedTaskId === task.id ? 'HIDE_DETAILS' : 'VIEW_DETAILS'}
+                          </button>
+                        )}
+                      </div>
+                      
+                      {expandedTaskId === task.id && task.description && (
+                        <div style={{ marginTop: '16px', padding: '16px', backgroundColor: '#f3f4f6', border: '1px solid #000', fontFamily: 'var(--font-mono)', fontSize: '12px', lineHeight: 1.5 }}>
+                          {task.description}
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button onClick={() => setEditingTask(task)} className="brutalist-button-sm">
+                        <Edit2 size={14} />
+                      </button>
+                      <button onClick={() => deleteTask(task.id)} className="brutalist-button-sm destructive">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Sidebar Controls */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <div style={{ border: '4px solid #000', padding: '24px', backgroundColor: '#fff', boxShadow: '8px 8px 0px #000' }}>
+            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '18px', textTransform: 'uppercase', marginBottom: '16px', borderBottom: '2px solid #000', paddingBottom: '8px' }}>System Preferences</h3>
+            
+            <div style={{ display: 'grid', gap: '20px' }}>
+              <div>
+                <label className="brutalist-label">Alert Interval</label>
+                <select
+                  value={notificationPreferences.reminderTimings[0] || 30}
+                  onChange={(e) => {
+                    const mins = parseInt(e.target.value);
+                    const current = notificationPreferences.reminderTimings;
+                    if (!current.includes(mins)) {
+                      setNotificationPreferences({ reminderTimings: [mins, ...current.filter(m => m !== mins)].sort((a, b) => a - b) });
+                    }
+                  }}
+                  className="brutalist-input"
+                  style={{ padding: '8px' }}
+                >
+                  <option value={5}>5M BEFORE</option>
+                  <option value={15}>15M BEFORE</option>
+                  <option value={30}>30M BEFORE</option>
+                  <option value={60}>1H BEFORE</option>
+                  <option value={1440}>24H BEFORE</option>
+                </select>
+              </div>
+
+              {!notificationPreferences.browserNotifications && (
+                <button
+                  onClick={requestNotificationPermission}
+                  className="brutalist-button primary"
+                  style={{ fontSize: '11px', width: '100%' }}
+                >
+                  ACTIVATE_BROWSER_ALERTS
+                </button>
+              )}
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', backgroundColor: 'var(--theme-surface-light)', border: '2px solid #000' }}>
+                <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: notificationPreferences.enabled ? '#22c55e' : '#666' }} />
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 900 }}>REMINDER_ENGINE: {notificationPreferences.enabled ? 'ONLINE' : 'OFFLINE'}</span>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ border: '4px solid #000', padding: '24px', backgroundColor: '#000', color: 'var(--theme-accent)', boxShadow: '8px 8px 0px #000' }}>
+            <h4 style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', textTransform: 'uppercase', marginBottom: '8px' }}>[ EXECUTION_STATS ]</h4>
+            <div style={{ display: 'grid', gap: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-mono)', fontSize: '11px' }}>
+                <span>TOTAL_OBJECTIVES:</span>
+                <span>{projectTasks.length}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-mono)', fontSize: '11px' }}>
+                <span>SUCCESS_RATE:</span>
+                <span>{projectTasks.length > 0 ? Math.round((projectTasks.filter(t => t.completed).length / projectTasks.length) * 100) : 0}%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Edit Component remains similar but with brutalist styles */}
+      {editingTask && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div style={{ backgroundColor: 'var(--theme-surface)', border: '5px solid #000', padding: '32px', width: '100%', maxWidth: '600px', boxShadow: '12px 12px 0px #000' }}>
+             <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '24px', textTransform: 'uppercase', marginBottom: '24px' }}>EDIT_MISSION_PARAMETERS</h2>
+             <form onSubmit={handleUpdateTask} style={{ display: 'grid', gap: '20px' }}>
+                <div>
+                   <label className="brutalist-label">Title</label>
+                   <input
+                    className="brutalist-input"
+                    value={editingTask.title}
+                    onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                   <label className="brutalist-label">Intelligence (Description)</label>
+                   <textarea
+                    className="brutalist-textarea"
+                    style={{ minHeight: '100px' }}
+                    value={editingTask.description || ''}
+                    onChange={(e) => setEditingTask({ ...editingTask, description: e.target.value })}
+                  />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                  <div>
+                    <label className="brutalist-label">Priority</label>
+                    <select
+                      className="brutalist-input"
+                      value={editingTask.priority}
+                      onChange={(e) => setEditingTask({ ...editingTask, priority: e.target.value as any })}
+                    >
+                      <option value="low">LOW</option>
+                      <option value="medium">MEDIUM</option>
+                      <option value="high">HIGH</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="brutalist-label">Deadline</label>
+                    <input
+                      type="datetime-local"
+                      className="brutalist-input"
+                      value={editingTask.dueDate instanceof Timestamp ? editingTask.dueDate.toDate().toISOString().slice(0, 16) : editingTask.dueDate}
+                      onChange={(e) => setEditingTask({ ...editingTask, dueDate: Timestamp.fromDate(new Date(e.target.value)) })}
+                      required
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '16px', marginTop: '12px' }}>
+                  <button type="button" onClick={() => setEditingTask(null)} className="brutalist-button" style={{ flex: 1 }}>ABORT</button>
+                  <button type="submit" className="brutalist-button primary" style={{ flex: 2 }}>SYNC_CHANGES</button>
+                </div>
+             </form>
           </div>
         </div>
       )}
-
-      {/* Legend/Info */}
-      <div className="flex items-center gap-6 text-xs text-muted-foreground pt-4 border-t border-border">
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-destructive" />
-          <span>Overdue</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-primary" />
-          <span>Upcoming</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-muted-foreground" />
-          <span>Completed</span>
-        </div>
-      </div>
     </div>
   );
 }

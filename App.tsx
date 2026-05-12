@@ -36,7 +36,7 @@ import { themes } from './lib/themes';
 import FloatingAvatar from './components/FloatingAvatar';
 import HelpModal from './components/HelpModal';
 import LegalDisclaimer from './components/LegalDisclaimer';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { useAuth } from './contexts/AuthContext';
 import { PublicInterview } from './components/PublicInterview';
 import { Toaster } from 'sonner';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -55,7 +55,7 @@ const getApiKey = () => {
   return undefined;
 };
 
-import { BrowserRouter as Router, Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
+import { Routes, Route, useSearchParams } from 'react-router-dom';
 import { PublicProjectView } from './components/workspace/PublicProjectView';
 import { AppError } from './components/AppError';
 
@@ -208,11 +208,7 @@ function App() {
   console.log('App rendered');
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <Router>
-          <AppRoutes />
-        </Router>
-      </AuthProvider>
+      <AppRoutes />
     </ErrorBoundary>
   );
 }

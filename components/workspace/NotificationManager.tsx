@@ -48,23 +48,23 @@ export function NotificationManager() {
   useEffect(() => {
     if (!notificationPreferences.enabled || tasks.length === 0) return;
 
-    const checkNotifications = () => {
+    const checkNotifications = async () => {
       const now = Date.now();
       
-      tasks.forEach(async (task) => {
-        if (task.completed) return;
+      for (const task of tasks) {
+        if (task.completed) continue;
 
         const dueDateMs = task.dueDate.toMillis();
         const timeUntilDue = dueDateMs - now;
 
         // Check each reminder timing
-        notificationPreferences.reminderTimings.forEach(async (minutes) => {
+        for (const minutes of notificationPreferences.reminderTimings) {
           const reminderMs = minutes * 60 * 1000;
           const notificationKey = `${task.id}_${minutes}`;
 
           // Check session cache OR firestore record
-          if (notifiedTasksRef.current.has(notificationKey)) return;
-          if (task.notifiedTimings?.includes(minutes)) return;
+          if (notifiedTasksRef.current.has(notificationKey)) continue;
+          if (task.notifiedTimings?.includes(minutes)) continue;
 
           // If task is due within the reminder window
           if (timeUntilDue <= reminderMs && timeUntilDue > reminderMs - 60000) {
@@ -99,12 +99,12 @@ export function NotificationManager() {
               }
             }
           }
-        });
+        }
 
         // Special check for overdue or exactly due (0m)
         if (timeUntilDue <= 0 && !task.notified) {
           const notificationKey = `${task.id}_due`;
-          if (notifiedTasksRef.current.has(notificationKey)) return;
+          if (notifiedTasksRef.current.has(notificationKey)) continue;
           
           notifiedTasksRef.current.add(notificationKey);
           const message = `Task Overdue: ${task.title}`;
@@ -134,7 +134,7 @@ export function NotificationManager() {
             }
           }
         }
-      });
+      }
     };
 
     // Check every 30 seconds

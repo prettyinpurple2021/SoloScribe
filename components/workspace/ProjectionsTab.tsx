@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useUI } from '../../lib/state';
 import { thinkDeeply } from '../../lib/ai-tools';
 import { 
@@ -14,11 +14,11 @@ import {
   ArrowDownRight,
   Info,
   AlertCircle,
-  TrendingDown,
   RefreshCcw,
   Sparkles,
-  AlertTriangle,
-  ChevronRight
+  Download,
+  FileDown,
+  Printer
 } from 'lucide-react';
 import { 
   LineChart, 
@@ -32,19 +32,20 @@ import {
   AreaChart, 
   Area, 
   BarChart, 
-  Bar, 
-  Cell,
-  PieChart,
-  Pie
+  Bar
 } from 'recharts';
 import { toast } from 'sonner';
 import { Tooltip as AppTooltip } from '../Tooltip';
+import { toPng } from 'html-to-image';
+import { jsPDF } from 'jspdf';
 
 export const ProjectionsTab: React.FC = () => {
   const { documentContent } = useUI();
   const [isLoading, setIsLoading] = useState(false);
   const [scenario, setScenario] = useState<'conservative' | 'moderate' | 'aggressive'>('moderate');
   const [activeWhatIf, setActiveWhatIf] = useState<string | null>(null);
+  const reportRef = useRef<HTMLDivElement>(null);
+
   const [projectionData, setProjectionData] = useState<{
     timeline: any[];
     cac: number;
@@ -61,13 +62,31 @@ export const ProjectionsTab: React.FC = () => {
 
   const [params, setParams] = useState({
     initialUsers: 100,
-    monthlyGrowthRate: 15, // percentage
-    churnRate: 5, // percentage
-    arpu: 20, // Average Revenue Per User
-    cac: 50, // Customer Acquisition Cost
-    fixedCosts: 5000, // Monthly fixed costs
+    monthlyGrowthRate: 15,
+    churnRate: 5,
+    arpu: 20,
+    cac: 50,
+    fixedCosts: 5000,
     months: 24
   });
+
+  const handleExportPDF = async () => {
+    if (!reportRef.current) return;
+    const toastId = toast.loading('Generating Financial Report...');
+    try {
+      const dataUrl = await toPng(reportRef.current, { quality: 0.95, backgroundColor: '#0a0a0a' });
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgProps = pdf.getImageProperties(dataUrl);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Full_Projections_Report_${new Date().getTime()}.pdf`);
+      toast.success('Report downloaded!', { id: toastId });
+    } catch (error) {
+      console.error(error);
+      toast.error('Export failed.', { id: toastId });
+    }
+  };
 
   const scenarios = {
     conservative: { growth: 0.5, churn: 1.5, cac: 1.5 },
@@ -93,9 +112,9 @@ export const ProjectionsTab: React.FC = () => {
       let adjustedArpu = params.arpu;
 
       if (isStressTest) {
-        adjustedGrowth *= 0.3; // 70% drop in growth
-        adjustedChurn *= 2.5; // 150% spike in churn
-        adjustedCac *= 2.0; // Double CAC
+        adjustedGrowth *= 0.3;
+        adjustedChurn *= 2.5;
+        adjustedCac *= 2.0;
       } else if (activeWhatIf) {
         const whatIf = whatIfScenarios.find(w => w.id === activeWhatIf);
         if (whatIf) {
@@ -107,14 +126,10 @@ export const ProjectionsTab: React.FC = () => {
         }
       }
 
-      const prompt = `Analyze this startup plan for a ${isStressTest ? 'WORST CASE STRESS TEST' : scenario + (activeWhatIf ? ' with ' + activeWhatIf : '')} scenario:\n\n${documentContent}\n\nParameters:
-      - Growth: ${adjustedGrowth.toFixed(1)}%
-      - Churn: ${adjustedChurn.toFixed(1)}%
-      - ARPU: $${adjustedArpu}
-      - CAC: $${adjustedCac.toFixed(1)}
-      - Fixed Costs: $${adjustedFixedCosts}
-      
-      Provide a concise financial health assessment (max 150 words). Focus on ${isStressTest ? 'survival and contingency planning' : 'unit economics and scalability'}.`;
+      const prompt = `Analyze this startup plan for a ${isStressTest ? 'WORST CASE STRESS TEST' : scenario + (activeWhatIf ? ' with ' + activeWhatIf : '')} scenario.
+      Document: ${documentContent.slice(0, 5000)}
+      Growth: ${adjustedGrowth.toFixed(1)}% | Churn: ${adjustedChurn.toFixed(1)}% | ARPU: $${adjustedArpu} | CAC: $${adjustedCac.toFixed(1)} | Fixed Costs: $${adjustedFixedCosts}
+      Provide a concise 3-5 point strategic assessment. Use terminal-style language.`;
       
       const summary = await thinkDeeply(prompt);
 
@@ -145,9 +160,7 @@ export const ProjectionsTab: React.FC = () => {
 
       const ltv = adjustedArpu / (adjustedChurn / 100);
       const paybackPeriod = adjustedCac / (adjustedArpu * (1 - adjustedChurn / 100));
-
       const lastMonth = timeline[timeline.length - 1];
-      const lastNetProfit = lastMonth.profit;
 
       setProjectionData({
         timeline,
@@ -158,218 +171,133 @@ export const ProjectionsTab: React.FC = () => {
         summary,
         metrics: {
           paybackPeriod,
-          runway: lastNetProfit < 0 ? Math.abs(100000 / lastNetProfit) : Infinity,
-          burnRate: Math.max(0, -lastNetProfit)
+          runway: lastMonth.profit < 0 ? Math.abs(100000 / lastMonth.profit) : Infinity,
+          burnRate: Math.max(0, -lastMonth.profit)
         }
       });
-      toast.success(isStressTest ? 'Runway Stress Test Complete!' : `${scenario.charAt(0).toUpperCase() + scenario.slice(1)} projections generated!`);
+      toast.success('Simulation Successful');
     } catch (error) {
       console.error(error);
-      toast.error('Failed to generate projections.');
+      toast.error('Simulation Failed');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const COLORS = ['#00f3ff', '#ff00ff', '#00ff00', '#ffff00'];
-
   return (
-    <div className="projections-tab" style={{ 
-      padding: '24px 24px 100px 24px', 
-      overflowY: 'auto', 
-      height: '100%',
-      backgroundColor: '#0a0a0a',
-      color: '#fff'
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+    <div className="projections-tab p-6 pb-40 overflow-y-auto h-full bg-[#0a0a0a] text-white scrollbar-hidden">
+      <div className="flex justify-between items-center mb-8">
         <div>
-          <h2 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--theme-accent)' }}>Advanced Growth Engine</h2>
-          <p style={{ opacity: 0.6, fontSize: '14px' }}>Simulate market scenarios and visualize your startup's trajectory.</p>
+          <h2 className="text-3xl font-display uppercase tracking-widest text-theme-accent">Growth_Orchestrator</h2>
+          <p className="font-mono text-xs opacity-50 uppercase mt-1">Multi-scenario financial modeling & unit economics.</p>
         </div>
-        <div style={{ display: 'flex', gap: '8px', backgroundColor: 'rgba(255,255,255,0.05)', padding: '4px', borderRadius: '8px' }}>
-          {(['conservative', 'moderate', 'aggressive'] as const).map((s) => (
-            <AppTooltip key={s} content={`${s.charAt(0).toUpperCase() + s.slice(1)} Growth Scenario`} position="bottom">
+        <div className="flex gap-4 items-center">
+          <div className="flex gap-1 bg-white/5 p-1 border border-white/10">
+            {(['conservative', 'moderate', 'aggressive'] as const).map((s) => (
               <button
+                key={s}
                 onClick={() => setScenario(s)}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  textTransform: 'capitalize',
-                  backgroundColor: scenario === s ? 'var(--theme-accent)' : 'transparent',
-                  color: scenario === s ? '#000' : '#fff',
-                  border: 'none',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
+                className={`px-4 py-1.5 font-mono text-[9px] uppercase font-bold transition-all ${scenario === s ? 'bg-theme-accent text-black' : 'text-white/50 hover:text-white'}`}
               >
                 {s}
               </button>
-            </AppTooltip>
-          ))}
+            ))}
+          </div>
+          {projectionData && (
+            <button 
+              onClick={handleExportPDF}
+              className="p-2 border-2 border-theme-accent text-theme-accent hover:bg-theme-accent hover:text-black transition-colors"
+            >
+              <FileDown size={20} />
+            </button>
+          )}
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '24px', marginBottom: '32px' }}>
-        <div style={{ 
-          backgroundColor: 'rgba(255,255,255,0.03)', 
-          padding: '24px', 
-          borderRadius: '16px', 
-          border: '1px solid rgba(255,255,255,0.1)',
-          height: 'fit-content'
-        }}>
-          <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Zap size={18} className="text-theme-accent" /> Model Parameters
-          </h3>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {[
-              { label: 'Initial Users', key: 'initialUsers', icon: <Users size={14} /> },
-              { label: 'Growth Rate (%)', key: 'monthlyGrowthRate', icon: <TrendingUp size={14} /> },
-              { label: 'Churn Rate (%)', key: 'churnRate', icon: <ArrowDownRight size={14} /> },
-              { label: 'ARPU ($)', key: 'arpu', icon: <DollarSign size={14} /> },
-              { label: 'CAC ($)', key: 'cac', icon: <ArrowUpRight size={14} /> },
-              { label: 'Fixed Costs ($)', key: 'fixedCosts', icon: <Info size={14} /> },
-              { label: 'Months', key: 'months', icon: <LineChartIcon size={14} /> },
-            ].map((field) => (
-              <div key={field.key}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', opacity: 0.5, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  {field.icon} {field.label}
-                </label>
-                <input 
-                  type="number" 
-                  value={(params as any)[field.key]} 
-                  onChange={e => setParams({...params, [field.key]: Number(e.target.value)})} 
-                  style={{ 
-                    width: '100%', 
-                    padding: '10px', 
-                    borderRadius: '8px', 
-                    backgroundColor: 'rgba(255,255,255,0.05)', 
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    color: '#fff',
-                    fontSize: '14px'
-                  }} 
-                />
-              </div>
-            ))}
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8" ref={reportRef}>
+        <div className="lg:col-span-4 space-y-8 no-export">
+          <div className="bg-white/5 border border-white/10 p-6 shadow-[4px_4px_0px_rgba(255,255,255,0.05)]">
+            <h3 className="font-display uppercase mb-6 flex items-center gap-2 border-b border-white/10 pb-2">
+              <Zap size={16} className="text-theme-accent" /> Control_Parameters
+            </h3>
+            
+            <div className="space-y-4">
+              {[
+                { label: 'Initial Users', key: 'initialUsers' },
+                { label: 'Growth % (MoM)', key: 'monthlyGrowthRate' },
+                { label: 'Churn %', key: 'churnRate' },
+                { label: 'Avg MRR / User', key: 'arpu' },
+                { label: 'CAC ($)', key: 'cac' },
+                { label: 'OPEX / Month', key: 'fixedCosts' },
+              ].map((f) => (
+                <div key={f.key}>
+                  <label className="block text-[9px] uppercase font-mono opacity-50 mb-1">{f.label}</label>
+                  <input 
+                    type="number" 
+                    value={(params as any)[f.key]} 
+                    onChange={e => setParams({...params, [f.key]: Number(e.target.value)})} 
+                    className="w-full bg-black border border-white/10 p-2 font-mono text-sm text-theme-accent focus:border-theme-accent focus:outline-none"
+                  />
+                </div>
+              ))}
+            </div>
 
-          <AppTooltip content="Run Financial Simulation" position="top">
             <button
               onClick={() => handleGenerateProjections(false)}
               disabled={isLoading || !documentContent.trim()}
-              style={{ 
-                marginTop: '24px', 
-                width: '100%', 
-                padding: '14px', 
-                borderRadius: '12px', 
-                backgroundColor: 'var(--theme-accent)', 
-                color: '#000', 
-                fontWeight: 700,
-                border: 'none', 
-                cursor: 'pointer', 
-                display: 'flex', 
-                justifyContent: 'center', 
-                alignItems: 'center', 
-                gap: '8px',
-                boxShadow: '0 4px 20px rgba(0, 243, 255, 0.3)'
-              }}
+              className="w-full mt-6 bg-theme-accent text-black p-4 font-display uppercase font-bold text-sm border-2 border-black hover:bg-white transition-all shadow-[4px_4px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
             >
-              {isLoading ? <Loader2 size={18} className="animate-spin" /> : <BarChart3 size={18} />}
-              {isLoading ? 'Processing...' : 'Run Simulation'}
+              {isLoading ? <Loader2 size={18} className="animate-spin mx-auto" /> : 'Run_Simulation'}
             </button>
-          </AppTooltip>
+          </div>
 
-          <div style={{ marginTop: '32px' }}>
-            <h3 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '16px', color: 'rgba(255,255,255,0.7)' }}>
-              "What-If" Scenarios
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div className="bg-white/5 border border-white/10 p-6">
+            <h3 className="font-mono text-[10px] uppercase opacity-50 mb-4 tracking-widest italic">Stress_Test_Protocols</h3>
+            <div className="space-y-2">
               {whatIfScenarios.map((w) => (
                 <button
                   key={w.id}
                   onClick={() => setActiveWhatIf(activeWhatIf === w.id ? null : w.id)}
-                  style={{
-                    padding: '10px',
-                    borderRadius: '8px',
-                    fontSize: '11px',
-                    textAlign: 'left',
-                    backgroundColor: activeWhatIf === w.id ? 'rgba(0,243,255,0.1)' : 'rgba(255,255,255,0.03)',
-                    border: `1px solid ${activeWhatIf === w.id ? 'var(--theme-accent)' : 'rgba(255,255,255,0.1)'}`,
-                    color: activeWhatIf === w.id ? 'var(--theme-accent)' : '#fff',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
+                  className={`w-full p-3 text-left font-mono text-[10px] uppercase transition-all border ${activeWhatIf === w.id ? 'bg-theme-accent/20 border-theme-accent text-theme-accent' : 'bg-black/20 border-white/5 opacity-60 hover:opacity-100'}`}
                 >
-                  <div style={{ fontWeight: 700, marginBottom: '2px' }}>{w.label}</div>
-                  <div style={{ opacity: 0.5, fontSize: '10px' }}>{w.description}</div>
+                  <div className="font-bold">{w.label}</div>
+                  <div className="text-[8px] opacity-60">{w.description}</div>
                 </button>
               ))}
+              <button
+                onClick={() => handleGenerateProjections(true)}
+                disabled={isLoading}
+                className="w-full mt-4 p-3 font-mono text-[10px] uppercase font-bold text-red-500 border border-red-500/30 hover:bg-red-500/10 transition-colors"
+              >
+                Simulate_Total_Market_Crash
+              </button>
             </div>
           </div>
-
-          <button
-            onClick={() => handleGenerateProjections(true)}
-            disabled={isLoading || !documentContent.trim()}
-            style={{ 
-              marginTop: '24px', 
-              width: '100%', 
-              padding: '12px', 
-              borderRadius: '12px', 
-              backgroundColor: 'transparent', 
-              color: '#ff4444', 
-              fontWeight: 600,
-              border: '1px solid #ff4444', 
-              cursor: 'pointer', 
-              display: 'flex', 
-              justifyContent: 'center', 
-              alignItems: 'center', 
-              gap: '8px',
-              fontSize: '12px'
-            }}
-          >
-            <AlertCircle size={16} />
-            Runway Stress Test
-          </button>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div className="lg:col-span-8 space-y-8">
           {projectionData ? (
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
-                  { label: 'LTV:CAC', value: `${(projectionData.ltv / projectionData.cac).toFixed(1)}x`, sub: projectionData.ltv / projectionData.cac >= 3 ? 'Healthy' : 'Low', color: '#00f3ff' },
-                  { label: 'Final MRR', value: `$${projectionData.timeline[projectionData.timeline.length - 1].mrr.toLocaleString()}`, sub: 'Month 24', color: '#00ff00' },
-                  { label: 'Payback', value: `${projectionData.metrics.paybackPeriod.toFixed(1)}mo`, sub: 'Recovery', color: '#ff00ff' },
-                  { label: 'Burn Rate', value: `$${projectionData.metrics.burnRate.toLocaleString()}`, sub: 'Monthly', color: '#ff4444' }
+                  { label: 'Unit Efficiency', value: `${(projectionData.ltv / projectionData.cac).toFixed(1)}x`, sub: 'LTV:CAC', color: 'text-theme-accent' },
+                  { label: 'End Horizon MRR', value: `$${projectionData.timeline[projectionData.timeline.length - 1].mrr.toLocaleString()}`, sub: 'Month 24', color: 'text-green-400' },
+                  { label: 'CAC Recovery', value: `${projectionData.metrics.paybackPeriod.toFixed(1)}mo`, sub: 'Payback', color: 'text-purple-400' },
+                  { label: 'Cash Exhaustion', value: projectionData.metrics.runway === Infinity ? '∞' : `${Math.round(projectionData.metrics.runway)}mo`, sub: 'Est Runway', color: 'text-red-400' }
                 ].map((stat, i) => (
-                  <div key={i} style={{ 
-                    backgroundColor: 'rgba(255,255,255,0.03)', 
-                    padding: '20px', 
-                    borderRadius: '16px', 
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '4px'
-                  }}>
-                    <div style={{ fontSize: '10px', opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{stat.label}</div>
-                    <div style={{ fontSize: '24px', fontWeight: 700, color: stat.color }}>{stat.value}</div>
-                    <div style={{ fontSize: '11px', opacity: 0.4 }}>{stat.sub}</div>
+                  <div key={i} className="bg-white/5 border border-white/10 p-5 shadow-[4px_4px_0px_rgba(255,255,255,0.02)]">
+                    <div className="text-[8px] uppercase font-mono opacity-40 mb-1">{stat.label}</div>
+                    <div className={`text-2xl font-display uppercase tracking-tight ${stat.color}`}>{stat.value}</div>
+                    <div className="text-[9px] font-mono opacity-30 mt-1">{stat.sub}</div>
                   </div>
                 ))}
               </div>
 
-              <div style={{ 
-                backgroundColor: 'rgba(255,255,255,0.03)', 
-                padding: '24px', 
-                borderRadius: '16px', 
-                border: '1px solid rgba(255,255,255,0.1)' 
-              }}>
-                <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <TrendingUp size={18} className="text-theme-accent" /> Revenue & Profitability
+              <div className="bg-white/5 border border-white/10 p-6">
+                <h3 className="font-display uppercase text-sm mb-6 flex items-center gap-2">
+                  <TrendingUp size={16} className="text-theme-accent" /> Traction_Forecast_v2.1
                 </h3>
-                <div style={{ height: '300px', width: '100%' }}>
+                <div className="h-[300px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={projectionData.timeline}>
                       <defs>
@@ -377,90 +305,38 @@ export const ProjectionsTab: React.FC = () => {
                           <stop offset="5%" stopColor="#00f3ff" stopOpacity={0.3}/>
                           <stop offset="95%" stopColor="#00f3ff" stopOpacity={0}/>
                         </linearGradient>
-                        <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#00ff00" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#00ff00" stopOpacity={0}/>
-                        </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                      <XAxis dataKey="month" stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} />
-                      <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v/1000}k`} />
+                      <XAxis dataKey="month" stroke="rgba(255,255,255,0.2)" fontSize={10} axisLine={false} tickLine={false} />
+                      <YAxis stroke="rgba(255,255,255,0.2)" fontSize={10} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v/1000}k`} />
                       <RechartsTooltip 
-                        contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
-                        itemStyle={{ fontSize: '12px' }}
+                        contentStyle={{ backgroundColor: '#000', border: '2px solid var(--theme-accent)', borderRadius: '0' }}
+                        labelStyle={{ color: 'var(--theme-accent)', fontWeight: 'bold' }}
                       />
-                      <Area type="monotone" dataKey="mrr" stroke="#00f3ff" fillOpacity={1} fill="url(#colorMrr)" name="MRR" />
-                      <Area type="monotone" dataKey="profit" stroke="#00ff00" fillOpacity={1} fill="url(#colorProfit)" name="Net Profit" />
+                      <Area type="monotone" dataKey="mrr" stroke="#00f3ff" strokeWidth={3} fillOpacity={1} fill="url(#colorMrr)" name="MRR" />
+                      <Area type="monotone" dataKey="profit" stroke="#4ade80" strokeWidth={2} fill="transparent" name="Net Profit" />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
               </div>
+
+              <div className="bg-black border-2 border-theme-accent p-6 shadow-[8px_8px_0px_rgba(0,243,255,0.1)]">
+                <h3 className="font-display uppercase text-xs mb-4 flex items-center gap-2 text-theme-accent">
+                  <Sparkles size={14} /> AI_STRATEGIC_OVERLAY
+                </h3>
+                <div className="font-mono text-xs leading-relaxed text-theme-accent/80 whitespace-pre-wrap">
+                  {projectionData.summary}
+                </div>
+              </div>
             </>
           ) : (
-            <div style={{ 
-              flex: 1, 
-              display: 'flex', 
-              flexDirection: 'column', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              backgroundColor: 'rgba(255,255,255,0.02)',
-              borderRadius: '24px',
-              border: '2px dashed rgba(255,255,255,0.05)',
-              padding: '60px'
-            }}>
-              <LineChartIcon size={48} style={{ opacity: 0.1, marginBottom: '20px' }} />
-              <h3 style={{ opacity: 0.3 }}>Run a simulation to see projections</h3>
+            <div className="h-full flex flex-col items-center justify-center border-4 border-dashed border-white/5 rounded-3xl opacity-20">
+              <BarChart3 size={80} />
+              <p className="font-display text-xl uppercase mt-4 italic tracking-widest">Awaiting Simulation Data...</p>
             </div>
           )}
         </div>
       </div>
-
-      {projectionData && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-          <div style={{ 
-            backgroundColor: 'rgba(255,255,255,0.03)', 
-            padding: '24px', 
-            borderRadius: '16px', 
-            border: '1px solid rgba(255,255,255,0.1)' 
-          }}>
-            <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '20px' }}>User Acquisition</h3>
-            <div style={{ height: '250px', width: '100%' }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={projectionData.timeline.filter((_, i) => i % 3 === 0)}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                  <XAxis dataKey="month" stroke="rgba(255,255,255,0.3)" fontSize={10} />
-                  <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} />
-                  <RechartsTooltip 
-                    contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
-                  />
-                  <Bar dataKey="users" fill="#ff00ff" radius={[4, 4, 0, 0]} name="Active Users" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          <div style={{ 
-            backgroundColor: 'rgba(255,255,255,0.03)', 
-            padding: '24px', 
-            borderRadius: '16px', 
-            border: '1px solid rgba(255,255,255,0.1)' 
-          }}>
-            <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '20px' }}>AI Strategic Analysis</h3>
-            <div style={{ 
-              fontSize: '14px', 
-              lineHeight: '1.7', 
-              opacity: 0.8, 
-              backgroundColor: 'rgba(0,243,255,0.03)', 
-              padding: '20px', 
-              borderRadius: '12px',
-              borderLeft: '4px solid var(--theme-accent)',
-              fontStyle: 'italic'
-            }}>
-              {projectionData.summary}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

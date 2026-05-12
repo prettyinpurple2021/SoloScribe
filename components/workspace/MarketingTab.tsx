@@ -17,6 +17,7 @@ import { thinkDeeply } from '../../lib/ai-tools';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
 import c from 'classnames';
+import { MarkdownRenderer } from '../MarkdownRenderer';
 
 interface MarketingAsset {
   id: string;
@@ -109,70 +110,75 @@ export default function MarketingTab() {
   };
 
   return (
-    <div className="marketing-tab p-6 max-w-5xl mx-auto space-y-8 pb-32 overflow-y-auto h-full scrollbar-brutalist">
-      <header>
-        <div className="flex items-center gap-3 mb-2">
-          <div className="p-2 bg-primary/10 rounded-lg text-primary">
-            <Megaphone size={24} />
-          </div>
-          <h2 className="text-2xl font-bold tracking-tight">Marketing & Launch Kit</h2>
-        </div>
-        <p className="text-muted-foreground">Turn your business ideas into high-converting marketing assets instantly.</p>
-      </header>
+    <div className="marketing-tab scrollbar-brutalist" style={{ padding: '40px', overflowY: 'auto', height: '100%', backgroundColor: 'var(--theme-bg)' }}>
+      <div style={{ marginBottom: '48px', borderLeft: '8px solid var(--theme-accent-secondary)', paddingLeft: '24px' }}>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '48px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-2px', margin: 0 }}>
+          Growth Engine
+        </h1>
+        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', color: 'var(--theme-text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+          Viral generation suite & high-velocity launch kit.
+        </p>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '32px', marginBottom: '48px' }}>
         {ASSETS.map((asset) => (
           <div 
             key={asset.id}
-            className="flex flex-col bg-card border border-border rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all"
+            style={{ 
+              backgroundColor: 'var(--theme-surface)', 
+              border: '4px solid #000', 
+              boxShadow: '8px 8px 0px #000',
+              display: 'flex',
+              flexDirection: 'column',
+              transition: 'all 0.2s',
+              position: 'relative'
+            }}
           >
-            <div className="p-6 border-b border-border bg-muted/20">
-              <div className="flex items-start justify-between mb-4">
-                <div className="p-2 bg-background rounded-lg border border-border text-primary">
+            <div style={{ padding: '24px', borderBottom: '2px solid #000', backgroundColor: 'var(--theme-surface-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                <div style={{ padding: '12px', background: '#000', color: 'var(--theme-accent)', border: '2px solid var(--theme-accent)' }}>
                   {asset.icon}
                 </div>
-                <button
-                  onClick={() => handleGenerate(asset)}
-                  disabled={!!isGenerating}
-                  className={c(
-                    "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all",
-                    isGenerating === asset.id 
-                      ? "bg-muted text-muted-foreground cursor-not-allowed"
-                      : "bg-primary text-primary-foreground hover:opacity-90 shadow-[3px_3px_0px_rgba(0,0,0,0.2)] active:translate-y-0.5 active:shadow-none"
-                  )}
-                >
-                  {isGenerating === asset.id ? (
-                    <Loader2 size={16} className="animate-spin" />
-                  ) : (
-                    <Sparkles size={16} />
-                  )}
-                  {isGenerating === asset.id ? 'Generating...' : 'Generate'}
-                </button>
+                <div>
+                  <h3 style={{ fontFamily: 'var(--font-display)', textTransform: 'uppercase', fontSize: '18px', margin: 0 }}>{asset.title}</h3>
+                  <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', margin: 0, opacity: 0.6 }}>{asset.description}</p>
+                </div>
               </div>
-              <h3 className="text-lg font-bold mb-1">{asset.title}</h3>
-              <p className="text-sm text-muted-foreground">{asset.description}</p>
+              <button
+                onClick={() => handleGenerate(asset)}
+                disabled={!!isGenerating}
+                className={`brutalist-button ${isGenerating === asset.id ? '' : 'primary'}`}
+                style={{ padding: '8px 16px', fontSize: '11px' }}
+              >
+                {isGenerating === asset.id ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Sparkles size={14} />
+                )}
+                <span style={{ marginLeft: '8px' }}>{isGenerating === asset.id ? 'COOKING...' : 'GENERATE'}</span>
+              </button>
             </div>
 
-            <div className="flex-1 p-6 bg-background/50 relative min-h-[200px]">
+            <div style={{ flex: 1, padding: '24px', backgroundColor: '#fff', position: 'relative', minHeight: '250px', maxHeight: '400px', overflowY: 'auto' }} className="scrollbar-brutalist">
               <AnimatePresence mode="wait">
                 {generatedContent[asset.id] ? (
                   <motion.div
                     key="content"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="prose prose-sm prose-invert max-w-none"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 10 }}
+                    style={{ position: 'relative' }}
                   >
-                    <div className="absolute top-4 right-4 z-10">
+                    <div style={{ position: 'sticky', top: 0, right: 0, display: 'flex', justifyContent: 'flex-end', zIndex: 10 }}>
                       <button
                         onClick={() => copyToClipboard(asset.id, generatedContent[asset.id])}
-                        className="p-2 bg-muted hover:bg-muted/80 rounded-md transition-colors"
+                        style={{ background: 'var(--theme-accent)', border: '2px solid #000', padding: '8px', cursor: 'pointer', boxShadow: '2px 2px 0px #000' }}
                       >
-                        {copiedId === asset.id ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
+                        {copiedId === asset.id ? <Check size={16} /> : <Copy size={16} />}
                       </button>
                     </div>
-                    <div className="whitespace-pre-wrap text-sm leading-relaxed pr-8">
-                      {generatedContent[asset.id]}
+                    <div style={{ paddingRight: '40px' }}>
+                      <MarkdownRenderer content={generatedContent[asset.id]} />
                     </div>
                   </motion.div>
                 ) : (
@@ -180,13 +186,13 @@ export default function MarketingTab() {
                     key="placeholder"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 0.5 }}
-                    className="h-full flex flex-col items-center justify-center text-center space-y-4"
+                    style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: '16px' }}
                   >
-                    <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-                      <Send size={20} className="text-muted-foreground" />
+                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'var(--theme-surface-light)', border: '2px dashed #000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Send size={20} style={{ opacity: 0.4 }} />
                     </div>
-                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">
-                      Ready to generate
+                    <p style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '2px' }}>
+                      Awaiting deployment...
                     </p>
                   </motion.div>
                 )}
@@ -196,22 +202,23 @@ export default function MarketingTab() {
         ))}
       </div>
 
-      <div className="bg-primary/5 border border-primary/20 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6">
-        <div className="space-y-1">
-          <h3 className="text-lg font-bold flex items-center gap-2">
-            <Rocket size={20} className="text-primary" />
+      <div className="flex flex-col md:flex-row items-center justify-between gap-8 p-8 bg-[#a855f7] border-4 border-black shadow-[12px_12px_0px_#000]">
+        <div style={{ color: '#000' }}>
+          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '24px', fontWeight: 900, textTransform: 'uppercase', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Rocket size={24} />
             Ready to Launch?
           </h3>
-          <p className="text-sm text-muted-foreground">
-            Use these assets to announce your project to the world. Consistency is key for solo founders.
+          <p style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', margin: 0, fontWeight: 700 }}>
+            Consistency is the only competitive advantage you can control. Stick to the sequence.
           </p>
         </div>
         <button 
-          onClick={() => toast.info('More launch tools coming soon!')}
-          className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-xl font-bold hover:opacity-90 transition-all shadow-[4px_4px_0px_rgba(0,0,0,0.2)]"
+          onClick={() => toast.info('Advanced distribution hacks arriving in v2.0')}
+          className="brutalist-button"
+          style={{ backgroundColor: '#fff', color: '#000', padding: '16px 32px', fontSize: '14px' }}
         >
-          Explore More Tools
-          <ArrowRight size={18} />
+          GO PREMIUM
+          <ArrowRight size={20} style={{ marginLeft: '12px' }} />
         </button>
       </div>
     </div>

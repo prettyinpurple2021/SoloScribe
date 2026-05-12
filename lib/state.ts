@@ -497,6 +497,7 @@ export const useTaskStore = create<{
   setTasks: (tasks: Task[]) => void;
   addTask: (task: Task) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
+  toggleTask: (id: string) => void;
   removeTask: (id: string) => void;
 }>((set) => ({
   tasks: [],
@@ -505,6 +506,10 @@ export const useTaskStore = create<{
   updateTask: (id, updates) =>
     set((state) => ({
       tasks: state.tasks.map((t) => (t.id === id ? { ...t, ...updates } : t)),
+    })),
+  toggleTask: (id) =>
+    set((state) => ({
+      tasks: state.tasks.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)),
     })),
   removeTask: (id) =>
     set((state) => ({

@@ -1,27 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { Search, FileText, Calendar, ArrowRight, Brain, Sparkles, Loader2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Search, FileText, Calendar, ArrowRight, Brain, Sparkles, Loader2, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useUI, Project } from '../../lib/state';
 import { useAuth } from '../../contexts/AuthContext';
-import { db, handleFirestoreError, OperationType } from '../../firebase';
+import { db } from '../../firebase';
 import { collection, query, getDocs, orderBy } from 'firebase/firestore';
 import { GoogleGenAI } from '@google/genai';
 import { toast } from 'sonner';
-
-const getApiKey = () => {
-  if (typeof window !== 'undefined' && window.process?.env?.API_KEY && window.process.env.API_KEY !== '{{API_KEY}}') {
-    return window.process.env.API_KEY;
-  }
-  if (typeof process !== 'undefined' && process.env) {
-    const key = process.env.API_KEY || process.env.GEMINI_API_KEY;
-    if (key && key !== '{{API_KEY}}') {
-      return key;
-    }
-  }
-  return undefined;
-};
-
-const API_KEY = getApiKey() as string;
 
 export const SearchTab: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -38,7 +23,6 @@ export const SearchTab: React.FC = () => {
     setResults([]);
 
     try {
-      // 1. Fetch all projects for the user
       const projectsRef = collection(db, 'users', user.uid, 'projects');
       const q = query(projectsRef, orderBy('updatedAt', 'desc'));
       const querySnapshot = await getDocs(q);
@@ -48,137 +32,89 @@ export const SearchTab: React.FC = () => {
       });
 
       if (allProjects.length === 0) {
-        toast.info("No projects found to search through.");
+        toast.info("EMPTY_REPOSITORY: No projects found.");
         setIsSearching(false);
         return;
       }
 
-      // 2. Use Gemini to perform "Semantic Search"
-      // We'll send the query and a summary of projects to Gemini
-      const apiKey = process.env.API_KEY || (window as any).process?.env?.API_KEY;
-      if (!apiKey) throw new Error("API key not found");
-      const genAI = new GoogleGenAI({ apiKey });
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) throw new Error("API_KEY_UNAVAILABLE");
+      const client = new GoogleGenAI({ apiKey });
 
       const projectsContext = allProjects.map(p => ({
         id: p.id,
         name: p.name,
-        content: p.documentContent?.substring(0, 1000) || '', // Send first 1000 chars for context
+        content: p.documentContent?.substring(0, 1000) || '',
         updatedAt: p.updatedAt?.toDate?.()?.toLocaleDateString() || 'Unknown'
       }));
 
       const prompt = `
-        You are the "Founder's Brain" semantic search engine for SoloScribe.
-        The user is searching for: "${searchQuery}"
-        
-        Here are the user's projects:
-        ${JSON.stringify(projectsContext, null, 2)}
-        
-        TASK:
-        1. Identify which projects are most relevant to the search query.
-        2. For each relevant project, provide a brief "Semantic Match" explanation (why it matches).
-        3. Extract a relevant snippet from the project content that matches the query.
-        4. Return a JSON array of objects with these fields: projectId, matchReason, snippet, score (0-1).
-        5. Only return the JSON array, nothing else.
+        You are the "Founder's Brain" semantic search engine.
+        User Query: "${searchQuery}"
+        Projects: ${JSON.stringify(projectsContext)}
+        Return a JSON array of: {projectId, matchReason, snippet, score (0-1)}.
       `;
 
-      const result = await genAI.models.generateContent({
-        model: 'gemini-2.0-flash-exp',
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      const result = await client.models.generateContent({
+        model: 'gemini-2.0-flash',
+        contents: prompt
       });
-      const responseText = result.text;
+      const responseText = result.text || '';
       
-      try {
-        // Clean up response if it contains markdown code blocks
-        const jsonStr = responseText.replace(/```json\n?|\n?```/g, '').trim();
-        const searchResults = JSON.parse(jsonStr);
-        
-        const enrichedResults = searchResults.map((res: any) => {
-          const project = allProjects.find(p => p.id === res.projectId);
-          return {
-            ...res,
-            projectName: project?.name || 'Unknown Project',
-            updatedAt: project?.updatedAt
-          };
-        }).sort((a: any, b: any) => b.score - a.score);
+      const jsonStr = responseText.replace(/```json\n?|\n?```/g, '').trim();
+      const searchResults = JSON.parse(jsonStr);
+      
+      const enrichedResults = searchResults.map((res: any) => {
+        const project = allProjects.find(p => p.id === res.projectId);
+        return {
+          ...res,
+          projectName: project?.name || 'Unknown',
+          updatedAt: project?.updatedAt
+        };
+      }).sort((a: any, b: any) => b.score - a.score);
 
-        setResults(enrichedResults);
-      } catch (parseError) {
-        console.error("Error parsing Gemini search response:", parseError, responseText);
-        toast.error("Failed to process semantic search results.");
-      }
-
+      setResults(enrichedResults);
     } catch (error) {
       console.error("Search error:", error);
-      toast.error("An error occurred during search.");
+      toast.error("SEARCH_FAILURE: Intelligence link offline.");
     } finally {
       setIsSearching(false);
     }
   };
 
   return (
-    <div className="search-tab-container" style={{ padding: '24px 24px 100px 24px', height: '100%', overflowY: 'auto' }}>
-      <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-          <div style={{ 
-            display: 'inline-flex', 
-            alignItems: 'center', 
-            gap: '12px', 
-            marginBottom: '16px',
-            padding: '8px 16px',
-            backgroundColor: 'rgba(0, 243, 255, 0.1)',
-            borderRadius: '20px',
-            border: '1px solid rgba(0, 243, 255, 0.2)'
-          }}>
-            <Brain size={20} color="var(--theme-accent)" />
-            <span style={{ fontSize: '14px', fontWeight: 'bold', letterSpacing: '1px', color: 'var(--theme-accent)' }}>FOUNDER'S BRAIN</span>
+    <div className="search-tab-container scrollbar-brutalist" style={{ padding: '40px', height: '100%', overflowY: 'auto' }}>
+      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+        <div style={{ marginBottom: '64px', borderLeft: '12px solid var(--theme-accent)', paddingLeft: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+            <div style={{ backgroundColor: '#000', color: 'var(--theme-accent)', padding: '4px 12px', fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 900 }}>[ SEMANTIC_ANALYSIS ]</div>
           </div>
-          <h2 style={{ fontSize: '32px', fontWeight: '900', marginBottom: '12px' }}>Semantic Search</h2>
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '16px' }}>
-            Search across all your projects, ideas, and transcripts using natural language.
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '48px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-2px', margin: 0 }}>
+            NEURAL_SEARCH
+          </h1>
+          <p style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', color: 'var(--theme-text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+            Query your entire brain. Find patterns across parallel missions.
           </p>
         </div>
 
-        <form onSubmit={handleSearch} style={{ position: 'relative', marginBottom: '40px' }}>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="e.g., 'What did I decide about the pricing model?' or 'Find my notes on AI ethics'"
-            style={{
-              width: '100%',
-              padding: '20px 60px 20px 24px',
-              fontSize: '18px',
-              backgroundColor: 'rgba(255,255,255,0.05)',
-              border: '2px solid rgba(255,255,255,0.1)',
-              borderRadius: '16px',
-              color: 'white',
-              outline: 'none',
-              transition: 'all 0.2s ease'
-            }}
-            onFocus={(e) => e.target.style.borderColor = 'var(--theme-accent)'}
-            onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
-          />
-          <button
-            type="submit"
-            disabled={isSearching || !searchQuery.trim()}
-            style={{
-              position: 'absolute',
-              right: '12px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              padding: '12px',
-              backgroundColor: isSearching ? 'transparent' : 'var(--theme-accent)',
-              color: 'black',
-              border: 'none',
-              borderRadius: '12px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
-            {isSearching ? <Loader2 size={24} className="animate-spin" color="var(--theme-accent)" /> : <Search size={24} />}
-          </button>
+        <form onSubmit={handleSearch} style={{ position: 'relative', marginBottom: '64px' }}>
+          <div style={{ display: 'flex', gap: '0' }}>
+            <input
+              className="brutalist-input"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="e.g. 'PRICING_STRATEGY' or 'GTM_PLAN'"
+              style={{ fontSize: '24px', padding: '24px', flex: 1, backgroundColor: '#fff' }}
+            />
+            <button
+              type="submit"
+              disabled={isSearching || !searchQuery.trim()}
+              className="brutalist-button primary"
+              style={{ width: '80px', padding: 0 }}
+            >
+              {isSearching ? <Loader2 size={32} className="animate-spin mx-auto" /> : <Search size={32} className="mx-auto" />}
+            </button>
+          </div>
         </form>
 
         <div className="search-results">
@@ -187,85 +123,67 @@ export const SearchTab: React.FC = () => {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}
+                style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                  <Sparkles size={16} color="var(--theme-accent)" />
-                  <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>
-                    Found {results.length} relevant matches
+                <div style={{ borderBottom: '4px solid #000', paddingBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <Zap size={20} />
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 900, textTransform: 'uppercase' }}>
+                    MATCHES_FOUND: {results.length}
                   </span>
                 </div>
+                
                 {results.map((result, index) => (
                   <motion.div
                     key={result.projectId + index}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.1 }}
+                    className="group"
                     style={{
-                      padding: '24px',
-                      backgroundColor: 'rgba(255,255,255,0.03)',
-                      borderRadius: '16px',
-                      border: '1px solid rgba(255,255,255,0.05)',
+                      padding: '32px',
+                      backgroundColor: 'var(--theme-surface)',
+                      border: '4px solid #000',
+                      boxShadow: '8px 8px 0px #000',
                       cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                    whileHover={{ 
-                      backgroundColor: 'rgba(255,255,255,0.05)',
-                      borderColor: 'rgba(0, 243, 255, 0.3)',
-                      transform: 'translateY(-2px)'
+                      transition: 'all 0.2s ease',
+                      position: 'relative'
                     }}
                     onClick={() => {
                       setCurrentProjectId(result.projectId);
                       setMainTab('document');
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ 
-                          padding: '8px', 
-                          backgroundColor: 'rgba(0, 243, 255, 0.1)', 
-                          borderRadius: '8px' 
-                        }}>
-                          <FileText size={18} color="var(--theme-accent)" />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <div style={{ padding: '12px', backgroundColor: '#000', color: 'var(--theme-accent)' }}>
+                          <FileText size={24} />
                         </div>
                         <div>
-                          <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '4px' }}>{result.projectName}</h3>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <Calendar size={12} />
-                              {result.updatedAt?.toDate?.()?.toLocaleDateString() || 'Recently'}
-                            </span>
-                            <span style={{ 
-                              padding: '2px 8px', 
-                              backgroundColor: 'rgba(0, 243, 255, 0.1)', 
-                              color: 'var(--theme-accent)',
-                              borderRadius: '4px',
-                              fontSize: '10px',
-                              fontWeight: 'bold'
-                            }}>
-                              {Math.round(result.score * 100)}% MATCH
-                            </span>
+                          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '24px', fontWeight: 900, textTransform: 'uppercase', margin: 0 }}>{result.projectName}</h3>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '11px', color: '#666', fontFamily: 'var(--font-mono)', marginTop: '4px' }}>
+                            <span>REC_UPDATED: {result.updatedAt?.toDate?.()?.toLocaleDateString() || 'Recently'}</span>
+                            <span style={{ padding: '2px 8px', backgroundColor: 'var(--theme-accent)', color: '#000', fontWeight: 900 }}>{Math.round(result.score * 100)}%_CONFIDENCE</span>
                           </div>
                         </div>
                       </div>
-                      <ArrowRight size={20} color="rgba(255,255,255,0.2)" />
+                      <ArrowRight size={24} />
                     </div>
                     
                     <div style={{ 
-                      padding: '12px', 
-                      backgroundColor: 'rgba(0,0,0,0.2)', 
-                      borderRadius: '8px', 
-                      marginBottom: '12px',
+                      padding: '20px', 
+                      backgroundColor: '#fff', 
+                      border: '2px solid #000',
+                      marginBottom: '20px',
                       fontSize: '14px',
                       lineHeight: '1.6',
-                      color: 'rgba(255,255,255,0.8)',
-                      borderLeft: '3px solid var(--theme-accent)'
+                      color: '#000',
+                      fontFamily: 'var(--theme-font-document)'
                     }}>
                       "{result.snippet}"
                     </div>
 
-                    <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', fontStyle: 'italic' }}>
-                      <span style={{ fontWeight: 'bold', color: 'var(--theme-accent)' }}>Why it matches:</span> {result.matchReason}
+                    <div style={{ fontSize: '12px', color: '#666', fontFamily: 'var(--font-mono)', borderTop: '1px solid #000', paddingTop: '12px' }}>
+                      <span style={{ fontWeight: 900, color: '#000' }}>RELEVANCE:</span> {result.matchReason}
                     </div>
                   </motion.div>
                 ))}
@@ -274,9 +192,10 @@ export const SearchTab: React.FC = () => {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                style={{ textAlign: 'center', padding: '40px', color: 'rgba(255,255,255,0.4)' }}
+                style={{ textAlign: 'center', padding: '64px', backgroundColor: 'var(--theme-surface-light)', border: '4px dashed #000' }}
               >
-                No relevant matches found in your brain. Try a different query.
+                 <Sparkles size={48} style={{ margin: '0 auto 24px', opacity: 0.3 }} />
+                 <p style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 700 }}>NULL_RESULT: No patterns detected for query.</p>
               </motion.div>
             ) : null}
           </AnimatePresence>
@@ -285,3 +204,4 @@ export const SearchTab: React.FC = () => {
     </div>
   );
 };
+

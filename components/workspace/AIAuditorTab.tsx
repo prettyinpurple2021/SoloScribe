@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useUI } from '../../lib/state';
 import { thinkDeeply } from '../../lib/ai-tools';
 import { ShieldAlert, Heart, Loader2, RefreshCw, AlertTriangle, CheckCircle } from 'lucide-react';
-import { marked } from 'marked';
+import { MarkdownRenderer } from '../MarkdownRenderer';
 
 export const AIAuditorTab: React.FC = () => {
   const { documentContent } = useUI();
@@ -122,9 +122,7 @@ export const AIAuditorTab: React.FC = () => {
              <span className="font-display animate-pulse uppercase">AI IS ANALYZING SYSTEM FLUX...</span>
           </div>
         ) : healthReport ? (
-          <div className="prose prose-slate max-w-none">
-            <div dangerouslySetInnerHTML={{ __html: marked.parse(healthReport) as string }} />
-          </div>
+          <MarkdownRenderer content={healthReport} />
         ) : (
           <div className="flex flex-col items-center justify-center h-full py-12 opacity-30">
              <ShieldAlert size={64} />
