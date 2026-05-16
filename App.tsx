@@ -1,215 +1,323 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
-*/
-/**
- * Copyright 2024 Google LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-import AgentEdit from './components/AgentEdit';
-import ControlTray from './components/console/control-tray/ControlTray';
-import DebugModal from './components/DebugModal';
-import ErrorScreen from './components/ErrorScreen';
-import KeynoteCompanion from './components/workspace/KeynoteCompanion';
-import Header from './components/Header';
-import UserSettings from './components/UserSettings';
-import WelcomeScreen from './components/WelcomeScreen';
-import { TutorialTour } from './components/TutorialTour';
-import { ProjectSidebar } from './components/workspace/ProjectSidebar';
-import { LiveAPIProvider } from './contexts/LiveAPIContext';
-import { useUI } from './lib/state';
-// Fix: Import React to resolve "Cannot find namespace 'React'" error.
-import React, { useEffect, useState } from 'react';
-import { themes } from './lib/themes';
-import FloatingAvatar from './components/FloatingAvatar';
-import HelpModal from './components/HelpModal';
-import LegalDisclaimer from './components/LegalDisclaimer';
-import { useAuth } from './contexts/AuthContext';
-import { PublicInterview } from './components/PublicInterview';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Toaster } from 'sonner';
-import { ErrorBoundary } from './components/ErrorBoundary';
-import { NotificationManager } from './components/workspace/NotificationManager';
+import { Sparkles, Brain, Settings, Rocket, Zap, Heart, Disc, LogOut, Eye, Book } from 'lucide-react';
+import { useAppStore } from './lib/state';
+import { auth } from './lib/firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import KeynoteCompanion from './components/workspace/KeynoteCompanion';
+import WelcomeScreen from './components/WelcomeScreen';
+import UserSettings from './components/UserSettings';
+import AuthPage from './components/auth/AuthPage';
+import LandingPage from './components/LandingPage';
+import Onboarding from './components/Onboarding';
+import FeatureTour from './components/FeatureTour';
+import MarketingTab from './components/workspace/MarketingTab';
+import ComplianceTab from './components/workspace/ComplianceTab';
+import MonetizationTab from './components/workspace/MonetizationTab';
+import AIAuditorTab from './components/workspace/AIAuditorTab';
+import RoadmapTab from './components/workspace/RoadmapTab';
+import StrategyVaultTab from './components/workspace/StrategyVaultTab';
+import TermsOfService from './components/Legal/TermsOfService';
+import PrivacyPolicy from './components/Legal/PrivacyPolicy';
+import InkloChatbot from './components/InkloChatbot';
 
-const getApiKey = () => {
-  if (typeof window !== 'undefined' && window.process?.env?.API_KEY && window.process.env.API_KEY !== '{{API_KEY}}') {
-    return window.process.env.API_KEY;
-  }
-  if (typeof process !== 'undefined' && process.env) {
-    const key = process.env.API_KEY || process.env.GEMINI_API_KEY;
-    if (key && key !== '{{API_KEY}}') {
-      return key;
-    }
-  }
-  return undefined;
-};
+function App() {
+  const [view, setView] = useState<'home' | 'auth' | 'terms' | 'privacy'>('home');
+  const [showTour, setShowTour] = useState(false);
+  const { user, setUser, founderMood, hasSeenTutorial, setHasSeenTutorial, activeTab, setActiveTab } = useAppStore();
 
-import { Routes, Route, useSearchParams } from 'react-router-dom';
-import { PublicProjectView } from './components/workspace/PublicProjectView';
-import { AppError } from './components/AppError';
-
-/**
- * Renders the main content of the application, including the header, modals,
- * the draggable agent avatar, the primary app area (KeynoteCompanion), and the control tray.
- */
-function AppContent() {
-  const { showUserConfig, showAgentEdit, showDebugModal, showHelpModal, showDisclaimer, showTutorial } =
-    useUI();
-
-  return (
-    <>
-      <ErrorScreen />
-      <ProjectSidebar />
-      <Header />
-      <NotificationManager />
-
-      <FloatingAvatar />
-
-      {/* Conditionally render modals based on UI state */}
-      {showUserConfig && <UserSettings />}
-      {showAgentEdit && <AgentEdit />}
-      {showDebugModal && <DebugModal />}
-      {showHelpModal && <HelpModal />}
-      {showDisclaimer && <LegalDisclaimer />}
-      {showTutorial && <TutorialTour />}
-      <div className="streaming-console paper-legal">
-        <main>
-          <div className="main-app-area">
-            <ErrorBoundary>
-              <KeynoteCompanion />
-            </ErrorBoundary>
-          </div>
-
-          <ErrorBoundary>
-            <ControlTray></ControlTray>
-          </ErrorBoundary>
-        </main>
-      </div>
-    </>
-  );
-}
-
-/**
- * Main application component. It checks for the required API key, sets up the
- * global theme, and provides the LiveAPI context to its children.
- */
-function AppRoutes() {
-  const [hasKey, setHasKey] = useState<boolean | null>(null);
-  const { showWelcomeScreen, setShowWelcomeScreen, hasCompletedOnboarding, theme, font } = useUI();
-  const { user, loading } = useAuth();
-  const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    // Show welcome screen if user is not logged in OR if they haven't completed onboarding
-    if (!loading) {
-      if (!user || !hasCompletedOnboarding) {
-        setShowWelcomeScreen(true);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        setUser({
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName,
+        });
+        setView('home');
+
+        // Fetch additional profile data
+        try {
+          const { doc, getDoc } = await import('firebase/firestore');
+          const { db } = await import('./lib/firebase');
+          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          if (userDoc.exists()) {
+            const data = userDoc.data();
+            if (data.founderIdentity) {
+              useAppStore.getState().setFounderIdentity(data.founderIdentity);
+            }
+          }
+        } catch (error) {
+          console.error("Critical Profile Sync Failure:", error);
+        }
       } else {
-        setShowWelcomeScreen(false);
+        setUser(null);
       }
-    }
-  }, [user, loading, hasCompletedOnboarding, setShowWelcomeScreen]);
+    });
+    return () => unsubscribe();
+  }, [setUser]);
 
-  useEffect(() => {
-    const checkKey = async () => {
-      if (typeof window !== 'undefined' && (window as any).aistudio?.hasSelectedApiKey) {
-        const selected = await (window as any).aistudio.hasSelectedApiKey();
-        setHasKey(selected);
-      } else {
-        // Fallback for local dev or if aistudio is not available
-        setHasKey(!!getApiKey());
-      }
-    };
-    checkKey();
-  }, []);
-
-  // This effect applies the selected theme's colors as CSS variables to the root element,
-  // allowing for dynamic theming of the entire application.
-  useEffect(() => {
-    const selectedTheme = themes.find(t => t.name === theme) || themes[0];
-    const root = document.documentElement;
-    root.style.setProperty('--theme-bg', selectedTheme.colors[0]);
-    root.style.setProperty('--theme-surface', selectedTheme.colors[1]);
-    root.style.setProperty('--theme-accent', selectedTheme.colors[2]);
-    root.style.setProperty('--theme-text', selectedTheme.colors[3]);
-    root.style.setProperty('--theme-document-bg', selectedTheme.colors[4]);
-  }, [theme]);
-
-  // This effect applies the selected font as a CSS variable to the root element.
-  useEffect(() => {
-    document.documentElement.style.setProperty('--font-document', font);
-  }, [font]);
-
-  const handleSelectKey = async () => {
-    if (typeof window !== 'undefined' && (window as any).aistudio?.openSelectKey) {
-      await (window as any).aistudio.openSelectKey();
-      // Assume success to mitigate race condition
-      setHasKey(true);
-    }
+  const handleSignOut = () => {
+    signOut(auth);
   };
 
-  if (hasKey === null) {
-    return <div className="fullscreen-error"><p>Loading...</p></div>;
-  }
-
-  if (!hasKey) {
+  if (!user) {
     return (
-      <div className="fullscreen-error">
-        <h1 style={{ color: 'var(--theme-accent)' }}>API Key Required</h1>
-        <p>This application requires a paid Google Cloud API key to generate images and use the Live API.</p>
-        <p>
-          <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noreferrer" style={{ color: 'var(--theme-accent-secondary)' }}>
-            Learn more about billing
-          </a>
-        </p>
-        <button onClick={handleSelectKey} className="start-button glass-button" style={{ marginTop: '20px' }}>
-          <span>Select API Key</span>
-        </button>
+      <div className="min-h-screen overflow-x-hidden font-sans relative">
+        <div className="y2k-grid fixed inset-0 z-0 pointer-events-none" />
+        <Toaster position="top-right" expand={false} richColors />
+        
+        <header className="fixed top-0 left-0 right-0 h-20 bg-neo-black text-white z-40 flex items-center justify-between px-6 border-b-4 border-neo-black">
+          <div className="flex items-center gap-4 bg-neo-cyan text-neo-black px-4 py-2 neo-border neo-shadow transform -rotate-1 cursor-pointer" onClick={() => setView('home')}>
+            <Rocket className="w-6 h-6" />
+            <span className="font-extrabold text-2xl tracking-tighter">SOLOSCRIBE</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => setView('auth')}
+              className="bg-neo-pink text-neo-black px-6 py-2 border-4 border-neo-black font-black neo-shadow-hover transition-all transform active:scale-95"
+            >
+              INITIALIZE_CORE
+            </button>
+          </div>
+        </header>
+
+        <main className="pt-32 pb-24 px-6 max-w-[1400px] mx-auto relative z-10">
+          <AnimatePresence mode="wait">
+            {view === 'auth' && (
+              <motion.div key="auth" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+                <AuthPage />
+              </motion.div>
+            )}
+            {view === 'home' && (
+              <motion.div key="landing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <LandingPage onStart={() => setView('auth')} />
+              </motion.div>
+            )}
+            {view === 'terms' && (
+              <motion.div key="terms" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }}>
+                <TermsOfService onBack={() => setView('home')} />
+              </motion.div>
+            )}
+            {view === 'privacy' && (
+              <motion.div key="privacy" initial={{ opacity: 0, x: -50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 50 }}>
+                <PrivacyPolicy onBack={() => setView('home')} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </main>
+
+        <footer className="fixed bottom-0 left-0 right-0 h-12 bg-neo-black border-t-4 border-neo-black flex items-center px-6 text-[10px] font-mono text-neo-white justify-between z-40">
+          <div className="flex gap-6">
+            <button onClick={() => setView('terms')} className="hover:text-neo-cyan transition-colors underline uppercase">TERMS_OF_SERVICE</button>
+            <button onClick={() => setView('privacy')} className="hover:text-neo-pink transition-colors underline uppercase">PRIVACY_POLICY</button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Zap size={12} className="text-neo-yellow" />
+            <span>SOLOSCRIBE_V5 // PUBLIC_GATEWAY</span>
+          </div>
+        </footer>
+
+        <InkloChatbot />
       </div>
     );
   }
 
-  const currentApiKey = getApiKey() as string;
-  const interviewId = searchParams.get('interview');
-
-  if (interviewId) {
-    return <PublicInterview interviewId={interviewId} />;
-  }
-
   return (
-    <Routes>
-      <Route path="/share/:shareId" element={<PublicProjectView />} />
-      <Route path="/" element={
-        <div className="App">
-          <Toaster position="top-center" theme="light" />
-          {showWelcomeScreen && <WelcomeScreen />}
-          <LiveAPIProvider apiKey={currentApiKey}>
-            <AppContent />
-          </LiveAPIProvider>
+    <div className="min-h-screen overflow-x-hidden font-sans relative">
+      <div className="y2k-grid fixed inset-0 z-0 pointer-events-none" />
+      <Toaster position="top-right" expand={false} richColors />
+
+      <AnimatePresence>
+        {!hasSeenTutorial && (
+          <Onboarding onComplete={(startTour) => {
+            setHasSeenTutorial(true);
+            if (startTour) setShowTour(true);
+          }} />
+        )}
+        {showTour && (
+          <FeatureTour onComplete={() => setShowTour(false)} />
+        )}
+      </AnimatePresence>
+
+      <InkloChatbot />
+
+      {/* HEADER / NAV - NEO-BRUTALIST */}
+      <header className="fixed top-0 left-0 right-0 h-20 bg-neo-black text-white z-40 flex items-center justify-between px-6 border-b-4 border-neo-black">
+        <div className="flex items-center gap-4 bg-neo-cyan text-neo-black px-4 py-2 neo-border neo-shadow transform -rotate-1">
+          <Rocket className="w-6 h-6 animate-pulse" />
+          <span className="font-extrabold text-2xl tracking-tighter">SOLOSCRIBE</span>
         </div>
-      } />
-      <Route path="*" element={<AppError type="404" title="NOT_FOUND" message="The page you're looking for doesn't exist in this timeline." />} />
-    </Routes>
-  );
-}
 
-function App() {
-  console.log('App rendered');
-  return (
-    <ErrorBoundary>
-      <AppRoutes />
-    </ErrorBoundary>
+        <nav className="hidden md:flex gap-4">
+          {[
+            { id: 'strategy', label: 'STRATEGY', icon: Brain, color: 'bg-neo-yellow', tour: 'nav-strategy' },
+            { id: 'keynote', label: 'KEYNOTE', icon: Sparkles, color: 'bg-neo-cyan', tour: 'nav-keynote' },
+            { id: 'vault', label: 'VAULT', icon: Book, color: 'bg-neo-lime', tour: 'nav-vault' },
+            { id: 'marketing', label: 'MARKETING', icon: Rocket, color: 'bg-neo-pink', tour: 'nav-marketing' },
+            {id: 'compliance', label: 'COMPLIANCE', icon: Disc, color: 'bg-neo-lime', tour: 'nav-compliance' },
+            { id: 'monetization', label: 'REVENUE', icon: Zap, color: 'bg-neo-yellow', tour: 'nav-revenue' },
+            { id: 'audit', label: 'AUDIT', icon: Eye, color: 'bg-neo-cyan', tour: 'nav-audit' },
+            { id: 'roadmap', label: 'ROADMAP', icon: Disc, color: 'bg-neo-pink', tour: 'nav-roadmap' },
+            { id: 'settings', label: 'SYSTEM', icon: Settings, color: 'bg-white', tour: 'nav-settings' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              data-tour={tab.tour}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`
+                flex items-center gap-2 px-6 py-2 border-4 border-neo-black font-black text-sm uppercase tracking-widest transition-all
+                ${activeTab === tab.id 
+                  ? `${tab.color} text-neo-black transform -translate-y-1 -translate-x-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]` 
+                  : 'bg-white text-neo-black hover:bg-zinc-100'}
+              `}
+            >
+              <tab.icon size={18} />
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+
+        <div className="flex items-center gap-4">
+          {user && (
+            <button 
+              onClick={() => setActiveTab('settings')}
+              className="flex items-center gap-2 px-3 py-1 bg-white border-2 border-neo-black neo-shadow-sm hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all group"
+            >
+              <div className="w-8 h-8 rounded-full bg-neo-pink border-2 border-neo-black flex items-center justify-center font-black text-xs text-white">
+                {user.displayName?.[0] || 'F'}
+              </div>
+              <div className="hidden lg:block text-left">
+                <div className="text-neo-black font-black text-[10px] leading-none uppercase">{user.displayName || 'FOUNDER'}</div>
+                <div className="text-neo-black/40 font-mono text-[8px] uppercase">PROFILE_v5</div>
+              </div>
+            </button>
+          )}
+          <div className="bg-neo-yellow text-neo-black px-3 py-1 border-2 border-neo-black font-mono text-xs font-bold uppercase neo-shadow hidden lg:block">
+             MOOD: {founderMood}
+          </div>
+          <button 
+            onClick={handleSignOut}
+            className="p-2 bg-neo-black border-2 border-neo-white text-neo-white hover:bg-neo-pink transition-all transform active:scale-95"
+            title="Sign Out"
+          >
+            <LogOut size={20} />
+          </button>
+        </div>
+      </header>
+
+      <main className="pt-28 pb-12 px-6 max-w-[1400px] mx-auto relative z-10">
+        <AnimatePresence mode="wait">
+          {activeTab === 'strategy' && (
+            <motion.div
+              key="strategy"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <WelcomeScreen />
+            </motion.div>
+          )}
+          {activeTab === 'keynote' && (
+            <motion.div
+              key="keynote"
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -50 }}
+              transition={{ type: "spring", stiffness: 100 }}
+              className="w-full"
+            >
+              <KeynoteCompanion />
+            </motion.div>
+          )}
+          {activeTab === 'vault' && (
+            <motion.div
+              key="vault"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+            >
+              <StrategyVaultTab />
+            </motion.div>
+          )}
+          {activeTab === 'marketing' && (
+            <motion.div
+              key="marketing"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 30 }}
+            >
+              <MarketingTab />
+            </motion.div>
+          )}
+          {activeTab === 'compliance' && (
+            <motion.div
+              key="compliance"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+            >
+              <ComplianceTab />
+            </motion.div>
+          )}
+          {activeTab === 'monetization' && (
+            <motion.div
+              key="monetization"
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -30 }}
+            >
+              <MonetizationTab />
+            </motion.div>
+          )}
+          {activeTab === 'audit' && (
+            <motion.div
+              key="audit"
+              initial={{ opacity: 0, y: -50 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 50 }}
+            >
+              <AIAuditorTab />
+            </motion.div>
+          )}
+          {activeTab === 'roadmap' && (
+            <motion.div
+              key="roadmap"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.1 }}
+            >
+              <RoadmapTab />
+            </motion.div>
+          )}
+          {activeTab === 'settings' && (
+            <motion.div
+              key="settings"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.1 }}
+            >
+              <UserSettings />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </main>
+
+      {/* FOOTER STRIP */}
+      <footer className="fixed bottom-0 left-0 right-0 h-10 bg-neo-black border-t-4 border-neo-black flex items-center px-6 text-[10px] font-mono text-neo-white justify-between z-40">
+        <div className="flex gap-4">
+          <span>PROJECT: SOLOSCRIBE_V5</span>
+          <span>BUILD: 2026.05.13</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Zap size={12} className="text-neo-yellow" />
+          <span>CONNECTED TO INKLO_NET</span>
+          <Heart size={12} className="text-neo-pink fill-neo-pink" />
+        </div>
+      </footer>
+    </div>
   );
 }
 

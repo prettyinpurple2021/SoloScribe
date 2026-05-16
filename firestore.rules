@@ -1,343 +1,52 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Default deny-all
+    // 0. Default deny
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // ===============================================================
-    // Assumed Data Model
-    // ===============================================================
-    //
-    // Collection: users
-    // Document ID: {userId}
-    // Fields:
-    //   - uid: string (required)
-    //   - email: string (required)
-    //   - displayName: string (optional)
-    //   - photoURL: string (optional)
-    //   - role: string (required, 'user' or 'admin')
-    //   - createdAt: timestamp (required)
-    //   - info: string (optional)
-    //   - topic: string (optional)
-    //   - format: string (optional)
-    //   - documentContent: string (optional)
-    //   - transcript: list (optional)
-    //   - updatedAt: timestamp (optional)
-    //
-    // Collection: users/{userId}/projects
-    // Document ID: {projectId}
-    // Fields:
-    //   - id: string (required)
-    //   - userId: string (required)
-    //   - name: string (required)
-    //   - documentContent: string (required)
-    //   - transcript: list (required)
-    //   - updatedAt: timestamp (required)
-    //   - createdAt: timestamp (optional)
-    //
-    // Collection: users/{userId}/projects/{projectId}/versions
-    // Document ID: {versionId}
-    // Fields:
-    //   - id: string (required)
-    //   - documentContent: string (required)
-    //   - createdAt: timestamp (required)
-    //   - label: string (optional)
-    //
-    // Collection: users/{userId}/projects/{projectId}/tasks
-    // Document ID: {taskId}
-    // Fields:
-    //   - id: string (required)
-    //   - projectId: string (required)
-    //   - userId: string (required)
-    //   - title: string (required)
-    //   - description: string (optional)
-    //   - priority: string (required, 'low', 'medium', 'high')
-    //   - dueDate: timestamp (required)
-    //   - completed: boolean (required)
-    //   - notified: boolean (optional)
-    //   - notifiedTimings: list (optional)
-    //   - createdAt: timestamp (optional)
-    //   - updatedAt: timestamp (optional)
-    //
-    // Collection: interviews
-    // Document ID: {interviewId}
-    // Fields:
-    //   - id: string (required)
-    //   - userId: string (required)
-    //   - title: string (required)
-    //   - goal: string (required)
-    //   - questions: string (required)
-    //   - createdAt: timestamp (required)
-    //
-    // Collection: interviews/{interviewId}/responses
-    // Document ID: {responseId}
-    // Fields:
-    //   - id: string (required)
-    //   - transcript: list (required)
-    //   - summary: string (required)
-    //   - createdAt: timestamp (required)
-    //
-    // ===============================================================
+    // Phase 3: Primitives
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function isEmailVerified() { return isSignedIn() && request.auth.token.email_verified == true; }
 
-    // ===============================================================
-    // Helper Functions
-    // ===============================================================
-    function isAuthenticated() {
-      return request.auth != null;
+    // User Profile Validation
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email'])
+        && data.uid is string && data.uid.size() <= 128
+        && data.email is string && data.email.size() <= 256
+        && (data.get('displayName', '') is string && data.get('displayName', '').size() <= 128)
+        && (data.get('founderMood', '') is string && data.get('founderMood', '').size() <= 64)
     }
 
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+    // Strategy Validation
+    function isValidStrategy(data) {
+      return data.keys().hasAll(['userId', 'content'])
+        && data.userId is string && data.userId.size() <= 128
+        && data.content is string && data.content.size() <= 1048576 // 1MB limit check
+        && (data.get('title', '') is string && data.get('title', '').size() <= 256)
     }
 
-    function isValidId(id) {
-       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
-    }
-
-    function isAdmin() {
-      return isAuthenticated() &&
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-          (request.auth.token.email == "prettyinpurple2021@gmail.com" && request.auth.token.email_verified == true));
-    }
-
-    function incoming() { return request.resource.data; }
-    function existing() { return resource.data; }
-
-    function hasOnlyAllowedFields(fields) {
-      return incoming().keys().hasOnly(fields);
-    }
-
-    function hasRequiredFields(fields) {
-      return incoming().keys().hasAll(fields);
-    }
-
-    function isValidString(field, minLen, maxLen) {
-      return incoming()[field] is string &&
-        incoming()[field].size() >= minLen &&
-        incoming()[field].size() <= maxLen;
-    }
-
-    function isValidOptionalString(field, minLen, maxLen) {
-      return !(field in incoming()) ||
-             (incoming()[field] is string &&
-              incoming()[field].size() >= minLen &&
-              incoming()[field].size() <= maxLen);
-    }
-
-    function isValidList(field, maxSize) {
-      return incoming()[field] is list && incoming()[field].size() <= maxSize;
-    }
-
-    function isValidOptionalList(field, maxSize) {
-      return !(field in incoming()) ||
-             (incoming()[field] is list && incoming()[field].size() <= maxSize);
-    }
-
-    function isTimestamp(field) {
-      return incoming()[field] is timestamp;
-    }
-
-    function isOptionalTimestamp(field) {
-      return !(field in incoming()) || incoming()[field] is timestamp;
-    }
-
-    function areImmutableFieldsUnchanged(fields) {
-      return !incoming().diff(existing()).affectedKeys().hasAny(fields);
-    }
-
-    // ===============================================================
-    // Domain Validators
-    // ===============================================================
-
-    function isValidUser() {
-      let allowedFields = ['uid', 'email', 'displayName', 'photoURL', 'role', 'createdAt', 'info', 'topic', 'format', 'documentContent', 'transcript', 'updatedAt', 'webhookUrl', 'memory', 'isVerified'];
-      return hasOnlyAllowedFields(allowedFields) &&
-             isValidString('uid', 1, 100) &&
-             isValidString('email', 3, 100) &&
-             isValidOptionalString('displayName', 0, 100) &&
-             isValidOptionalString('photoURL', 0, 500) &&
-             incoming().role in ['user', 'admin'] &&
-             isOptionalTimestamp('createdAt') &&
-             isValidOptionalString('info', 0, 5000) &&
-             isValidOptionalString('topic', 0, 1000) &&
-             isValidOptionalString('format', 0, 100) &&
-             isValidOptionalString('documentContent', 0, 1000000) && // 1MB limit
-             isValidOptionalList('transcript', 10000) &&
-             isOptionalTimestamp('updatedAt') &&
-             isValidOptionalString('webhookUrl', 0, 1000) &&
-             isValidOptionalString('memory', 0, 100000) &&
-             (!( 'isVerified' in incoming() ) || incoming().isVerified is bool);
-    }
-
-    function isValidProject() {
-      let allowedFields = ['id', 'userId', 'name', 'documentContent', 'transcript', 'updatedAt', 'createdAt', 'isPublic', 'shareId', 'viewCount', 'lastViewedAt'];
-      return hasOnlyAllowedFields(allowedFields) &&
-             hasRequiredFields(['id', 'userId', 'name', 'documentContent', 'transcript', 'updatedAt']) &&
-             isValidString('id', 1, 100) &&
-             isValidString('userId', 1, 100) &&
-             isValidString('name', 1, 200) &&
-             isValidString('documentContent', 0, 1000000) &&
-             isValidList('transcript', 10000) &&
-             isTimestamp('updatedAt') &&
-             isOptionalTimestamp('createdAt') &&
-             (!( 'isPublic' in incoming() ) || incoming().isPublic is bool) &&
-             isValidOptionalString('shareId', 0, 100) &&
-             (!( 'viewCount' in incoming() ) || incoming().viewCount is int) &&
-             isOptionalTimestamp('lastViewedAt');
-    }
-
-    function isValidInterview() {
-      let allowedFields = ['id', 'userId', 'title', 'goal', 'questions', 'createdAt'];
-      return hasOnlyAllowedFields(allowedFields) &&
-             hasRequiredFields(allowedFields) &&
-             isValidString('id', 1, 100) &&
-             isValidString('userId', 1, 100) &&
-             isValidString('title', 1, 200) &&
-             isValidString('goal', 1, 5000) &&
-             isValidString('questions', 1, 10000) &&
-             isTimestamp('createdAt');
-    }
-
-    function isValidInterviewResponse() {
-      let allowedFields = ['id', 'transcript', 'summary', 'createdAt'];
-      return hasOnlyAllowedFields(allowedFields) &&
-             hasRequiredFields(allowedFields) &&
-             isValidString('id', 1, 100) &&
-             isValidList('transcript', 10000) &&
-             isValidString('summary', 0, 50000) &&
-             isTimestamp('createdAt');
-    }
-
-    function isValidVersion() {
-      let allowedFields = ['id', 'documentContent', 'createdAt', 'label'];
-      return hasOnlyAllowedFields(allowedFields) &&
-             hasRequiredFields(['id', 'documentContent', 'createdAt']) &&
-             isValidString('id', 1, 100) &&
-             isValidString('documentContent', 0, 1000000) &&
-             isTimestamp('createdAt') &&
-             isValidOptionalString('label', 0, 200);
-    }
-
-    function isValidFeedback() {
-      let allowedFields = ['projectId', 'ownerId', 'content', 'authorName', 'createdAt'];
-      return hasOnlyAllowedFields(allowedFields) &&
-             hasRequiredFields(['projectId', 'ownerId', 'content', 'authorName']) &&
-             isValidString('projectId', 1, 100) &&
-             isValidString('ownerId', 1, 100) &&
-             isValidString('content', 1, 50000) &&
-             isValidString('authorName', 1, 200) &&
-             isOptionalTimestamp('createdAt');
-    }
-
-    function isValidTask() {
-      let allowedFields = ['id', 'projectId', 'userId', 'title', 'description', 'priority', 'dueDate', 'completed', 'notified', 'notifiedTimings', 'createdAt', 'updatedAt'];
-      return hasOnlyAllowedFields(allowedFields) &&
-             hasRequiredFields(['id', 'projectId', 'userId', 'title', 'priority', 'dueDate', 'completed']) &&
-             isValidString('id', 1, 100) &&
-             isValidString('projectId', 1, 100) &&
-             isValidString('userId', 1, 100) &&
-             isValidString('title', 1, 500) &&
-             isValidOptionalString('description', 0, 5000) &&
-             incoming().priority in ['low', 'medium', 'high'] &&
-             isTimestamp('dueDate') &&
-             incoming().completed is bool &&
-             (!( 'notified' in incoming() ) || incoming().notified is bool) &&
-             isValidOptionalList('notifiedTimings', 10) &&
-             isOptionalTimestamp('createdAt') &&
-             isOptionalTimestamp('updatedAt');
-    }
-
-    // ===============================================================
-    // Rules
-    // ===============================================================
-
+    // 1. Users Collection
     match /users/{userId} {
-      // Users can only read their own data
-      allow read: if isOwner(userId);
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'photoURL', 'founderMood', 'updatedAt']);
       
-      // Users can create their own profile. They cannot create an admin role unless they are already an admin.
-      allow create: if isOwner(userId) && isValidUser() && 
-                    ((incoming().role == 'user') || isAdmin());
-                    
-      // Users can update their own profile. They cannot change their role unless they are an admin.
-      // They cannot change their uid.
-      allow update: if isOwner(userId) && isValidUser() && 
-                    areImmutableFieldsUnchanged(['uid', 'createdAt']) &&
-                    ((!('role' in incoming()) || incoming().role == resource.data.role) || isAdmin());
-                    
-      allow delete: if isOwner(userId) || isAdmin();
-
-      match /projects/{projectId} {
-        allow read: if isOwner(userId);
-        
-        // Ensure the userId inside the document matches the path userId
-        allow create: if isOwner(userId) && isValidProject() && incoming().userId == userId;
-        
-        allow update: if isOwner(userId) && isValidProject() && 
-                      areImmutableFieldsUnchanged(['id', 'userId', 'createdAt']);
-                      
+      // 2. Strategies Subcollection
+      match /strategies/{strategyId} {
+        allow list: if isOwner(userId);
+        allow get: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidStrategy(request.resource.data)
+          && request.resource.data.userId == request.auth.uid;
+        allow update: if isOwner(userId) && isValidStrategy(request.resource.data)
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'content', 'updatedAt']);
         allow delete: if isOwner(userId);
-
-        match /versions/{versionId} {
-          allow read: if isOwner(userId);
-          allow create: if isOwner(userId) && isValidVersion();
-          allow update, delete: if isOwner(userId) || isAdmin();
-        }
-
-        match /tasks/{taskId} {
-          allow read: if isOwner(userId);
-          allow create: if isOwner(userId) && isValidTask() && incoming().userId == userId && incoming().projectId == projectId;
-          allow update: if isOwner(userId) && isValidTask() && 
-                        areImmutableFieldsUnchanged(['id', 'userId', 'projectId', 'createdAt']);
-          allow delete: if isOwner(userId);
-        }
       }
-    }
-
-    match /interviews/{interviewId} {
-      // Anyone can read an interview to take it
-      allow read: if true;
-      
-      // Only authenticated users can create an interview, and they must set themselves as the owner
-      allow create: if isAuthenticated() && isValidInterview() && incoming().userId == request.auth.uid;
-      
-      // Only the owner can update or delete
-      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid && isValidInterview() &&
-                    areImmutableFieldsUnchanged(['id', 'userId', 'createdAt']);
-                    
-      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
-
-      match /responses/{responseId} {
-        // Only the owner of the interview can read the responses
-        allow read: if isAuthenticated() && get(/databases/$(database)/documents/interviews/$(interviewId)).data.userId == request.auth.uid;
-        
-        // Anyone can submit a response
-        allow create: if isValidInterviewResponse();
-        
-        // Responses cannot be updated or deleted by public users
-        allow update, delete: if false;
-      }
-    }
-
-    match /public_projects/{shareId} {
-      allow read: if true;
-      // Allow public to increment viewCount and update lastViewedAt
-      // OR allow owner to update everything
-      allow update: if (incoming().diff(existing()).affectedKeys().hasOnly(['viewCount', 'lastViewedAt']) &&
-                       (resource.data.userId == request.auth.uid || true)) || 
-                       (isAuthenticated() && resource.data.userId == request.auth.uid && isValidProject());
-    }
-
-    match /projects/{projectId}/feedback/{feedbackId} {
-      // Anyone with the link can see feedback
-      allow read: if true;
-      // Anyone can create feedback
-      allow create: if isValidFeedback();
-      // Only the owner (indicated by the ownerId in the document) or admin can delete
-      allow update, delete: if isAuthenticated() && (request.auth.uid == resource.data.ownerId || isAdmin());
     }
   }
 }

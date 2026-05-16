@@ -1,8 +1,8 @@
 {
   "name": "SoloScribe",
-  "description": "Engage with a SoloSuccess agent — an intelligent writing and ideation partner designed for solo founders who need a polished, high-end environment to brainstorm, refine ideas, and build interactive business documents.",
+  "description": "The AI-powered Strategist and Keynote Companion for Founders.",
   "requestFramePermissions": [
-    "microphone",
-    "camera"
+    "camera",
+    "microphone"
   ]
 }

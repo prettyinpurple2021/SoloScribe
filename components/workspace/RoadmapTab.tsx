@@ -1,216 +1,188 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { useUI, useUser, useTaskStore } from '../../lib/state';
-import { 
-  CheckCircle2, 
-  Circle, 
-  ArrowRight, 
-  Rocket, 
-  Target, 
-  TrendingUp, 
-  Calendar, 
-  Award, 
-  Loader2, 
-  Sparkles,
-  Lightbulb,
-  Plus,
-  Shield,
-  Zap,
-  Flag,
-  ChevronRight,
-  ClipboardList
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { thinkDeeply } from '../../lib/ai-tools';
+import React, { useState } from 'react';
+import { motion } from 'motion/react';
+import { Calendar, CheckSquare, Clock, Flag, Layout, Download, Zap } from 'lucide-react';
+import { jsPDF } from 'jspdf';
 import { toast } from 'sonner';
+import { useAppStore } from '../../lib/state';
 
-interface RoadmapItem {
-  id: string;
-  title: string;
-  description: string;
-  stage: 'Idea' | 'Planning' | 'Launch' | 'Growth' | 'Legacy';
-  complexity: 'Low' | 'Medium' | 'High';
-}
+const RoadmapTab = () => {
+  const { setIsProcessing, setInkloMode } = useAppStore();
+  const [tasks, setTasks] = useState([
+    { id: 1, task: 'Refine GPT-4o context window for strategy generation', done: true },
+    { id: 2, task: 'Implement high-fidelity revenue simulation models', done: false },
+    { id: 3, task: 'Audit V5 logic for GDPR/CCPA data sovereignty', done: true },
+    { id: 4, task: 'Optimize Inklo mascot 3D rendering path', done: false }
+  ]);
 
-const ROADMAP_ITEMS: RoadmapItem[] = [
-  { id: 'problem-solution', title: 'Problem/Solution Fit', description: 'Validate the core problem & solution hypothesis.', stage: 'Idea', complexity: 'Medium' },
-  { id: 'lean-canvas', title: 'Lean Canvas', description: '1-page business model for rapid iteration.', stage: 'Idea', complexity: 'Medium' },
-  { id: 'pitch-deck', title: 'Pitch Deck', description: 'Narrative-driven deck for stakeholders.', stage: 'Planning', complexity: 'High' },
-  { id: 'gtm-strategy', title: 'Go-To-Market', description: 'Acquisition channels and launch plan.', stage: 'Planning', complexity: 'High' },
-  { id: 'launch-checklist', title: 'Launch Protocol', description: 'Critical operations for Day 0.', stage: 'Launch', complexity: 'Medium' },
-  { id: 'okrs', title: 'Strategic OKRs', description: 'Objectives & Key Results for scale.', stage: 'Growth', complexity: 'Medium' },
-  { id: 'long-vision', title: '10-Year Legacy', description: 'Long-term impact and exit vision.', stage: 'Legacy', complexity: 'High' }
-];
+  const milestones = [
+    { phase: 'PHASE_01', title: 'CORE_ATTRIBUTES', status: 'COMPLETED', date: 'MAY 2026' },
+    { phase: 'PHASE_02', title: 'INKLO_NET_EXPANSION', status: 'ACTIVE', date: 'JUNE 2026' },
+    { phase: 'PHASE_03', title: 'SOVEREIGN_REVENUE', status: 'PLANNED', date: 'JULY 2026' },
+    { phase: 'PHASE_04', title: 'MARKET_DOMINATION', status: 'LOCKED', date: 'AUG 2026' },
+  ];
 
-export const RoadmapTab: React.FC = () => {
-  const { setDocumentContent, setMainTab, setTranscript, documentContent, currentProjectId } = useUI();
-  const { name, info, topic } = useUser();
-  const { tasks, toggleTask } = useTaskStore();
-  const [isGenerating, setIsGenerating] = useState<string | null>(null);
-  const [isSuggesting, setIsSuggesting] = useState(false);
-  const [customItems, setCustomItems] = useState<RoadmapItem[]>([]);
+  const toggleTask = (id: number) => {
+    setIsProcessing(true);
+    setInkloMode('BUILDING');
+    
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
+    
+    setTimeout(() => {
+      setIsProcessing(false);
+      setInkloMode('DEFAULT');
+      toast.success('CORE_ROADMAP_SYNCHRONIZED', { icon: '⚡' });
+    }, 800);
+  };
 
-  const projectTasks = useMemo(() => 
-    tasks.filter(t => t.projectId === currentProjectId),
-    [tasks, currentProjectId]
-  );
+  const completedCount = tasks.filter(t => t.done).length;
 
-  const completedCount = projectTasks.filter(t => t.completed).length;
-  const progress = projectTasks.length > 0 ? Math.round((completedCount / projectTasks.length) * 100) : 0;
-
-  const handleAIDraft = async (item: RoadmapItem) => {
-    setIsGenerating(item.id);
-    const toastId = toast.loading(`InkLo is drafting ${item.title}...`);
+  const handleExportPDF = () => {
     try {
-      const prompt = `Act as a world-class strategic consultant. Generate a first draft for: ${item.title}. 
-      Context: ${topic}. User Info: ${info}.
-      Current Doc: ${documentContent.slice(0, 2000)}.
-      Output high-density Markdown with actionable headers and placeholder variables like [INSERT_DATA].`;
-
-      const draft = await thinkDeeply(prompt);
-      setDocumentContent(draft);
-      setMainTab('document');
-      toast.success('Draft Generated', { id: toastId });
+      const doc = new jsPDF();
+      
+      // Header
+      doc.setFillColor(0, 0, 0);
+      doc.rect(0, 0, 210, 40, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(28);
+      doc.text('STRATEGIC_ROADMAP_V5.0', 10, 25);
+      
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(10);
+      doc.text(`SOLOSCRIBE INTERNAL_DOCUMENT - GENERATED: ${new Date().toLocaleString()}`, 10, 50);
+      
+      doc.line(10, 55, 200, 55);
+      
+      // Milestones
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('MILESTONES:', 10, 70);
+      
+      let yPos = 85;
+      doc.setFontSize(12);
+      milestones.forEach((m) => {
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${m.phase}: ${m.title}`, 15, yPos);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`STATUS: ${m.status} | DATE: ${m.date}`, 15, yPos + 7);
+        yPos += 20;
+      });
+      
+      // Tasks
+      yPos += 10;
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('CURRENT_TASKS:', 10, yPos);
+      yPos += 15;
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      
+      tasks.forEach((t, i) => {
+        doc.text(`${t.done ? '[X]' : '[ ]'} ${t.task}`, 15, yPos);
+        yPos += 10;
+      });
+      
+      doc.save('SoloScribe_Roadmap.pdf');
+      toast.success('ROADMAP_EXPORT_SUCCESS');
     } catch (error) {
-      toast.error('Draft Failed', { id: toastId });
-    } finally {
-      setIsGenerating(null);
+      console.error('Roadmap PDF Error:', error);
+      toast.error('EXPORT_FAILURE');
     }
   };
 
-  const stages = ['Idea', 'Planning', 'Launch', 'Growth', 'Legacy'] as const;
-  const allItems = [...ROADMAP_ITEMS, ...customItems];
-
   return (
-    <div className="roadmap-tab p-6 pb-40 overflow-y-auto h-full bg-[#0a0a0a] text-white scrollbar-brutalist">
-      <div className="mb-12 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-        <div className="max-w-xl">
-          <div className="flex items-center gap-2 mb-2">
-            <Shield size={16} className="text-theme-accent" />
-            <span className="font-mono text-[10px] uppercase tracking-[0.3em] font-bold text-theme-accent">Mission_Protocol_v4</span>
-          </div>
-          <h2 className="text-4xl font-display uppercase tracking-tighter leading-none mb-4">Strategic_Roadmap</h2>
-          <p className="font-mono text-xs opacity-50 uppercase leading-relaxed">
-            Transition from loose ideas to a battle-hardened legacy. Orchestrate your milestones through AI-assisted documentation.
-          </p>
+    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8">
+      <div className="bg-neo-black text-neo-white p-8 border-4 border-neo-black neo-shadow-lg flex items-center justify-between overflow-hidden relative">
+        <div className="relative z-10">
+          <h2 className="text-5xl font-black tracking-tighter uppercase">STRATEGIC_ROADMAP</h2>
+          <p className="font-mono text-xs text-neo-lime uppercase tracking-widest">Growth_Trajectory_v5.0</p>
         </div>
-
-        <div className="w-full md:w-64 bg-white/5 border-2 border-white/10 p-4 shadow-[4px_4px_0px_rgba(255,255,255,0.05)]">
-          <div className="flex justify-between items-center mb-2">
-            <span className="font-mono text-[9px] uppercase font-bold opacity-40 italic">Global_Readiness</span>
-            <span className="font-mono text-xs font-bold text-theme-accent">{progress}%</span>
-          </div>
-          <div className="h-2 bg-black border border-white/10 overflow-hidden">
-            <motion.div 
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              className="h-full bg-theme-accent shadow-[0_0_15px_rgba(0,243,255,0.5)]"
-            />
-          </div>
-          <div className="mt-2 text-[10px] font-mono opacity-50 uppercase text-center tracking-widest">
-            {completedCount} / {projectTasks.length} Milestones Sync'd
-          </div>
+        <div className="flex items-center gap-4 relative z-10">
+           <button 
+              onClick={handleExportPDF}
+              className="p-3 bg-white text-neo-black border-4 border-neo-black neo-shadow hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all flex items-center gap-2 font-black text-xs uppercase"
+           >
+              <Download size={16} />
+              Export_PDF
+           </button>
+           <Flag className="text-neo-pink w-16 h-16 opacity-40 -rotate-12 hidden md:block" />
         </div>
       </div>
 
-      <div className="mb-12">
-         <button
-          onClick={async () => {
-            setIsSuggesting(true);
-            try {
-              const res = await thinkDeeply(`Suggest 1 unique roadmap item for: ${topic}. Return JSON: {title, description, stage, complexity}`);
-              const item = JSON.parse(res.replace(/```json|```/g, ''));
-              setCustomItems(prev => [...prev, { ...item, id: Date.now().toString() }]);
-              toast.success('Custom Milestone Added');
-            } finally { setIsSuggesting(false); }
-          }}
-          disabled={isSuggesting}
-          className="flex items-center gap-2 px-6 py-3 bg-theme-accent/10 border-2 border-theme-accent text-theme-accent font-display text-xs uppercase hover:bg-theme-accent hover:text-black transition-all"
-        >
-          {isSuggesting ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-          Generate_Expansion_Pack
-        </button>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {milestones.map((m, i) => (
+          <div key={m.phase} className="bg-white border-4 border-neo-black p-6 neo-shadow flex flex-col justify-between hover:rotate-1 transition-transform cursor-pointer">
+            <div>
+              <div className="flex justify-between items-center mb-4">
+                <span className="font-mono text-[10px] font-black bg-neo-black text-white px-2 py-1">{m.phase}</span>
+                {m.status === 'COMPLETED' ? <CheckSquare className="text-neo-lime" size={16} /> : <Clock className="text-neo-yellow" size={16} />}
+              </div>
+              <h3 className="font-black text-lg uppercase leading-tight mb-2">{m.title}</h3>
+              <p className="font-bold text-[10px] text-zinc-400 uppercase">{m.date}</p>
+            </div>
+            <div className="mt-6 pt-4 border-t-2 border-neo-black/10">
+               <div className={`h-2 w-full border-2 border-neo-black ${m.status === 'COMPLETED' ? 'bg-neo-lime' : m.status === 'ACTIVE' ? 'bg-neo-cyan anim-pulse' : 'bg-neo-black/10'}`} />
+            </div>
+          </div>
+        ))}
       </div>
 
-      <div className="space-y-16 relative">
-        <div className="absolute left-[20px] top-4 bottom-4 w-1 bg-white/5" />
-        
-        {stages.map((stage) => {
-          const stageItems = allItems.filter(item => item.stage === stage);
-          if (stageItems.length === 0) return null;
-
-          return (
-            <section key={stage} className="relative pl-12">
-              <div className="absolute left-0 top-0 w-10 h-10 bg-black border-2 border-white/20 flex items-center justify-center z-10">
-                 {stage === 'Idea' && <Lightbulb size={20} className="text-theme-accent" />}
-                 {stage === 'Planning' && <Zap size={20} className="text-yellow-400" />}
-                 {stage === 'Launch' && <Rocket size={20} className="text-green-400" />}
-                 {stage === 'Growth' && <TrendingUp size={20} className="text-purple-400" />}
-                 {stage === 'Legacy' && <Award size={20} className="text-orange-400" />}
-              </div>
-
-              <div className="mb-8">
-                <h3 className="text-xl font-display uppercase tracking-widest italic flex items-center gap-3">
-                  {stage}_Phase
-                  <span className="h-px flex-1 bg-white/10" />
-                </h3>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                {stageItems.map((item) => (
-                  <motion.div
-                    key={item.id}
-                    whileHover={{ scale: 1.02 }}
-                    className="group relative bg-white/5 border-2 border-white/10 p-6 transition-all hover:border-theme-accent/50 shadow-[4px_4px_0px_rgba(255,255,255,0.02)]"
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 notebook-bg border-4 border-neo-black p-10 neo-shadow relative">
+          <div className="absolute left-0 top-0 bottom-0 w-8 flex flex-col justify-around py-4">
+            {[...Array(10)].map((_, i) => <div key={i} className="w-3 h-3 rounded-full bg-white border-2 border-neo-black mx-auto" />)}
+          </div>
+          <div className="ml-8">
+            <div className="flex justify-between items-center mb-6 border-b-4 border-neo-black pb-4">
+               <h3 className="font-black text-2xl uppercase flex items-center gap-3">
+                 <Layout className="text-neo-pink" /> CURRENT_TASKS
+               </h3>
+               <div className="font-mono text-xs font-black">
+                 {completedCount}/{tasks.length} COMPLETED
+               </div>
+            </div>
+            <div className="space-y-4">
+                {tasks.map((t) => (
+                  <div 
+                    key={t.id} 
+                    onClick={() => toggleTask(t.id)}
+                    className={`flex items-center gap-4 p-4 border-2 border-neo-black cursor-pointer group transition-all ${t.done ? 'bg-neo-lime/10' : 'bg-white hover:bg-neo-cyan/10'}`}
                   >
-                    <div className="flex justify-between items-start mb-4">
-                      <div className={`px-2 py-0.5 border text-[8px] font-mono uppercase font-black tracking-tighter
-                        ${item.complexity === 'High' ? 'border-red-500/50 text-red-400' : 
-                          item.complexity === 'Medium' ? 'border-yellow-500/50 text-yellow-400' : 'border-green-500/50 text-green-400'}
-                      `}>
-                        {item.complexity}_Load
-                      </div>
-                      <Flag size={14} className="opacity-20 group-hover:opacity-100 group-hover:text-theme-accent transition-all" />
+                    <div className={`w-8 h-8 border-4 border-neo-black flex items-center justify-center transition-colors ${t.done ? 'bg-neo-lime' : 'bg-white'}`}>
+                        {t.done && <CheckSquare size={20} />}
                     </div>
-
-                    <h4 className="text-lg font-display uppercase tracking-tight mb-2 group-hover:text-theme-accent transition-colors">
-                      {item.title}
-                    </h4>
-                    <p className="text-[10px] font-mono opacity-50 uppercase leading-relaxed mb-8 h-8 line-clamp-2">
-                      {item.description}
-                    </p>
-
-                    <div className="mt-auto flex items-center justify-between gap-4 pt-4 border-t border-white/5">
-                      <button 
-                        onClick={() => {
-                          setDocumentContent(`# ${item.title}\n\n[START_TYPING_HERE]`);
-                          setMainTab('document');
-                        }}
-                        className="font-mono text-[9px] uppercase font-bold text-white/40 hover:text-white flex items-center gap-1 transition-colors"
-                      >
-                        Template <ChevronRight size={10} />
-                      </button>
-                      <button 
-                        onClick={() => handleAIDraft(item)}
-                        disabled={isGenerating === item.id}
-                        className="flex items-center gap-1.5 bg-theme-accent text-black px-3 py-1.5 text-[9px] font-display uppercase font-bold hover:bg-white transition-colors"
-                      >
-                        {isGenerating === item.id ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
-                        AI_Draft
-                      </button>
-                    </div>
-
-                    {item.id.startsWith('custom-') && (
-                      <div className="absolute -top-2 -right-2 bg-theme-accent text-black p-1 text-[8px] font-black uppercase tracking-tighter">
-                        Proprietary
-                      </div>
-                    )}
-                  </motion.div>
+                    <span className={`font-black uppercase text-sm flex-1 ${t.done ? 'line-through opacity-50' : ''}`}>{t.task}</span>
+                    <Zap className={`text-neo-black opacity-0 group-hover:opacity-100 transition-opacity ${t.done ? 'text-neo-lime opacity-40' : ''}`} size={16} />
+                  </div>
                 ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-neo-black text-neo-white p-8 border-4 border-neo-black neo-shadow-lg flex flex-col justify-between">
+           <div>
+              <h4 className="text-neo-cyan font-black text-xl mb-4 uppercase tracking-widest">Inklo_Review</h4>
+              <p className="font-mono text-xs opacity-80 leading-relaxed italic border-l-4 border-neo-pink pl-4">
+                "VELOCITY IS GOOD, FOUNDER. BUT YOUR 'PHASE_02' RELIES HEAVILY ON THE MONETIZATION MODEL REFINEMENT. KEEP THE HYPER-LOCAL TARGETING AS A FAILSAFE."
+              </p>
+           </div>
+           
+           <div className="mt-8">
+              <div className="h-40 w-full border-2 border-neo-white/30 flex items-center justify-center relative overflow-hidden group">
+                 <div className="absolute inset-0 bg-neo-pink/10 group-hover:bg-neo-pink/20 transition-colors" />
+                 <div className="text-[60px] font-black opacity-10 animate-pulse pointer-events-none">INKLO</div>
+                 <div className="relative z-10 text-center">
+                    <div className="text-4xl font-black">{Math.round((completedCount/tasks.length)*100)}%</div>
+                    <div className="text-[10px] font-mono font-black uppercase">Core_Integrity</div>
+                 </div>
               </div>
-            </section>
-          );
-        })}
+           </div>
+        </div>
       </div>
     </div>
   );
 };
+
+export default RoadmapTab;

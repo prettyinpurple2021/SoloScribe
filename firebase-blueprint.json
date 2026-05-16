@@ -1,150 +1,44 @@
 {
   "entities": {
     "User": {
-      "title": "User",
-      "description": "User profile and current working document state.",
+      "title": "User Profile",
+      "description": "User account information and settings.",
       "type": "object",
       "properties": {
         "uid": { "type": "string" },
-        "email": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
         "displayName": { "type": "string" },
         "photoURL": { "type": "string" },
-        "role": { "type": "string" },
+        "founderMood": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" },
-        "info": { "type": "string" },
-        "topic": { "type": "string" },
-        "format": { "type": "string" },
-        "documentContent": { "type": "string" },
-        "transcript": { "type": "array" },
-        "webhookUrl": { "type": "string" },
-        "memory": { "type": "string" },
         "updatedAt": { "type": "string", "format": "date-time" }
-      }
+      },
+      "required": ["uid", "email"]
     },
-    "Project": {
-      "title": "Project",
-      "description": "A saved project for a user.",
+    "Strategy": {
+      "title": "Strategy Document",
+      "description": "AI-generated strategy and keynote content.",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
         "userId": { "type": "string" },
-        "name": { "type": "string" },
-        "documentContent": { "type": "string" },
-        "transcript": { "type": "array" },
-        "isPublic": { "type": "boolean", "description": "Whether the project is shared publicly" },
-        "shareId": { "type": "string", "description": "Unique ID for public sharing" },
-        "viewCount": { "type": "integer", "description": "Number of times the public link has been viewed" },
-        "lastViewedAt": { "type": "string", "format": "date-time", "description": "Last time the public link was viewed" },
-        "updatedAt": { "type": "string", "format": "date-time" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "userId", "name", "documentContent", "transcript", "updatedAt"]
-    },
-    "Feedback": {
-      "title": "Feedback",
-      "description": "Feedback left by public users on a shared project",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "projectId": { "type": "string" },
-        "ownerId": { "type": "string" },
+        "title": { "type": "string" },
         "content": { "type": "string" },
-        "authorName": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "projectId", "ownerId", "content"]
-    },
-    "Interview": {
-      "title": "Interview",
-      "description": "An interview campaign created by a user.",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "userId": { "type": "string" },
-        "title": { "type": "string" },
-        "goal": { "type": "string" },
-        "questions": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "userId", "title", "goal", "questions", "createdAt"]
-    },
-    "InterviewResponse": {
-      "title": "InterviewResponse",
-      "description": "A response to an interview campaign submitted by a public user.",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "transcript": { "type": "array" },
-        "summary": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "transcript", "summary", "createdAt"]
-    },
-    "Version": {
-      "title": "Version",
-      "description": "A snapshot of a project's document content.",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "documentContent": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "label": { "type": "string" }
-      },
-      "required": ["id", "documentContent", "createdAt"]
-    },
-    "Task": {
-      "title": "Task",
-      "description": "A task with a due date related to a project.",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "projectId": { "type": "string" },
-        "userId": { "type": "string" },
-        "title": { "type": "string" },
-        "description": { "type": "string" },
-        "priority": { "type": "string", "enum": ["low", "medium", "high"] },
-        "dueDate": { "type": "string", "format": "date-time" },
-        "completed": { "type": "boolean" },
-        "notified": { "type": "boolean", "description": "Whether the user has been notified about this task being due/overdue" },
-        "notifiedTimings": { "type": "array", "items": { "type": "integer" }, "description": "List of reminder minutes that have already been notified" },
+        "founderMood": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["id", "projectId", "userId", "title", "dueDate", "completed", "priority"]
+      "required": ["userId", "content"]
     }
   },
   "firestore": {
     "/users/{userId}": {
-      "schema": { "$ref": "#/entities/User" },
-      "description": "Stores user profile and current session data."
+      "schema": "User",
+      "description": "User profiles indexed by their Firebase Auth UID."
     },
-    "/users/{userId}/projects/{projectId}": {
-      "schema": { "$ref": "#/entities/Project" },
-      "description": "Stores saved projects for a user."
-    },
-    "/users/{userId}/projects/{projectId}/versions/{versionId}": {
-      "schema": { "$ref": "#/entities/Version" },
-      "description": "Stores snapshots of a project's document content."
-    },
-    "/users/{userId}/projects/{projectId}/tasks/{taskId}": {
-      "schema": { "$ref": "#/entities/Task" },
-      "description": "Stores tasks related to a specific project."
-    },
-    "/interviews/{interviewId}": {
-      "schema": { "$ref": "#/entities/Interview" },
-      "description": "Stores interview campaigns created by users."
-    },
-    "/interviews/{interviewId}/responses/{responseId}": {
-      "schema": { "$ref": "#/entities/InterviewResponse" },
-      "description": "Stores public responses to an interview campaign."
-    },
-    "/public_projects/{shareId}": {
-      "schema": { "$ref": "#/entities/Project" },
-      "description": "Publicly shared projects (read-only or feedback-enabled)"
-    },
-    "/projects/{projectId}/feedback/{feedbackId}": {
-      "schema": { "$ref": "#/entities/Feedback" },
-      "description": "Feedback on specific projects"
+    "/users/{userId}/strategies/{strategyId}": {
+      "schema": "Strategy",
+      "description": "Strategy documents belonging to a specific user."
     }
   }
 }
