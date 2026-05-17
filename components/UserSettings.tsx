@@ -1,595 +1,242 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
-*/
-import Modal from './Modal';
-import { useAgent, useUI, useUser } from '../lib/state';
-import { useAuth } from '../contexts/AuthContext';
-import { Theme, themes } from '../lib/themes';
-import { FONT_OPTIONS, PLACEHOLDER_DOC } from '../lib/constants';
-import React, { useState, useRef } from 'react';
-import * as pdfjs from 'pdfjs-dist';
-import { FileUp, X, FileText, Loader2, ChevronDown, Sparkles, Bell, Settings, Camera, RefreshCw, Webhook, CreditCard, LogOut } from 'lucide-react';
+import React from 'react';
+import { motion } from 'motion/react';
+import { useAppStore } from '../lib/state';
+import { auth } from '../lib/firebase';
+import { verifyBeforeUpdateEmail, sendPasswordResetEmail, deleteUser } from 'firebase/auth';
+import { Bell, Shield, User, Globe, Trash2, Zap, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
-import { Tooltip } from './Tooltip';
 
-// Set up PDF.js worker
-// Using unpkg as it's often more reliable for specific versioned assets
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
-
-type FormatOption = 'Markdown' | 'HTML';
-const FORMAT_OPTIONS: FormatOption[] = ['Markdown', 'HTML'];
-
-/**
- * A component to capture a profile picture using the camera.
- */
-function CameraCapture({ onCapture, initialImage }: { onCapture: (data: string | undefined) => void, initialImage?: string }) {
-  const [isStreaming, setIsStreaming] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [stream, setStream] = useState<MediaStream | null>(null);
-
-  const startCamera = async () => {
-    try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
-      setStream(mediaStream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-        setIsStreaming(true);
-      }
-    } catch (err) {
-      console.error("Error accessing camera:", err);
-      toast.error("Could not access camera. Please check permissions.");
-    }
-  };
-
-  const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
-      setIsStreaming(false);
-    }
-  };
-
-  const captureImage = () => {
-    if (videoRef.current && canvasRef.current) {
-      const context = canvasRef.current.getContext('2d');
-      if (context) {
-        canvasRef.current.width = videoRef.current.videoWidth;
-        canvasRef.current.height = videoRef.current.videoHeight;
-        context.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
-        const dataUrl = canvasRef.current.toDataURL('image/png');
-        onCapture(dataUrl);
-        stopCamera();
-      }
-    }
-  };
-
-  const clearImage = () => {
-    onCapture(undefined);
-  };
-
-  return (
-    <div className="camera-capture-container">
-      <div className="camera-preview-wrapper">
-        {isStreaming ? (
-          <video ref={videoRef} autoPlay playsInline className="camera-preview" />
-        ) : initialImage ? (
-          <img src={initialImage} alt="Profile" className="profile-picture-img" referrerPolicy="no-referrer" />
-        ) : (
-          <div className="flex items-center justify-center h-full opacity-20">
-            <Camera size={48} />
-          </div>
-        )}
-      </div>
-      <canvas ref={canvasRef} style={{ display: 'none' }} />
-      
-      <div className="camera-actions">
-        {!isStreaming ? (
-          <>
-            <button type="button" onClick={startCamera} className="brutalist-button camera-btn">
-              {initialImage ? 'Retake' : 'Capture'}
-            </button>
-            {initialImage && (
-              <button type="button" onClick={clearImage} className="brutalist-button-outline camera-btn">
-                Remove
-              </button>
-            )}
-          </>
-        ) : (
-          <>
-            <button type="button" onClick={captureImage} className="brutalist-button camera-btn">
-              Snap
-            </button>
-            <button type="button" onClick={stopCamera} className="brutalist-button-outline camera-btn">
-              Cancel
-            </button>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/**
- * A custom dropdown component for settings.
- */
-function CustomDropdown({ 
-  value, 
-  options, 
-  onChange, 
-  placeholder 
-}: { 
-  value: string, 
-  options: string[], 
-  onChange: (val: string) => void,
-  placeholder?: string
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  return (
-    <div className="custom-dropdown-container" ref={containerRef}>
-      <button 
-        type="button"
-        className="custom-dropdown-trigger"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <span>{value || placeholder}</span>
-        <ChevronDown size={16} style={{ 
-          transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-          transition: 'transform 0.2s',
-          opacity: 0.5
-        }} />
-      </button>
-      {isOpen && (
-        <div className="custom-dropdown-menu">
-          {options.map(option => (
-            <button
-              key={option}
-              type="button"
-              className={`custom-dropdown-item ${value === option ? 'active' : ''}`}
-              onClick={() => {
-                onChange(option);
-                setIsOpen(false);
-              }}
-            >
-              {option}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/**
- * A modal for configuring user settings for the writing session.
- * It features a modern, "jazzy" design for a more engaging user experience.
- */
-export default function UserSettings() {
-  // Hooks to manage user-specific data (name, info, topic, etc.)
-  const { name, info, topic, format, profilePicture, setName, setInfo, setTopic, setFormat, setProfilePicture, contextFiles, addContextFile, removeContextFile } =
-    useUser();
-  // Hooks to manage UI state (modal visibility, current theme)
+const UserSettings = () => {
   const { 
-    setShowUserConfig, 
-    font, 
-    setFont, 
-    useSearch, 
-    setUseSearch, 
-    liveApiModel, 
-    setLiveApiModel, 
-    documentContent, 
-    setHasCompletedOnboarding, 
-    setShowWelcomeScreen,
+    founderMood, 
+    setFounderMood, 
     notificationPreferences,
-    setNotificationPreferences,
-    webhookUrl,
-    setWebhookUrl
-  } = useUI();
-  // Hooks to manage agent state (needed for updating agent color on theme change)
-  const { current: agent, update: updateAgent } = useAgent();
-  const { signOut } = useAuth();
+    founderIdentity,
+    setFounderIdentity
+  } = useAppStore();
 
-  const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const moods = ['PRODUCTIVE', 'HYPER-FOCUSED', 'CHAOTIC', 'STRATEGIC', 'GOD_MODE'];
 
-  /**
-   * A placeholder function that currently just closes the modal.
-   * Could be expanded in the future if client-side settings need more complex handling.
-   */
-  function updateClient() {
-    setShowUserConfig(false);
-  }
+  const updateIdentity = async (field: keyof typeof founderIdentity, value: string) => {
+    const updatedIdentity = {
+      ...founderIdentity,
+      [field]: value
+    };
+    
+    setFounderIdentity(updatedIdentity);
 
-  const handleReplayOnboarding = () => {
-    setHasCompletedOnboarding(false);
-    setShowWelcomeScreen(true);
-    setShowUserConfig(false);
+    // Sync with Firestore if authenticated
+    if (auth.currentUser) {
+      try {
+        const { doc, setDoc } = await import('firebase/firestore');
+        const { db } = await import('../lib/firebase');
+        await setDoc(doc(db, 'users', auth.currentUser.uid), {
+          founderIdentity: updatedIdentity
+        }, { merge: true });
+      } catch (error) {
+        console.error('Identity Sync Failure:', error);
+      }
+    }
   };
 
-  const handleEditAgent = () => {
-    setShowUserConfig(false);
-    useUI.getState().setShowAgentEdit(true);
-  };
-
-  const handleRequestNotificationPermission = async () => {
-    if (!('Notification' in window)) {
-      toast.error('This browser does not support desktop notifications');
+  const handleUpdateEmail = async () => {
+    const newEmail = window.prompt('ENTER_NEW_FOUNDER_EMAIL:');
+    if (!newEmail || !newEmail.includes('@')) {
+      if (newEmail) toast.error('INVALID_EMAIL_FORMAT');
       return;
     }
 
-    const permission = await Notification.requestPermission();
-    if (permission === 'granted') {
-      setNotificationPreferences({ browserNotifications: true });
-      toast.success('Notifications enabled!');
-    } else {
-      toast.error('Notification permission denied');
-    }
-  };
+    if (!auth.currentUser) return;
 
-  const toggleReminderTiming = (minutes: number) => {
-    const current = notificationPreferences.reminderTimings || [];
-    if (current.includes(minutes)) {
-      setNotificationPreferences({ 
-        reminderTimings: current.filter(m => m !== minutes) 
-      });
-    } else {
-      setNotificationPreferences({ 
-        reminderTimings: [...current, minutes].sort((a, b) => a - b) 
-      });
-    }
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    setIsUploading(true);
     try {
-      for (const file of Array.from(files) as File[]) {
-        if (file.type === 'application/pdf') {
-          const arrayBuffer = await file.arrayBuffer();
-          const loadingTask = pdfjs.getDocument({ data: arrayBuffer });
-          const pdf = await loadingTask.promise;
-          
-          let fullText = '';
-          for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const textContent = await page.getTextContent();
-            const pageText = textContent.items
-              .map((item: any) => item.str)
-              .join(' ');
-            fullText += pageText + '\n';
-          }
+      toast.loading('DISPATCHING_VERIFICATION_LINK...', { id: 'email-update' });
+      await verifyBeforeUpdateEmail(auth.currentUser, newEmail);
+      toast.success('VERIFICATION_DISPATCHED: CHECK YOUR NEW INBOX', { id: 'email-update' });
+    } catch (error: any) {
+      toast.error(error.message.replace('Firebase:', '').trim(), { id: 'email-update' });
+    }
+  };
 
-          addContextFile({
-            name: file.name,
-            text: fullText,
-            type: 'pdf'
-          });
-        } else if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
-          const text = await file.text();
-          addContextFile({
-            name: file.name,
-            text,
-            type: 'text'
-          });
-        } else if (file.name.endsWith('.md')) {
-          const text = await file.text();
-          addContextFile({
-            name: file.name,
-            text,
-            type: 'markdown'
-          });
-        }
+  const handleResetPassword = async () => {
+    const email = auth.currentUser?.email;
+    if (!email) return;
+
+    if (!window.confirm('DISPATCH_PASSWORD_RESET_PROTOCOL_TO: ' + email + '?')) return;
+
+    try {
+      toast.loading('COMMUNICATING_WITH_AUTH_SERVER...', { id: 'pwd-reset' });
+      await sendPasswordResetEmail(auth, email);
+      toast.success('RECOVERY_LINK_DISPATCHED', { id: 'pwd-reset' });
+    } catch (error: any) {
+      toast.error(error.message.replace('Firebase:', '').trim(), { id: 'pwd-reset' });
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!auth.currentUser) return;
+
+    const confirmation = window.prompt('WARNING: THIS_PROTOCOL_IS_IRREVERSIBLE. TYPE "DELETE" TO PURGE ALL FOUNDER DATA:');
+    if (confirmation !== 'DELETE') {
+      if (confirmation) toast.error('DATA_PURGE_ABORTED: INCORRECT_CONFIRMATION');
+      return;
+    }
+
+    try {
+      toast.loading('EXECUTING_DATA_PURGE...', { id: 'delete-acc' });
+      await deleteUser(auth.currentUser);
+      toast.success('IDENTITY_PURGED: GOODBYE FOUNDER');
+    } catch (error: any) {
+      if (error.code === 'auth/requires-recent-login') {
+        toast.error('SECURITY_GATE_ACTIVE: PLEASE SIGN OUT AND SIGN BACK IN TO RE-AUTHENTICATE BEFORE DELETING.', { id: 'delete-acc' });
+      } else {
+        toast.error(error.message.replace('Firebase:', '').trim(), { id: 'delete-acc' });
       }
-    } catch (error) {
-      console.error('Error parsing file:', error);
-      toast.error('Failed to parse file. Please try again.');
-    } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
   return (
-    <Modal onClose={() => setShowUserConfig(false)} title="System Configuration">
-      <div className="userSettings">
-        <p className="config-description">Initialize documentation parameters. Define identity and objective.</p>
-
-        <form
-          onSubmit={e => {
-            e.preventDefault();
-            setShowUserConfig(false);
-            updateClient();
-          }}
-        >
-          {/* Identity Section */}
-          <div className="settings-section">
-            <h3 className="section-title"><Sparkles size={16} /> Identity & Context</h3>
-            
-            <CameraCapture onCapture={setProfilePicture} initialImage={profilePicture} />
-
-            <div className="settings-grid">
-              <div>
-                <p className="input-label">Your name</p>
-                <input
-                  type="text"
-                  name="name"
-                  className="brutalist-input"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  placeholder="What do you like to be called?"
-                />
-              </div>
-
-              <div>
-                <p className="input-label">Topic</p>
-                <input
-                  type="text"
-                  name="topic"
-                  className="brutalist-input"
-                  value={topic}
-                  onChange={e => setTopic(e.target.value)}
-                  placeholder="A business plan, pitch deck, marketing strategy, lean canvas, etc."
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Notifications Section - PROMINENT */}
-          <div className="settings-section prominent-section">
-            <h3 className="section-title"><Bell size={16} /> Task Notifications</h3>
-            <div className="notification-controls">
-              <div className="flex items-center justify-between mb-4">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={notificationPreferences.enabled}
-                    onChange={e => setNotificationPreferences({ enabled: e.target.checked })}
-                    className="brutalist-checkbox"
-                  />
-                  <span className="font-bold">Enable Reminders</span>
-                </label>
-
-                <button
-                  type="button"
-                  onClick={handleRequestNotificationPermission}
-                  className={`brutalist-button-small ${notificationPreferences.browserNotifications ? 'active' : ''}`}
-                >
-                  {notificationPreferences.browserNotifications ? 'Browser Notifications Active' : 'Enable Browser Notifications'}
-                </button>
-              </div>
-
-              {notificationPreferences.enabled && (
-                <div className="reminder-timings">
-                  <p className="input-label mb-2">Reminder Timings (minutes before due)</p>
-                  <div className="flex flex-wrap gap-2">
-                    {[5, 15, 30, 60, 120, 1440].map(mins => (
-                      <button
-                        key={mins}
-                        type="button"
-                        onClick={() => toggleReminderTiming(mins)}
-                        className={`timing-chip ${(notificationPreferences.reminderTimings || []).includes(mins) ? 'active' : ''}`}
-                      >
-                        {mins < 60 ? `${mins}m` : mins === 1440 ? '1d' : `${mins / 60}h`}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Appearance Section */}
-          <div className="settings-section">
-            <h3 className="section-title"><Settings size={16} /> Appearance & Model</h3>
-            <div className="settings-grid">
-              <div>
-                <p className="input-label">Document Font</p>
-                <CustomDropdown
-                  value={font}
-                  options={FONT_OPTIONS}
-                  onChange={setFont}
-                  placeholder="Select a font"
-                />
-              </div>
-
-              <div>
-                <p className="input-label">Live API Model</p>
-                <CustomDropdown
-                  value={liveApiModel === 'gemini-2.5-flash-native-audio-preview-12-2025' ? '12-2025' : '09-2025 (Default)'}
-                  options={['12-2025', '09-2025 (Default)']}
-                  onChange={(val) => setLiveApiModel(val === '12-2025' ? 'gemini-2.5-flash-native-audio-preview-12-2025' : 'gemini-2.5-flash-native-audio-preview-09-2025')}
-                />
-              </div>
-            </div>
-
-            <div style={{ marginTop: '15px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={useSearch}
-                  onChange={e => setUseSearch(e.target.checked)}
-                  style={{ width: '18px', height: '18px' }}
-                />
-                <span>Use search as needed</span>
-              </label>
-            </div>
-          </div>
-
-          {/* Integrations Section */}
-          <div className="settings-section">
-            <h3 className="section-title"><Webhook size={16} /> Integrations & Webhooks</h3>
-            <div>
-              <p className="input-label">Outgoing Webhook URL</p>
-              <input
-                type="url"
-                className="brutalist-input"
-                value={webhookUrl}
-                onChange={e => setWebhookUrl(e.target.value)}
-                placeholder="https://zapier.com/hooks/..."
-              />
-              <p className="config-description" style={{ marginTop: '8px', fontSize: '11px' }}>
-                SoloScribe will send events (like task completion) to this URL.
-              </p>
-            </div>
-          </div>
-
-          {/* Subscription Section */}
-          <div className="settings-section prominent-section bg-theme-accent/10">
-            <h3 className="section-title"><CreditCard size={16} /> SoloScribe Pro Subscription</h3>
-            <div className="p-4 border-2 border-black bg-white mb-4">
-              <div className="flex justify-between items-center mb-2">
-                <span className="font-black uppercase text-sm tracking-widest">Current Plan: Free</span>
-                <span className="bg-black text-white text-[10px] px-2 py-0.5 font-bold uppercase">Upgrade Needed</span>
-              </div>
-              <p className="text-xs opacity-70 mb-4">Unlock vertical-specific co-founders, unlimited projects, and advanced compliance auditing.</p>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 border-2 border-black hover:bg-theme-accent cursor-pointer transition-colors group">
-                  <p className="font-bold text-xs uppercase">Creator Pro</p>
-                  <p className="text-lg font-black">$19/mo</p>
-                </div>
-                <div className="p-3 border-2 border-black hover:bg-theme-accent cursor-pointer transition-colors group">
-                  <p className="font-bold text-xs uppercase">SaaS Founder</p>
-                  <p className="text-lg font-black">$49/mo</p>
-                </div>
-              </div>
-            </div>
-            <button type="button" className="brutalist-button w-full py-2 text-xs">MANAGE SUBSCRIPTION</button>
-          </div>
-
-          <details style={{ marginTop: '15px' }}>
-            <summary>Context & Documents (Optional)</summary>
-            <div className="details-content">
-              <p className="context-description">
-                Provide any background info worth knowing for this session.
-              </p>
-              <textarea
-                rows={3}
-                name="info"
-                className="brutalist-textarea"
-                value={info}
-                onChange={e => setInfo(e.target.value)}
-                placeholder="e.g., names, facts, style preferences"
-              />
-
-              <div className="context-section" style={{ marginTop: '20px' }}>
-                <p>Context Documents (.pdf, .txt, .md)</p>
-                <div className="pdf-upload-container">
-                  <input
-                    type="file"
-                    accept=".pdf,.txt,.md"
-                    multiple
-                    onChange={handleFileChange}
-                    style={{ display: 'none' }}
-                    ref={fileInputRef}
-                  />
-                  <button
-                    type="button"
-                    className="pdf-upload-button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploading}
-                  >
-                    {isUploading ? (
-                      <Loader2 className="animate-spin" size={18} />
-                    ) : (
-                      <FileUp size={18} />
-                    )}
-                    <span>{isUploading ? 'Processing...' : 'Upload Files'}</span>
-                  </button>
-
-                  {contextFiles.length > 0 && (
-                    <div className="pdf-list">
-                      {contextFiles.map(file => (
-                        <div key={file.name} className="pdf-item">
-                          <FileText size={14} className="pdf-icon" />
-                          <Tooltip content={file.name} position="top">
-                            <span className="pdf-name">{file.name}</span>
-                          </Tooltip>
-                          <Tooltip content="Remove File" position="top">
-                            <button
-                              type="button"
-                              className="pdf-remove"
-                              onClick={() => removeContextFile(file.name)}
-                            >
-                              <X size={14} />
-                            </button>
-                          </Tooltip>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </details>
-
-          {documentContent === PLACEHOLDER_DOC && (
-            <div style={{ marginTop: '15px' }}>
-              <p className="input-label">Output Format</p>
-              <div className="format-selector">
-                {FORMAT_OPTIONS.map(f => (
-                  <label key={f} className="format-option">
-                    <input
-                      type="radio"
-                      name="format"
-                      value={f}
-                      checked={format === f}
-                      onChange={() => setFormat(f)}
-                    />
-                    <span>{f}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <button className="brutalist-button" style={{ marginTop: '20px', width: '100%' }}>Initialize Session</button>
-          
-          <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1px solid rgba(255, 255, 255, 0.1)', display: 'flex', justifyContent: 'center', gap: '24px' }}>
-            <button 
-              type="button" 
-              onClick={handleEditAgent}
-              className="flex items-center gap-2 text-sm opacity-60 hover:opacity-100 transition-opacity"
-            >
-              <Sparkles size={16} />
-              <span>Edit Agent</span>
-            </button>
-            <button 
-              type="button" 
-              onClick={handleReplayOnboarding}
-              className="flex items-center gap-2 text-sm opacity-60 hover:opacity-100 transition-opacity"
-            >
-              <Sparkles size={16} />
-              <span>Replay Onboarding</span>
-            </button>
-            <button 
-              type="button" 
-              onClick={async () => {
-                await signOut();
-                setShowUserConfig(false);
-              }}
-              className="flex items-center gap-2 text-sm text-red-500 hover:text-red-700 transition-colors"
-            >
-              <LogOut size={16} />
-              <span>Sign Out</span>
-            </button>
-          </div>
-        </form>
+    <div className="max-w-4xl mx-auto py-8">
+      <div className="bg-neo-black text-neo-white p-6 border-4 border-neo-black neo-shadow-lg mb-8">
+         <h2 className="text-4xl font-black tracking-tighter flex items-center gap-4">
+            <User size={32} className="text-neo-cyan" />
+            FOUNDER_CORE_SETTINGS
+         </h2>
       </div>
-    </Modal>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+         {/* MOOD CONTROL */}
+         <section className="bg-white border-4 border-neo-black p-6 neo-shadow">
+            <h3 className="text-xl font-black mb-6 flex items-center gap-2 border-b-2 border-neo-black pb-2">
+               <Zap className="text-neo-yellow" size={20} />
+               MOOD_CALIBRATION
+            </h3>
+            <div className="flex flex-wrap gap-2">
+               {moods.map(mood => (
+                  <button
+                     key={mood}
+                     onClick={() => setFounderMood(mood)}
+                     className={`px-4 py-2 border-2 border-neo-black font-black text-xs transition-all
+                        ${founderMood === mood ? 'bg-neo-cyan shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : 'bg-white hover:bg-zinc-100'}
+                     `}
+                  >
+                     {mood}
+                  </button>
+               ))}
+            </div>
+         </section>
+
+         {/* NOTIFICATIONS */}
+         <section className="bg-neo-lime border-4 border-neo-black p-6 neo-shadow">
+            <h3 className="text-xl font-black mb-6 flex items-center gap-2 border-b-2 border-neo-black pb-2">
+               <Bell size={20} />
+               SYNC_NOTIFICATIONS
+            </h3>
+            <div className="flex flex-col gap-4">
+               {['DESKTOP_PUSH', 'EMAIL_DIGEST', 'MOBILE_LINK'].map(type => (
+                  <label key={type} className="flex items-center gap-3 cursor-pointer group">
+                     <div className="w-6 h-6 border-2 border-neo-black bg-white group-hover:bg-neo-cyan transition-all flex items-center justify-center font-black text-[10px]">
+                        X
+                     </div>
+                     <span className="font-extrabold text-sm">{type}</span>
+                  </label>
+               ))}
+            </div>
+         </section>
+
+         {/* IDENTITY CORE */}
+         <section className="bg-neo-black text-neo-white border-4 border-neo-black p-6 neo-shadow col-span-1 md:col-span-2">
+            <h3 className="text-xl font-black mb-6 flex items-center gap-2 border-b-2 border-neo-white pb-2">
+               <Globe className="text-neo-cyan" size={20} />
+               STRATEGIC_IDENTITY_CORE
+            </h3>
+            <div className="space-y-6">
+               <div className="space-y-2">
+                  <label className="font-mono text-[10px] font-black uppercase text-zinc-400">THE_WHY // PERSISTENT_MOTIVATION</label>
+                  <textarea 
+                    value={founderIdentity.why}
+                    onChange={(e) => updateIdentity('why', e.target.value)}
+                    placeholder="Why are you building this?"
+                    className="w-full bg-zinc-900 border-2 border-zinc-700 p-4 font-bold text-sm focus:border-neo-cyan outline-none transition-colors min-h-[80px]"
+                  />
+               </div>
+               <div className="space-y-2">
+                  <label className="font-mono text-[10px] font-black uppercase text-zinc-400">LONG_TERM_VISION // NORTH_STAR</label>
+                  <textarea 
+                    value={founderIdentity.vision}
+                    onChange={(e) => updateIdentity('vision', e.target.value)}
+                    placeholder="Where do you see this in 5 years?"
+                    className="w-full bg-zinc-900 border-2 border-zinc-700 p-4 font-bold text-sm focus:border-neo-cyan outline-none transition-colors min-h-[80px]"
+                  />
+               </div>
+               <div className="space-y-2">
+                  <label className="font-mono text-[10px] font-black uppercase text-zinc-400">OPERATIONAL_CONSTRAINTS // BOUNDARY_LOGIC</label>
+                  <textarea 
+                    value={founderIdentity.constraints}
+                    onChange={(e) => updateIdentity('constraints', e.target.value)}
+                    placeholder="What will you NOT do?"
+                    className="w-full bg-zinc-900 border-2 border-zinc-700 p-4 font-bold text-sm focus:border-neo-cyan outline-none transition-colors min-h-[80px]"
+                  />
+               </div>
+               <div className="bg-neo-pink/10 border border-neo-pink/30 p-4 flex gap-4 items-start">
+                  <Zap size={16} className="text-neo-pink shrink-0 mt-1" />
+                  <p className="font-mono text-[10px] font-bold leading-relaxed opacity-80 uppercase">
+                    INKLO: "Your identity core is now synchronized with my reasoning engine. Every move we make will be grounded in these specific parameters to ensure maximum founder-market fit."
+                  </p>
+               </div>
+            </div>
+         </section>
+
+         {/* ACCOUNT CONTROL */}
+         <section className="bg-neo-pink border-4 border-neo-black p-6 neo-shadow col-span-1 md:col-span-2">
+            <h3 className="text-xl font-black mb-6 flex items-center gap-2 border-b-2 border-neo-black pb-2">
+               <Shield size={20} />
+               PROFILE_IDENTITY_CORE
+            </h3>
+            <div className="flex flex-col md:flex-row gap-6 items-center">
+               <div className="flex-1 space-y-2">
+                  <div className="font-mono text-[10px] font-bold text-neo-black/60 uppercase">AUTHENTICATED_EMAIL</div>
+                  <div className="font-black text-lg bg-white border-2 border-neo-black p-2 neo-shadow transform -rotate-1">
+                     {useAppStore.getState().user?.email || 'ANONYMOUS_SESSION'}
+                  </div>
+                  <div className="pt-4 flex gap-4 text-[10px] font-mono font-black uppercase">
+                     <button 
+                        onClick={handleUpdateEmail}
+                        className="underline hover:text-neo-cyan transition-colors"
+                     >
+                        UPDATE_EMAIL
+                     </button>
+                     <button 
+                        onClick={handleResetPassword}
+                        className="underline hover:text-neo-cyan transition-colors"
+                     >
+                        RESET_PASSWORD
+                     </button>
+                     <button 
+                        onClick={handleDeleteAccount}
+                        className="underline text-red-500 hover:text-red-700 transition-colors"
+                     >
+                        DELETE_ACCOUNT
+                     </button>
+                  </div>
+               </div>
+               
+               <div className="w-full md:w-auto flex flex-col gap-3">
+                  <button 
+                     onClick={() => auth.signOut()}
+                     className="bg-neo-black text-neo-white px-10 py-6 font-black uppercase tracking-widest hover:bg-zinc-800 transition-all neo-shadow-hover flex items-center justify-center gap-3 border-4 border-neo-black"
+                  >
+                     <LogOut size={24} className="text-neo-pink animate-pulse" />
+                     SECURE_SIGN_OUT
+                  </button>
+                  <p className="font-mono text-[8px] text-center text-zinc-500 uppercase">
+                    INKLO_ID: {useAppStore.getState().user?.uid?.substring(0, 12)}...
+                  </p>
+               </div>
+            </div>
+         </section>
+      </div>
+    </div>
   );
-}
+};
+
+export default UserSettings;
