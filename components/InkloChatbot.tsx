@@ -1,63 +1,97 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MessageSquare, X, Send, User, Brain, HelpCircle, Bug, Sparkles } from 'lucide-react';
+import { MessageSquare, X, Send, User, Brain, HelpCircle, Bug, Sparkles, AlertTriangle } from 'lucide-react';
 import Inklo from './Inklo';
 import { toast } from 'sonner';
 import { useAppStore } from '../lib/state';
+import { thinkDeeply } from '../lib/ai-tools';
+import { marked } from 'marked';
+
+// Preset high-value starter suggestions for lone founders
+const INKLO_CHIPS = [
+  { label: "💡 Roast Pitch", prompt: "Inklo, please roast my business strategy, original vision, and current direction. Give it to me 100% straight." },
+  { label: "💸 Bootstrap Traps", prompt: "What are the most dangerous growth traps that a bootstrapped solo founder should avoid?" },
+  { label: "💥 Unfair Advantage", prompt: "Help me define my unfair advantage or asymmetry factor that lets me outperform heavily funded VC teams." },
+  { label: "👑 Exec God Mode", prompt: "How do I operate in high-velocity 'GOD_MODE' to gain maximum leverage as a solo engineer?" }
+];
 
 const InkloChatbot = () => {
-  const { setIsProcessing, setInkloMode } = useAppStore();
+  const { setIsProcessing, setInkloMode, founderIdentity } = useAppStore();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<{ role: 'inklo' | 'user', text: string }[]>([
-    { role: 'inklo', text: "HEY FOUNDER! I'm Inklo! *bounces enthusiastically* I've got my nerdy glasses polished and I'm ready to turn your chaos into leverage. Need a hand with the strategy engine?" }
+    { role: 'inklo', text: "HEY FOUNDER! I'm Inklo! *bounces enthusiastically* I've got my nerdy glasses polished and I'm ready to turn your chaos into leverage. Tap one of my strategic chips below or write me anything, and I'll use live cognitive filters to analyze it!" }
   ]);
   const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, loading]);
 
-  const handleSend = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim()) return;
+  const renderInkloMarkdown = (text: string) => {
+    try {
+      const html = marked.parse(text, { gfm: true, breaks: true });
+      if (html instanceof Promise) {
+        return text;
+      }
+      return html;
+    } catch (e) {
+      return text.replace(/\n/g, '<br/>');
+    }
+  };
 
-    setMessages(prev => [...prev, { role: 'user', text: input }]);
+  const executeSend = async (textToSend: string) => {
+    if (!textToSend.trim()) return;
+
+    setMessages(prev => [...prev, { role: 'user', text: textToSend }]);
+    setLoading(true);
     setIsProcessing(true);
     setInkloMode('STRATEGIZING');
     
-    // Friendly, nerdy response logic
-    setTimeout(() => {
-      let response = "Interesting! My cognitive circuits are firing! *adjusts glasses* I'm processing that through the Inklo_Net filters. What else is on your mind, founder?";
+    const toastId = toast.loading('INKLO IS PROCESSING...', { position: 'bottom-right' });
+
+    try {
+      const response = await thinkDeeply(textToSend, founderIdentity);
       
-      const lowerInput = input.toLowerCase();
-      if (lowerInput.includes('bug') || lowerInput.includes('error')) {
+      setMessages(prev => [...prev, { role: 'inklo', text: response }]);
+      toast.success('INKLO: COGNITION COMPLETE!', { id: toastId, icon: '🤖', position: 'bottom-right' });
+    } catch (error: any) {
+      console.error(error);
+      
+      // Fallback response with beautiful personality in case of missing keys
+      let fallback = "Ah, my deep thinking circuit is atmospheric! Ensure your GEMINI_API_KEY is configured in your project settings. Let me provide some local helper wisdom:\n\n### 🤖 Inklo Local Backup Mode\n1. Use the **STRATEGY** tab to dump your brain into actionable SWOT or MoSCoW matrices.\n2. Go to **SETTINGS** to connect Notion synchronizations or run system health scans!\n3. *Keep pushing forward, founder!*";
+      
+      const lower = textToSend.toLowerCase();
+      if (lower.includes('bug') || lower.includes('error')) {
         setInkloMode('FIXING');
-        response = "ACK! A GLITCH IN THE MATRIX! I've logged that bug faster than a Series A pivot! My dev-team (the Inklo-Bots) are on it! Thanks for the sharp eye!";
-      } else if (lowerInput.includes('pricing') || lowerInput.includes('cost') || lowerInput.includes('money')) {
-        response = "We're currently in the FOUNDER_BETA! That means full access for visions who share the drive. No credits needed while we're in soft-launch mode!";
-      } else if (lowerInput.includes('help') || lowerInput.includes('how') || lowerInput.includes('where')) {
-        response = "It's easy-peasy! Use STRATEGY to dump your brain, MARKET to find your loop, and KEYNOTE to polish it into a masterpiece! I'm here at every step!";
-      } else if (lowerInput.includes('strategy')) {
-        response = "Strategy is my specialty! *bounces* We use a Grounded AI model to ensure your plans aren't just fluff, but real, battle-tested leverage!";
-      } else if (lowerInput.includes('build') || lowerInput.includes('create')) {
-        setInkloMode('BUILDING');
+        fallback = "ACK! A GLITCH IN THE MATRIX! I've logged that bug faster than a Series A pivot! My dev-team (the Inklo-Bots) are on it! Thanks for the sharp eye!";
+      } else if (lower.includes('pricing') || lower.includes('cost') || lower.includes('money')) {
+        fallback = "We're currently in the FOUNDER_BETA! That means full access for visionaries who share the drive. No billing required while we're in soft-launch mode!";
       }
 
-      setMessages(prev => [...prev, { role: 'inklo', text: response }]);
+      setMessages(prev => [...prev, { role: 'inklo', text: fallback }]);
+      toast.info('LOCKED: LOCAL SYSTEM INTEGRITY ACTIVATED', { id: toastId, position: 'bottom-right' });
+    } finally {
+      setLoading(false);
       setIsProcessing(false);
-      // Wait a bit before resetting mode to see the accessory in the chat
-      setTimeout(() => setInkloMode('DEFAULT'), 2000);
+      setInkloMode('DEFAULT');
+    }
+  };
 
-      toast.success('INKLO: RESPONSE DISPATCHED', { 
-        position: 'bottom-right',
-        icon: '🤖'
-      });
-    }, 1500);
-
+  const handleSendSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || loading) return;
+    const msg = input;
     setInput('');
+    executeSend(msg);
+  };
+
+  const handleChipClick = (promptText: string) => {
+    if (loading) return;
+    executeSend(promptText);
   };
 
   return (
@@ -68,45 +102,83 @@ const InkloChatbot = () => {
             initial={{ opacity: 0, y: 50, scale: 0.9, rotate: 2 }}
             animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
             exit={{ opacity: 0, y: 50, scale: 0.9, rotate: 2 }}
-            className="w-80 md:w-96 h-[500px] bg-white border-4 border-neo-black neo-shadow-lg mb-6 flex flex-col overflow-hidden transform rotate-1"
+            className="w-85 md:w-105 h-[550px] bg-white border-4 border-neo-black neo-shadow-lg mb-6 flex flex-col overflow-hidden transform rotate-1 z-[110]"
           >
             <div className="bg-neo-black text-neo-white p-4 flex items-center justify-between border-b-4 border-neo-black">
               <div className="flex items-center gap-3">
                 <div className="scale-50 -ml-4 -mt-2">
                   <Inklo />
                 </div>
-                <h3 className="font-black tracking-widest text-sm uppercase">InkLo_Support_v5</h3>
+                <div>
+                  <h3 className="font-black tracking-widest text-sm uppercase">InkLo_Support_v5</h3>
+                  <p className="text-[7.5px] font-mono text-neo-lime uppercase leading-none mt-0.5">// LIVE_COGNITIVE_NET_CONNECTED</p>
+                </div>
               </div>
-              <button onClick={() => setIsOpen(false)} className="hover:text-neo-pink transition-colors">
+              <button onClick={() => setIsOpen(false)} className="hover:text-neo-pink transition-colors cursor-pointer">
                 <X size={20} />
               </button>
             </div>
 
+            {/* Chat message space */}
             <div 
               ref={scrollRef}
               className="flex-1 overflow-y-auto p-4 space-y-4 notebook-bg"
             >
               {messages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`
-                    max-w-[80%] p-3 border-2 border-neo-black font-bold text-xs leading-tight
-                    ${msg.role === 'user' ? 'bg-neo-cyan neo-shadow' : 'bg-neo-yellow neo-shadow'}
-                  `}>
-                    {msg.text}
-                  </div>
+                  {msg.role === 'user' ? (
+                     <div className="max-w-[85%] p-3 border-2 border-neo-black font-bold text-xs leading-tight bg-neo-cyan neo-shadow">
+                        {msg.text}
+                     </div>
+                  ) : (
+                     <div className="max-w-[90%] p-3 border-2 border-neo-black text-xs leading-relaxed bg-neo-yellow neo-shadow chat-markdown">
+                        <div dangerouslySetInnerHTML={{ __html: renderInkloMarkdown(msg.text) }} />
+                     </div>
+                  )}
                 </div>
               ))}
+              
+              {loading && (
+                <div className="flex justify-start">
+                  <div className="p-3 border-2 border-neo-black bg-zinc-100 flex items-center gap-2 font-mono text-[9px] font-black uppercase text-zinc-650 animate-pulse">
+                     <Brain className="text-neo-pink animate-spin" size={14} />
+                     STRATEGIST IS CONSTRUCTING THOUGHT PATHWAYS...
+                  </div>
+                </div>
+              )}
             </div>
 
-            <form onSubmit={handleSend} className="p-4 border-t-4 border-neo-black bg-white flex gap-2">
+            {/* Dynamic Starter Suggestions Chips Panel */}
+            <div className="bg-zinc-50 border-t-4 border-neo-black p-2 flex flex-wrap gap-1.5 justify-center max-h-[85px] overflow-y-auto">
+               <span className="text-[7.5px] font-mono font-black uppercase text-zinc-550 w-full text-center">CHOOSE_STRATEGIC_CMD:</span>
+               {INKLO_CHIPS.map((chip, idx) => (
+                  <button
+                     key={idx}
+                     type="button"
+                     disabled={loading}
+                     onClick={() => handleChipClick(chip.prompt)}
+                     className="text-[8px] font-mono font-black uppercase bg-white hover:bg-neo-pink/10 hover:text-neo-pink text-neo-black border border-neo-black px-2 py-0.5 cursor-pointer rounded-sm hover:-translate-y-0.5 transition-transform disabled:opacity-40 disabled:pointer-events-none"
+                  >
+                     {chip.label}
+                  </button>
+               ))}
+            </div>
+
+            {/* Form Input Submit */}
+            <form onSubmit={handleSendSubmit} className="p-3 border-t-4 border-neo-black bg-white flex gap-2">
               <input 
                 type="text" 
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="REPORT_BUG_OR_ASK..."
-                className="flex-1 bg-zinc-50 border-2 border-neo-black p-2 font-black text-xs outline-none focus:bg-neo-cyan/10"
+                disabled={loading}
+                placeholder={loading ? "CONSTRUCTING..." : "REPORT_BUG_OR_ASK..."}
+                className="flex-1 bg-zinc-50 border-2 border-neo-black p-2 font-black text-xs outline-none focus:bg-neo-cyan/10 disabled:opacity-50"
               />
-              <button type="submit" className="bg-neo-black text-neo-white p-2 border-2 border-neo-black neo-shadow-active">
+              <button 
+                type="submit" 
+                disabled={loading}
+                className="bg-neo-black text-neo-white p-2 border-2 border-neo-black neo-shadow-active disabled:opacity-50"
+              >
                 <Send size={16} />
               </button>
             </form>
@@ -119,11 +191,11 @@ const InkloChatbot = () => {
         whileTap={{ scale: 0.9 }}
         onClick={() => setIsOpen(!isOpen)}
         className={`
-          w-16 h-16 rounded-full border-4 border-neo-black flex items-center justify-center neo-shadow hover:neo-shadow-lg transition-all
+          w-16 h-16 rounded-full border-4 border-neo-black flex items-center justify-center neo-shadow hover:neo-shadow-lg transition-all cursor-pointer
           ${isOpen ? 'bg-neo-pink' : 'bg-neo-yellow'}
         `}
       >
-        {isOpen ? <X size={32} /> : <div className="scale-75"><Inklo /></div>}
+        {isOpen ? <X size={32} className="text-neo-black font-black" /> : <div className="scale-75"><Inklo /></div>}
       </motion.button>
     </div>
   );

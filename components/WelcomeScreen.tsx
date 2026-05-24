@@ -1,70 +1,227 @@
-import React from 'react';
-import { motion } from 'motion/react';
-import { Rocket, Sparkles, Brain, Mic, MessageSquare } from 'lucide-react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Rocket, Sparkles, Brain, Mic, MessageSquare, Wand2, ArrowRight, BookOpen, Clock, AlertTriangle } from 'lucide-react';
 import Inklo from './Inklo';
+import { useAppStore } from '../lib/state';
+import { thinkDeeply } from '../lib/ai-tools';
+import { db, auth } from '../lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { toast } from 'sonner';
 
 const WelcomeScreen = () => {
-  const cards = [
+  const { founderIdentity, founderMood, setInkloMode, isProcessing, setIsProcessing, setActiveTab } = useAppStore();
+  const [brainDump, setBrainDump] = useState('');
+  const [selectedFramework, setSelectedFramework] = useState<'SWOT' | 'MOSCOW' | 'LEAN_CANVAS' | 'GROWTH_LOOPS'>('SWOT');
+  
+  const frameworks = [
     {
-      title: 'FOUNDER STRATEGY',
-      description: 'Battle-tested frameworks for early-stage visionaries. No fluff, just leverage.',
-      icon: <Brain size={48} className="text-neo-pink" />,
-      color: 'bg-neo-cyan'
+      id: 'SWOT',
+      name: 'SWOT Matrix',
+      description: 'Strengths, Weaknesses, Opportunities, and Threats assessment grounded in your constraints.',
+      accent: 'bg-neo-cyan'
     },
     {
-      title: 'INKLO INTELLIGENCE',
-      description: 'Access the latest market data and trends instantly. Grounded AI for real-world wins.',
-      icon: <Inklo />,
-      color: 'bg-neo-lime'
+      id: 'MOSCOW',
+      name: 'MoSCoW Prioritization',
+      description: 'Must-have, Should-have, Could-have, and Won\'t-have boundaries for MVP scoping.',
+      accent: 'bg-neo-yellow'
     },
     {
-      title: 'VOICE_LINK',
-      description: 'High-bandwidth streaming for your thoughts. Capture the vision as it happens.',
-      icon: <div className="flex gap-2 text-neo-black"><Mic size={32} /><MessageSquare size={32} /></div>,
-      color: 'bg-neo-pink'
+      id: 'LEAN_CANVAS',
+      name: 'Lean Canvas Matrix',
+      description: 'Speed-run of Problem, Solution, Key Metrics, Channels, and Unfair Advantages.',
+      accent: 'bg-neo-pink'
+    },
+    {
+      id: 'GROWTH_LOOPS',
+      name: 'Viral Growth Loops',
+      description: 'Inbound acquisition, retention triggers, and organic amplification loops.',
+      accent: 'bg-neo-lime'
     }
   ];
 
-  return (
-    <div className="flex flex-col items-center py-12">
-      <motion.div 
-        initial={{ rotate: -5, scale: 0.9, opacity: 0 }}
-        animate={{ rotate: 0, scale: 1, opacity: 1 }}
-        className="bg-neo-yellow border-4 border-neo-black p-8 neo-shadow-lg mb-16 text-center max-w-2xl transform rotate-1 relative"
-      >
-        <div className="absolute -top-12 -right-8">
-           <Inklo />
-        </div>
-        <Rocket className="w-16 h-16 mx-auto mb-4 text-neo-black" />
-        <h1 className="text-6xl font-black tracking-tighter mb-4 uppercase">SOLOSCRIBE CORE</h1>
-        <p className="text-xl font-bold uppercase tracking-widest text-neo-black leading-none">
-          SYSTEM_ACCESS: GRANTED <br />
-          VERSION: 5.0.0_INKLO
-        </p>
-      </motion.div>
+  const handleCompileStrategy = async () => {
+    if (!brainDump.trim()) {
+      toast.error('INPUT_REQUIRED', { description: 'Please enter your thoughts first to allow parsing.' });
+      return;
+    }
+    
+    if (!auth.currentUser) {
+      toast.error('AUTHENTICATION_REQUIRED', { description: 'Please authenticate with your founder credentials.' });
+      return;
+    }
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
-        {cards.map((card, index) => (
-          <motion.div
-            key={index}
-            initial={{ y: 50, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: index * 0.1 }}
-            className={`${card.color} border-4 border-neo-black p-6 neo-shadow-hover transition-all cursor-pointer`}
-          >
-            <div className="mb-6">{card.icon}</div>
-            <h3 className="text-2xl font-black mb-2">{card.title}</h3>
-            <p className="font-bold text-sm leading-tight">{card.description}</p>
-          </motion.div>
-        ))}
+    setIsProcessing(true);
+    setInkloMode('STRATEGIZING');
+    const toastId = toast.loading('INKLO_REASONING_CORE_INITIALIZED...');
+
+    try {
+      const frameworkInfo = frameworks.find(f => f.id === selectedFramework);
+      const query = `
+Please analyze the following raw brain dump from a founder and format it into a comprehensive business strategic output under the "${frameworkInfo?.name}" model.
+${frameworkInfo?.description}
+
+FOUNDER RAW BRAIN DUMP:
+"${brainDump}"
+
+FORMAT: Please use clear markdown presentation format with elegant headers, bullets, and strong neo-brutalist high-leverage copywriting. Avoid corporate buzzword cliche's. Output markdown only.
+      `;
+
+      const parsedOutput = await thinkDeeply(query, founderIdentity);
+      
+      // Save strategy directly to Firestore user collection
+      const docTitle = `${selectedFramework}_MATRIX_${new Date().toLocaleDateString().replace(/\//g, '-')}`;
+      
+      await addDoc(collection(db, 'users', auth.currentUser.uid, 'strategies'), {
+        title: docTitle,
+        content: parsedOutput,
+        founderMood: founderMood || 'HYPER-FOCUSED',
+        createdAt: serverTimestamp()
+      });
+
+      toast.success('STRATEGY_COMPILED_AND_VAULTED', {
+        id: toastId,
+        description: `Successfully stored "${docTitle}" under your Strategy Vault.`,
+      });
+
+      // Clear dump index
+      setBrainDump('');
+    } catch (error: any) {
+      console.error(error);
+      toast.error('STRATEGY_COMPILATION_FAIL', {
+        id: toastId,
+        description: error.message || 'Verification of Gemini parameters failed.'
+      });
+    } finally {
+      setIsProcessing(false);
+      setInkloMode('DEFAULT');
+    }
+  };
+
+  return (
+    <div className="space-y-12 animate-in fade-in duration-300">
+      {/* LANDING GREETER */}
+      <div className="flex flex-col items-center py-4">
+        <motion.div 
+          initial={{ rotate: -2, scale: 0.95, opacity: 0 }}
+          animate={{ rotate: 0, scale: 1, opacity: 1 }}
+          className="bg-neo-yellow border-4 border-neo-black p-8 neo-shadow-lg text-center max-w-2xl transform relative w-full"
+        >
+          <div className="absolute -top-12 -right-8">
+             <Inklo />
+          </div>
+          <Rocket className="w-12 h-12 mx-auto mb-4 text-neo-black animate-bounce" />
+          <h1 className="text-5xl font-black tracking-tighter mb-4 uppercase">SOLOSCRIBE CORE</h1>
+          <p className="text-sm font-black uppercase tracking-widest text-neo-black leading-none">
+            SYSTEM_ACCESS: ACTIVE // STRATEGY EXECUTIVE ENGINE <br />
+            MOOD STATE: {founderMood} // GROUNDING PROFILE: v5
+          </p>
+        </motion.div>
       </div>
 
-      <div className="mt-16 bg-white border-4 border-neo-black p-6 neo-shadow max-w-xl text-center">
-         <p className="font-mono text-xs font-bold text-zinc-500 uppercase">
-           [SECURITY_NOTICE]
-           <br />
-           ALL DATA ENCRYPTED BY INKLO_PROTOCOLS. YOUR STRATEGY IS SOVEREIGN.
-         </p>
+      {/* CORE WORKSPACE INPUT FEED */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        {/* INPUT AND FRAMEWORK FORM BLOCK */}
+        <div className="lg:col-span-2 space-y-6">
+          <section className="bg-white border-4 border-neo-black p-6 neo-shadow">
+            <h3 className="text-xl font-black mb-4 flex items-center gap-2 border-b-2 border-neo-black pb-2 text-neo-pink">
+              <Brain className="text-neo-pink" size={24} />
+              CHAOTIC_THOUGHTS_STREAM
+            </h3>
+            
+            <p className="font-mono text-[10px] text-zinc-500 uppercase font-bold mb-4 leading-tight">
+              Paste your raw thoughts, midnight ideas, or coffee-induced epiphanies below. Inklo will compile it into high-fidelity tactical strategy.
+            </p>
+
+            <textarea
+              value={brainDump}
+              onChange={(e) => setBrainDump(e.target.value)}
+              disabled={isProcessing}
+              placeholder="Dump your strategic thoughts here (e.g., 'I want to build a newsletter for solo developers selling SaaS ideas, charging $10/mo but offering premium micro-credits. I'm afraid competitors like IndyHackers have too much content, so I want to focus strictly on real-time feedback widgets...')"
+              className="w-full bg-zinc-50 border-2 border-neo-black p-4 font-bold text-sm focus:bg-white outline-none min-h-[180px] font-sans"
+            />
+          </section>
+
+          {/* FRAMEWORK EXPANSIONS */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {frameworks.map((f) => (
+              <div 
+                key={f.id}
+                onClick={() => setSelectedFramework(f.id as any)}
+                className={`border-4 border-neo-black p-4 transition-all cursor-pointer select-none flex flex-col justify-between hover:scale-[1.02]
+                  ${selectedFramework === f.id 
+                    ? `${f.accent} shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] translate-x-[-2px] translate-y-[-2px]` 
+                    : 'bg-white hover:bg-zinc-50 shadow-none'
+                  }
+                `}
+              >
+                <div>
+                  <h4 className="font-black text-sm uppercase tracking-wider">{f.name}</h4>
+                  <p className="text-[10px] uppercase font-bold text-zinc-600 mt-2 leading-snug">{f.description}</p>
+                </div>
+                <div className="flex justify-end mt-4">
+                  <div className={`w-4 h-4 rounded-full border-2 border-neo-black ${selectedFramework === f.id ? 'bg-neo-black' : 'bg-white'}`} />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={handleCompileStrategy}
+            disabled={isProcessing}
+            className="w-full bg-neo-black text-neo-white border-4 border-neo-black py-4 font-black uppercase text-md tracking-wider hover:bg-zinc-850 transform active:scale-[0.99] disabled:opacity-40 flex items-center justify-center gap-3 transition-all cursor-pointer neo-shadow-hover"
+          >
+            {isProcessing ? (
+              <>
+                <Sparkles className="animate-spin text-neo-yellow" />
+                <span>PROCESSING_STRATEGIC_INCUBATION...</span>
+              </>
+            ) : (
+              <>
+                <Wand2 className="text-neo-cyan" />
+                <span>COMPILE_STRATEGIC_PLAN</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* CURRENT SYSTEM STATS / QUICK ACTIONS */}
+        <div className="space-y-6">
+          <section className="bg-neo-cyan border-4 border-neo-black p-6 neo-shadow flex flex-col justify-between min-h-[220px]">
+             <div>
+                <h3 className="font-black text-2xl uppercase tracking-tighter flex items-center gap-2 mb-3">
+                   <BookOpen size={20} />
+                   VAULT_STATUS
+                </h3>
+                <p className="text-[11px] font-bold uppercase leading-tight mb-4">
+                  All successfully processed thought streams are written into your personal, secure Strategy Vault to support keynote synthesis and audits.
+                </p>
+             </div>
+             
+             <button
+               onClick={() => setActiveTab('vault')}
+               className="w-full bg-white border-2 border-neo-black p-3 font-black text-xs uppercase hover:bg-zinc-105 transition-all text-center flex items-center justify-center gap-2 cursor-pointer neo-shadow-sm"
+             >
+                <span>OPEN_STRATEGY_VAULT</span>
+                <ArrowRight size={14} />
+             </button>
+          </section>
+
+          <section className="bg-neo-pink text-white border-4 border-neo-black p-6 neo-shadow relative overflow-hidden">
+             <div className="absolute top-0 right-0 p-2 opacity-10">
+                <AlertTriangle size={80} />
+             </div>
+             <h4 className="font-mono text-[10px] font-black uppercase tracking-widest text-[#ffe4e6] mb-2">[SECURE_INKLO_NET]</h4>
+             <p className="font-sans font-black text-sm leading-snug uppercase mb-4">
+               "Strategic inputs are processed strictly on model: Gemini 2.0 Thinking EXP. This provides advanced latent reasoning to map competitor gaps and revenue parameters."
+             </p>
+             <div className="flex gap-2 items-center text-[10px] font-mono uppercase bg-zinc-900 text-neo-lime py-1.5 px-3 border border-zinc-700">
+                <Clock size={12} />
+                <span>SYNC: OK 100% SOVEREIGN</span>
+             </div>
+          </section>
+        </div>
       </div>
     </div>
   );

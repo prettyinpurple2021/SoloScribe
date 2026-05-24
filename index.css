@@ -110,3 +110,60 @@ body::before {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-neo-cyan);
 }
+
+/* Chat Markdown custom typography rules */
+.chat-markdown h1, .chat-markdown h2, .chat-markdown h3 {
+  font-family: var(--font-sans);
+  font-weight: 800;
+  margin-top: 0.75rem;
+  margin-bottom: 0.35rem;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  border-bottom: 2px solid var(--color-neo-black);
+  display: inline-block;
+  color: var(--color-neo-black);
+}
+.chat-markdown p {
+  margin-bottom: 0.5rem;
+  line-height: 1.4;
+}
+.chat-markdown ul {
+  list-style-type: square;
+  padding-left: 1rem;
+  margin-bottom: 0.5rem;
+}
+.chat-markdown ol {
+  list-style-type: decimal;
+  padding-left: 1rem;
+  margin-bottom: 0.5rem;
+}
+.chat-markdown li {
+  margin-bottom: 0.25rem;
+}
+.chat-markdown code {
+  font-family: var(--font-mono);
+  background-color: var(--color-neo-black);
+  color: var(--color-neo-lime);
+  padding: 0.05rem 0.2rem;
+  font-size: 0.75rem;
+  font-weight: bold;
+}
+.chat-markdown pre {
+  background-color: var(--color-neo-black);
+  color: var(--color-neo-white);
+  padding: 0.5rem;
+  border: 2px solid var(--color-neo-black);
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  margin: 0.5rem 0;
+  box-shadow: 2px 2px 0px 0px var(--color-neo-black);
+}
+.chat-markdown blockquote {
+  border-left: 3px solid var(--color-neo-pink);
+  padding-left: 0.5rem;
+  color: #4b5563;
+  font-style: italic;
+  margin: 0.5rem 0;
+}
+

@@ -29,6 +29,18 @@ service cloud.firestore {
         && (data.get('title', '') is string && data.get('title', '').size() <= 256)
     }
 
+    // Post Validation
+    function isValidPost(data) {
+      return data.keys().hasAll(['userId', 'title', 'content'])
+        && data.userId is string && data.userId.size() <= 128
+        && data.title is string && data.title.size() <= 512
+        && data.content is string && data.content.size() <= 1048576
+        && (data.get('userDisplayName', '') is string && data.get('userDisplayName', '').size() <= 256)
+        && (data.get('userEmail', '') is string && data.get('userEmail', '').size() <= 256)
+        && (data.get('founderMood', '') is string && data.get('founderMood', '').size() <= 128)
+        && (data.get('likesCount', 0) is int)
+    }
+
     // 1. Users Collection
     match /users/{userId} {
       allow get: if isOwner(userId);
@@ -46,6 +58,38 @@ service cloud.firestore {
           && request.resource.data.userId == request.auth.uid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'content', 'updatedAt']);
         allow delete: if isOwner(userId);
+      }
+    }
+
+    // 3. Posts Collection
+    match /posts/{postId} {
+      allow list: if isSignedIn();
+      allow get: if isSignedIn();
+      allow create: if isSignedIn() && isValidPost(request.resource.data)
+        && request.resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() && isValidPost(request.resource.data) && (
+        // Action: Edit Post (only description/mood/title)
+        (resource.data.userId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'content', 'founderMood', 'updatedAt']))
+        ||
+        // Action: Upvote
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount'])
+         && request.resource.data.likesCount - resource.data.likesCount >= -1
+         && request.resource.data.likesCount - resource.data.likesCount <= 1)
+      );
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+
+      // 4. Post Likes
+      match /likes/{userId} {
+        allow read: if isSignedIn();
+        allow write: if isSignedIn() && request.auth.uid == userId;
+      }
+
+      // 5. Post Comments
+      match /comments/{commentId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid
+          && request.resource.data.content is string && request.resource.data.content.size() <= 10000;
+        allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
       }
     }
   }

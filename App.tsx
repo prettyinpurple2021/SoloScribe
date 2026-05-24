@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Toaster } from 'sonner';
-import { Sparkles, Brain, Settings, Rocket, Zap, Heart, Disc, LogOut, Eye, Book } from 'lucide-react';
+import { Sparkles, Brain, Settings, Rocket, Zap, Heart, Disc, LogOut, Eye, Book, Users } from 'lucide-react';
 import { useAppStore } from './lib/state';
 import { auth } from './lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
@@ -18,6 +18,7 @@ import MonetizationTab from './components/workspace/MonetizationTab';
 import AIAuditorTab from './components/workspace/AIAuditorTab';
 import RoadmapTab from './components/workspace/RoadmapTab';
 import StrategyVaultTab from './components/workspace/StrategyVaultTab';
+import CommunityTab from './components/workspace/CommunityTab';
 import TermsOfService from './components/Legal/TermsOfService';
 import PrivacyPolicy from './components/Legal/PrivacyPolicy';
 import InkloChatbot from './components/InkloChatbot';
@@ -156,6 +157,7 @@ function App() {
             { id: 'strategy', label: 'STRATEGY', icon: Brain, color: 'bg-neo-yellow', tour: 'nav-strategy' },
             { id: 'keynote', label: 'KEYNOTE', icon: Sparkles, color: 'bg-neo-cyan', tour: 'nav-keynote' },
             { id: 'vault', label: 'VAULT', icon: Book, color: 'bg-neo-lime', tour: 'nav-vault' },
+            { id: 'community', label: 'COMMUNITY', icon: Users, color: 'bg-neo-pink', tour: 'nav-community' },
             { id: 'marketing', label: 'MARKETING', icon: Rocket, color: 'bg-neo-pink', tour: 'nav-marketing' },
             {id: 'compliance', label: 'COMPLIANCE', icon: Disc, color: 'bg-neo-lime', tour: 'nav-compliance' },
             { id: 'monetization', label: 'REVENUE', icon: Zap, color: 'bg-neo-yellow', tour: 'nav-revenue' },
@@ -240,6 +242,16 @@ function App() {
               exit={{ opacity: 0, scale: 0.95 }}
             >
               <StrategyVaultTab />
+            </motion.div>
+          )}
+          {activeTab === 'community' && (
+            <motion.div
+              key="community"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+            >
+              <CommunityTab />
             </motion.div>
           )}
           {activeTab === 'marketing' && (

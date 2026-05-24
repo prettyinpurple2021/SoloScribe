@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
-import { Brain, Mic, MicOff, Sparkles, Wand2, History, Languages, X, Save, Copy, Zap, Download, FileText, FileCode } from 'lucide-react';
+import { Brain, Mic, MicOff, Sparkles, Wand2, History, Languages, X, Save, Copy, Zap, Download, FileText, FileCode, Share2, Globe } from 'lucide-react';
 import { thinkDeeply, quickPolish } from '../../lib/ai-tools';
 import { toast } from 'sonner';
 import { db, auth } from '../../lib/firebase';
@@ -8,11 +8,92 @@ import { collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, 
 import { useAppStore } from '../../lib/state';
 import { jsPDF } from 'jspdf';
 
+const PLAYBOOK_TEMPLATES = [
+  {
+    id: 'MVP_SPEC',
+    name: '🛠️ MVP Spec Blueprint',
+    description: 'Structure a zero-fluff MVP roadmap, feature set, and out-of-scope boundaries.',
+    content: `# MVP FEATURE SPECIFICATION: [PROJECT_NAME]
+## 🎯 Core Problem & ICP Match
+- **What is the single most painful frustration our target users face daily?**
+  *Enter 1-2 sentences of specific user pain.*
+- **Who is the ideal customer profile (ICP) that will register and pay immediately?**
+  *Define the exact niche (e.g., solo founders with <$1k MRR).*
+
+## 🚀 True Minimal Feature Set (The 1-Week Scope)
+- [ ] **Crucial Value Hook:** [Feature 1] - Explain the exact action that solves the core pain.
+- [ ] **Simple Onboarding:** [Feature 2] - Minimize registration friction (e.g., passwordless login, offline-first direct entry).
+- [ ] **Fast Value Loop:** [Feature 3] - What triggers the "aha" moment in under 15 seconds?
+
+## 🚫 Strictly Out of Scope for Phase 1 (The Prevention List)
+- **Deferred Complexity:** What complex systems are strictly forbidden (e.g., custom billing systems, native apps, heavy visualizers)?
+- **Alternative Manual Hacks:** How can we substitute automated code with a simple manual email action initially?
+
+## ⚙️ Direct Technology Stack Choices
+- **Frontend / Client UI:** React 18 / Vite / Tailwind
+- **Persistency Engine:** LocalStorage fallback + Firebase client-side stores
+- **Compute Server:** lightweight Single-Node Engine`
+  },
+  {
+    id: 'PRICING_DECK',
+    name: '💸 Value Pricing Blueprint',
+    description: 'Design monetization channels, conversion triggers, product tiers, and credit math.',
+    content: `# MONETIZATION & VALUE PRICING: [PROJECT_NAME]
+## 🎯 Hook Tier (Free Engagement Utility)
+- **High-Value Lead Generator:** What interactive micro-app or checklist is 100% free with no wall?
+  *This builds distribution power & search visibility.*
+
+## 💳 Core Premium Tier ($29/mo or $49/mo)
+- **Rigid Conversion Event:** What exact action prompts the paywall (e.g., exporting a full PDF plan, running a 5th AI deep think)?
+- **Hard Cost Mitigation:** How does our pricing scale match our cloud compute expenses?
+
+## 🚀 Enterprise Sovereign Tier
+- **High-Trust Access:** For corporate users or security-conscious nodes.
+  - Custom backup endpoints
+  - Encrypted local vault transfers
+  - Self-hosting configuration assets`
+  },
+  {
+    id: 'LAUNCH_PH',
+    name: '🐱 Launch Program Playbook',
+    description: 'Map out copy and targeting for Product Hunt, HackerNews, and software directories.',
+    content: `# LAUNCH COPYBOOK: [PROJECT_NAME]
+## ⚡ The High-Energy Hook
+- **The Short Tagline:** 10-12 words highlighting direct benefit. Eliminate general fluff ("the next-generation AI platform").
+  *Example: "Create highly secure strategy matrices for solo creators, grounded in your capital constraints."*
+
+## 🚀 Product Hunt Launch Kit
+- **The First Comment:** Explain the raw genesis story. Keep it human: Why did you build this alone? Who is it for? Share a special discount code.
+- **Visual Asset List:** High-contrast retro mockups showing actual utility with zero device frame noise.
+
+## 🗣️ HackerNews "Show HN" Pitch
+- **Raw Architectural Honesty:** Explain the technical setup transparently. What was hard to build? Why does this matter?`
+  },
+  {
+    id: 'COMP_GAP',
+    name: '🦁 Competitor Gap Mapping',
+    description: 'Locate competitor loopholes and specify your asymmetric unfair advantage.',
+    content: `# COMPETITIVE INTEGRATION GAP: [PROJECT_NAME]
+## 👥 Main Competitors (VC-Funded / Big Tech)
+- **Competitor A (The Corporate Giant):** VC-backed, heavy sales cycles, complex configurations.
+- **Competitor B (The Generic AI Chat):** Linear stream, lacks grounding, exposes keys to client log lines.
+
+## 💥 Loopholes & Structural Weaknesses
+- **Bloated Headcounts:** They must charge $150+/seat just to sustain their heavy sales overhead.
+- **Cookie-cutter Workflows:** They target enterprise teams, leaving solo operators stranded with slow templates.
+
+## ⚡ Asymmetric Unfair Advantage
+- **Hyper-velocity:** We can ship live core revisions in 5 minutes with zero committee approvals.
+- **Offline Integrity:** All strategies persist locally on our client-first state engine.`
+  }
+];
+
 const KeynoteCompanion = () => {
   const [input, setInput] = useState('');
   const [analysis, setAnalysis] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isExportingNotion, setIsExportingNotion] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { 
     founderMood, 
@@ -21,10 +102,114 @@ const KeynoteCompanion = () => {
     founderIdentity,
     isProcessing,
     setIsProcessing,
-    setInkloMode
+    setInkloMode,
+    notionToken,
+    notionParentId,
+    notionParentType
   } = useAppStore();
 
   const recognitionRef = useRef<any>(null);
+  const [isPublishingCommunity, setIsPublishingCommunity] = useState(false);
+
+  const handlePublishToCommunity = async () => {
+    if (!analysis) {
+      toast.error('NO_CONTENT_TO_PUBLISH');
+      return;
+    }
+    if (!auth.currentUser) {
+      toast.error('AUTHENTICATION_REQUIRED');
+      return;
+    }
+
+    setIsPublishingCommunity(true);
+    const toastId = toast.loading('PUBLISHING_TO_COMMUNITY_FEED...');
+    try {
+      const lines = analysis.trim().split('\n');
+      let docTitle = 'Strategic Thought Dump';
+      if (lines.length > 0 && lines[0].startsWith('#')) {
+        docTitle = lines[0].replace(/^#+\s*/, '').trim();
+      } else if (lines.length > 0) {
+        docTitle = lines[0].slice(0, 50);
+      }
+
+      const customPost = {
+        userId: auth.currentUser.uid,
+        userDisplayName: auth.currentUser.displayName || auth.currentUser.email?.split('@')[0] || 'Anonymous Founder',
+        userEmail: auth.currentUser.email || 'unknown',
+        title: docTitle,
+        content: analysis,
+        founderMood: founderMood || 'HYPER-FOCUSED',
+        likesCount: 0,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+
+      await addDoc(collection(db, 'posts'), customPost);
+      toast.success('PUBLISHED_TO_COMMUNITY_FEED', {
+        id: toastId,
+        description: `Successfully broadcast: "${docTitle}"`
+      });
+    } catch (err: any) {
+      console.error(err);
+      toast.error('COMMUNITY_PUBLISH_FAILED', {
+        id: toastId,
+        description: err.message
+      });
+    } finally {
+      setIsPublishingCommunity(false);
+    }
+  };
+
+  const handleExportNotion = async () => {
+    if (!analysis) {
+      toast.error('NO_CONTENT_TO_EXPORT', { description: 'Please process a strategy stream first.' });
+      return;
+    }
+    if (!notionToken || !notionParentId) {
+      toast.error('NOTION_CREDENTIALS_MISSING', {
+        description: 'Please configure your Notion integration parameters under SETTINGS first.'
+      });
+      return;
+    }
+
+    setIsExportingNotion(true);
+    const toastId = toast.loading('EXPORTING_STRATEGY_TO_NOTION_PAGES...');
+    try {
+      const { sendToNotion } = await import('../../lib/notion');
+      const lines = analysis.trim().split('\n');
+      let docTitle = 'SoloScribe Strategy Plan';
+      if (lines.length > 0 && lines[0].startsWith('#')) {
+        docTitle = lines[0].replace(/^#+\s*/, '').trim();
+      } else if (lines.length > 0) {
+        docTitle = lines[0].slice(0, 50);
+      }
+
+      const { url } = await sendToNotion({
+        token: notionToken,
+        parentId: notionParentId,
+        parentType: notionParentType,
+        title: docTitle,
+        content: analysis
+      });
+
+      toast.success('EXPORT_TO_NOTION_SUCCESS', {
+        id: toastId,
+        description: `Published: "${docTitle}"`,
+        action: {
+          label: 'OPEN_NOTION',
+          onClick: () => window.open(url, '_blank')
+        }
+      });
+    } catch (err: any) {
+      console.error(err);
+      toast.error('NOTION_PUBLICATION_FAILED', {
+        id: toastId,
+        description: err.message || 'Check your target connectivity settings.'
+      });
+    } finally {
+      setIsExportingNotion(false);
+    }
+  };
 
   useEffect(() => {
     if (currentDocument) {
@@ -209,6 +394,110 @@ const KeynoteCompanion = () => {
     }
   };
 
+  const handleExportObsidian = () => {
+    if (!analysis) return;
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const obsidianContent = `---
+tags: [soloscribe, strategy, decisions, run_${dateStr}]
+created: ${dateStr}
+status: verified
+---
+
+# [[SoloScribe Intelligence Vault]]
+*Grounded by: [[Founder Identity Core]]*
+
+${analysis}
+
+---
+*Generated by [[SoloScribe Strategic Co-pilot]] on ${new Date().toLocaleString()}*`;
+
+    const element = document.createElement("a");
+    const file = new Blob([obsidianContent], {type: 'text/markdown'});
+    element.href = URL.createObjectURL(file);
+    element.download = `Obsidian_Vault_Strategy_${Date.now()}.md`;
+    document.body.appendChild(element);
+    element.click();
+    toast.success('OBSIDIAN_VAULT_EXPORT_SUCCESS');
+  };
+
+  const handleExportGitHub = () => {
+    if (!analysis) return;
+    const lines = analysis.split('\n');
+    let title = 'SoloScribe Strategy Plan';
+    if (lines.length > 0 && lines[0].startsWith('#')) {
+      title = lines[0].replace(/^#+\s*/, '').trim();
+    }
+    const ghContent = `### :shield: SECURE STRATEGY RUN: ${title}
+> Grounded with hyper-local operational constraints under the **Inklo Engine**.
+
+<details>
+<summary><b>:bar_chart: EXPEND CORE DEPLOYMENT SCHEMAS</b> (Click to inspect)</summary>
+
+${analysis}
+
+</details>
+
+- [ ] Connect Firestore security bounds
+- [ ] Re-verify GDPR compliance vectors
+- [ ] Review revenue audit advice
+- [ ] Export production-ready documents
+
+---
+_Deployed via [SoloScribe](https://ai.studio/build)_`;
+
+    const element = document.createElement("a");
+    const file = new Blob([ghContent], {type: 'text/markdown'});
+    element.href = URL.createObjectURL(file);
+    element.download = `GitHub_Issue_Strategy_${Date.now()}.md`;
+    document.body.appendChild(element);
+    element.click();
+    toast.success('GITHUB_FLAVORED_EXPORT_SUCCESS');
+  };
+
+  const handleExportTrello = () => {
+    if (!analysis) return;
+    const lines = analysis.split('\n');
+    let currentCategory = 'TO DO';
+    const trelloJson: any = {
+      lists: [
+        { name: 'BACKLOG', cards: [] },
+        { name: 'TO DO', cards: [] },
+        { name: 'IN DEVELOPMENT', cards: [] },
+        { name: 'DONE', cards: [] }
+      ]
+    };
+
+    lines.forEach((line) => {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('#')) {
+        const cleanCat = trimmed.replace(/^#+\s*/, '').trim().toUpperCase();
+        if (cleanCat.length < 25) {
+          currentCategory = cleanCat;
+        }
+      } else if (trimmed.startsWith('- [ ]') || trimmed.startsWith('-') || trimmed.startsWith('*')) {
+        const cleanCard = trimmed.replace(/^(-\s*\[\s*\]|-\s*|\*\s*)/, '').trim();
+        if (cleanCard) {
+          const targetList = trelloJson.lists.find((l: any) => l.name === 'TO DO');
+          if (targetList) {
+            targetList.cards.push({
+              name: cleanCard,
+              desc: `Extracted from Strategy section: ${currentCategory}`,
+              labels: ['soloscribe']
+            });
+          }
+        }
+      }
+    });
+
+    const element = document.createElement("a");
+    const file = new Blob([JSON.stringify(trelloJson, null, 2)], {type: 'application/json'});
+    element.href = URL.createObjectURL(file);
+    element.download = `Trello_Kanban_Import_${Date.now()}.json`;
+    document.body.appendChild(element);
+    element.click();
+    toast.success('KANBAN_TRELLO_EXPORT_SUCCESS');
+  };
+
   return (
     <div className="flex flex-col lg:flex-row gap-8 h-[calc(100vh-12rem)] pb-8 pt-4">
       {/* INPUT PANEL - NEO-BRUTALIST */}
@@ -221,6 +510,35 @@ const KeynoteCompanion = () => {
              </div>
              <div className={`px-2 py-1 text-[10px] font-black border-2 border-neo-black ${isListening ? 'bg-neo-lime' : 'bg-neo-yellow'}`}>
                 {isListening ? 'LIVE_VOICE' : 'STANDBY'}
+             </div>
+          </div>
+
+          {/* STRATEGIC PLAYBOOK PRESETS */}
+          <div className="mb-4 bg-zinc-50 border-2 border-neo-black p-3.5">
+             <div className="text-[9px] font-mono font-black text-zinc-650 uppercase mb-2 flex justify-between items-center">
+               <span>SELECT_STRATEGIC_PLAYBOOK_BLUEPRINT:</span>
+               <span className="text-neo-pink font-mono text-[7px] animate-pulse">// OFFLINE_CAPABLE</span>
+             </div>
+             <div className="flex flex-wrap gap-1.5">
+               {PLAYBOOK_TEMPLATES.map((tmpl) => (
+                 <button
+                   key={tmpl.id}
+                   type="button"
+                   onClick={() => {
+                     if (input.trim() && !window.confirm("APPEND_PRESET_BLUEPRINT? Current stream will be preserved.")) {
+                       return;
+                     }
+                     setInput((prev) => prev ? prev + "\n\n" + tmpl.content : tmpl.content);
+                     toast.success('BLUEPRINT_INJECTED', {
+                       description: `Loaded: ${tmpl.name}`
+                     });
+                   }}
+                   className="text-[9px] font-mono font-black uppercase bg-white hover:bg-neo-cyan hover:text-neo-black text-neo-black border-2 border-neo-black px-2.5 py-1.5 cursor-pointer hover:-translate-y-0.5 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none"
+                   title={tmpl.description}
+                 >
+                   {tmpl.name}
+                 </button>
+               ))}
              </div>
           </div>
           
@@ -317,6 +635,22 @@ const KeynoteCompanion = () => {
                 <Download size={16} />
               </button>
               <button 
+                onClick={handleExportNotion}
+                disabled={isExportingNotion || !analysis}
+                className="p-2 border-2 border-neo-white hover:bg-neo-cyan hover:text-neo-black transition-all disabled:opacity-30"
+                title="Export directly to Notion"
+              >
+                {isExportingNotion ? <Zap className="animate-spin" size={16} /> : <Share2 size={16} />}
+              </button>
+              <button 
+                onClick={handlePublishToCommunity}
+                disabled={isPublishingCommunity || !analysis}
+                className="p-2 border-2 border-neo-white hover:bg-neo-lime hover:text-neo-black transition-all disabled:opacity-30"
+                title="Broadcast package to Inklo Community Feed"
+              >
+                {isPublishingCommunity ? <Zap className="animate-spin" size={16} /> : <Globe size={16} />}
+              </button>
+              <button 
                 onClick={handleSaveStrategy}
                 disabled={isSaving || !analysis}
                 className="p-2 border-2 border-neo-white hover:bg-neo-pink hover:text-neo-black transition-all disabled:opacity-30"
@@ -325,6 +659,43 @@ const KeynoteCompanion = () => {
                 {isSaving ? <Zap className="animate-spin" size={16} /> : <Save size={16} />}
               </button>
             </div>
+          </div>
+
+          {/* DYNAMIC MULTI-TARGET EXPORTERS PRO BANNER */}
+          <div className="bg-neo-yellow border-b-4 border-neo-black p-3.5 flex flex-col md:flex-row items-center justify-between gap-3 text-xs font-black uppercase text-neo-black font-mono relative z-20">
+             <div className="flex items-center gap-2">
+                <span className="bg-neo-black text-neo-lime px-2 py-0.5 text-[8px] animate-pulse">// INTEGRATION ENGINE_v5</span>
+                <span className="tracking-tighter">SOVEREIGN EXPORT DEPLOYMENT DESTINATIONS:</span>
+             </div>
+             <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={handleExportObsidian}
+                  disabled={!analysis}
+                   className="bg-white hover:bg-neo-cyan border-2 border-neo-black px-2.5 py-1 text-[9px] font-black cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all disabled:opacity-30 disabled:pointer-events-none"
+                  title="Export styled Obsidian Vault markdown with backlink wikilinks"
+                >
+                  🟣 OBSIDIAN [WIKI]
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExportGitHub}
+                  disabled={!analysis}
+                   className="bg-white hover:bg-neo-pink border-2 border-neo-black px-2.5 py-1 text-[9px] font-black cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all disabled:opacity-30 disabled:pointer-events-none"
+                  title="Export developer-ready issue checklist with task boxes"
+                >
+                  🐙 GITHUB [ISSUE]
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExportTrello}
+                  disabled={!analysis}
+                   className="bg-white hover:bg-neo-lime border-2 border-neo-black px-2.5 py-1 text-[9px] font-black cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all disabled:opacity-30 disabled:pointer-events-none"
+                  title="Export Trello Kanban group JSON import matrix"
+                >
+                  📋 TRELLO [KANBAN]
+                </button>
+             </div>
           </div>
 
           <div 

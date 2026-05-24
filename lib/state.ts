@@ -23,6 +23,12 @@ interface AppState {
   setIsProcessing: (isProcessing: boolean) => void;
   inkloMode: 'DEFAULT' | 'BUILDING' | 'FIXING' | 'STRATEGIZING';
   setInkloMode: (mode: 'DEFAULT' | 'BUILDING' | 'FIXING' | 'STRATEGIZING') => void;
+  notionToken: string;
+  setNotionToken: (token: string) => void;
+  notionParentId: string;
+  setNotionParentId: (id: string) => void;
+  notionParentType: 'page' | 'database';
+  setNotionParentType: (type: 'page' | 'database') => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -50,7 +56,13 @@ export const useAppStore = create<AppState>()(
       isProcessing: false,
       setIsProcessing: (isProcessing) => set({ isProcessing }),
       inkloMode: 'DEFAULT',
-      setInkloMode: (inkloMode) => set({ inkloMode })
+      setInkloMode: (inkloMode) => set({ inkloMode }),
+      notionToken: '',
+      setNotionToken: (notionToken) => set({ notionToken }),
+      notionParentId: '',
+      setNotionParentId: (notionParentId) => set({ notionParentId }),
+      notionParentType: 'page',
+      setNotionParentType: (notionParentType) => set({ notionParentType })
     }),
     {
       name: 'soloscribe-v5-storage',

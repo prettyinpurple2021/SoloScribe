@@ -29,6 +29,37 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "content"]
+    },
+    "Post": {
+      "title": "Community Post",
+      "description": "Public strategy or feedback update shared on Inklo Community Feed.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userDisplayName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "founderMood": { "type": "string" },
+        "likesCount": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "content"]
+    },
+    "Comment": {
+      "title": "Post Comment",
+      "description": "Feedback or peer review comment on a shared community post.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userDisplayName": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "content"]
     }
   },
   "firestore": {
@@ -39,6 +70,18 @@
     "/users/{userId}/strategies/{strategyId}": {
       "schema": "Strategy",
       "description": "Strategy documents belonging to a specific user."
+    },
+    "/posts/{postId}": {
+      "schema": "Post",
+      "description": "Global shared posts for the SoloScribe Community."
+    },
+    "/posts/{postId}/likes/{userId}": {
+      "schema": "object",
+      "description": "Subcollection to track unique user upvotes and avoid double liking."
+    },
+    "/posts/{postId}/comments/{commentId}": {
+      "schema": "Comment",
+      "description": "Subcollection for replies and review comments under each post."
     }
   }
 }
