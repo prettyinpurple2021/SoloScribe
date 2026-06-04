@@ -1,5 +1,5 @@
 {
-  "name": "SoloScribe",
+  "name": "soloscribe",
   "description": "The AI-powered Strategist and Keynote Companion for Founders.",
   "requestFramePermissions": [
     "camera",
