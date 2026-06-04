@@ -6,7 +6,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "start": "serve -s dist -l ${PORT:-8080}"
   },
   "dependencies": {
     "@google/genai": "latest",
@@ -35,6 +36,7 @@
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.13.1",
     "recharts": "^3.6.0",
+    "serve": "^14.2.6",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.2.2",
