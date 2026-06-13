@@ -121,7 +121,7 @@ const LandingPage = ({ onStart }: LandingPageProps) => {
         className="bg-neo-yellow border-4 border-neo-black p-12 neo-shadow-lg text-center max-w-3xl transform rotate-1 mb-20"
       >
          <h2 className="text-5xl font-black mb-6 uppercase">READY TO INITIALIZE?</h2>
-         <p className="text-xl font-bold mb-8 uppercase tracking-widest">JOIN 5,000+ FOUNDERS ALREADY RUNNING ON INKLOCORE.</p>
+         <p className="text-xl font-bold mb-8 uppercase tracking-widest">STOP DROWNING IN EXECUTION DEBT.</p>
          <button 
            onClick={onStart}
            className="bg-neo-black text-neo-white px-12 py-5 text-2xl font-black neo-shadow-hover transition-all"
