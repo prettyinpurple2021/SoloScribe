@@ -60,6 +60,19 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "content"]
+    },
+    "Pulse": {
+      "title": "Founder Pulse",
+      "description": "Daily or periodic check-in for focus and energy levels.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "focus": { "type": "integer" },
+        "energy": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "focus", "energy"]
     }
   },
   "firestore": {
@@ -70,6 +83,10 @@
     "/users/{userId}/strategies/{strategyId}": {
       "schema": "Strategy",
       "description": "Strategy documents belonging to a specific user."
+    },
+    "/users/{userId}/pulses/{pulseId}": {
+      "schema": "Pulse",
+      "description": "Founder pulse checks (focus and energy) belonging to a specific user."
     },
     "/posts/{postId}": {
       "schema": "Post",

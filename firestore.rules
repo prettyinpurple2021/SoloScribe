@@ -29,6 +29,15 @@ service cloud.firestore {
         && (data.get('title', '') is string && data.get('title', '').size() <= 256)
     }
 
+    // Pulse Validation
+    function isValidPulse(data) {
+      return data.keys().hasAll(['userId', 'focus', 'energy', 'createdAt'])
+        && data.userId is string && data.userId.size() <= 128
+        && data.focus is int && data.focus >= 1 && data.focus <= 10
+        && data.energy is int && data.energy >= 1 && data.energy <= 10
+        && data.createdAt == request.time
+    }
+
     // Post Validation
     function isValidPost(data) {
       return data.keys().hasAll(['userId', 'title', 'content'])
@@ -57,6 +66,15 @@ service cloud.firestore {
         allow update: if isOwner(userId) && isValidStrategy(request.resource.data)
           && request.resource.data.userId == request.auth.uid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'content', 'updatedAt']);
+        allow delete: if isOwner(userId);
+      }
+
+      // 2.5 Pulses Subcollection
+      match /pulses/{pulseId} {
+        allow list: if isOwner(userId);
+        allow get: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidPulse(request.resource.data)
+          && request.resource.data.userId == request.auth.uid;
         allow delete: if isOwner(userId);
       }
     }

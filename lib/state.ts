@@ -29,6 +29,10 @@ interface AppState {
   setNotionParentId: (id: string) => void;
   notionParentType: 'page' | 'database';
   setNotionParentType: (type: 'page' | 'database') => void;
+  scratchpadContent: string;
+  setScratchpadContent: (content: string) => void;
+  isScratchpadOpen: boolean;
+  setIsScratchpadOpen: (isOpen: boolean) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -62,7 +66,11 @@ export const useAppStore = create<AppState>()(
       notionParentId: '',
       setNotionParentId: (notionParentId) => set({ notionParentId }),
       notionParentType: 'page',
-      setNotionParentType: (notionParentType) => set({ notionParentType })
+      setNotionParentType: (notionParentType) => set({ notionParentType }),
+      scratchpadContent: '',
+      setScratchpadContent: (scratchpadContent) => set({ scratchpadContent }),
+      isScratchpadOpen: false,
+      setIsScratchpadOpen: (isScratchpadOpen) => set({ isScratchpadOpen })
     }),
     {
       name: 'soloscribe-v5-storage',

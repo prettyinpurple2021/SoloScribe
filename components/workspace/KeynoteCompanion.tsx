@@ -7,6 +7,7 @@ import { db, auth } from '../../lib/firebase';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc as firestoreDoc } from 'firebase/firestore';
 import { useAppStore } from '../../lib/state';
 import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const PLAYBOOK_TEMPLATES = [
   {
@@ -85,6 +86,142 @@ const PLAYBOOK_TEMPLATES = [
 ## ⚡ Asymmetric Unfair Advantage
 - **Hyper-velocity:** We can ship live core revisions in 5 minutes with zero committee approvals.
 - **Offline Integrity:** All strategies persist locally on our client-first state engine.`
+  },
+  {
+    id: 'API_DOCS',
+    name: '🔌 API & Architecture Spec',
+    description: 'Outline your system endpoints, webhooks, and core logic for handoffs or public adoption.',
+    content: `# 🔌 SYSTEM ARCHITECTURE & API SPEC: [PROJECT_NAME]
+## 🧱 Core Infrastructure
+- **Server:** [e.g., Express + Node / Next.js / Cloud Run]
+- **Database:** [e.g., Firebase Firestore / PostgreSQL on Supabase]
+- **File Storage:** [e.g., AWS S3 / Cloud Storage]
+
+## 🌐 Endpoints & Webhooks
+### \`POST /api/v1/trigger\`
+- **Purpose:** What is the primary action this route accomplishes?
+- **Auth required:** [Yes / No] (Bearer Token)
+- **Request Body (JSON):**
+  \`\`\`json
+  {
+    "userId": "uuid",
+    "action": "run_audit"
+  }
+  \`\`\`
+- **Expected Responses:**
+  - \`200 OK\`: Success payload
+  - \`400 Bad Request\`: Missing parameters
+  - \`429 Too Many Requests\`: Rate limit triggered
+
+## 🔐 Security Constraints
+- **CORS Allowed Origins:** [e.g., https://app.example.com]
+- **Token Rotation:** [e.g., JWT expiring every 24hrs]
+- **Rate Limits:** [e.g., 20 requests/minute per IP]`
+  },
+  {
+    id: 'USER_GUIDE',
+    name: '📖 User Onboarding FAQ',
+    description: 'Step-by-step customer documentation to reduce support tickets and explain basic value loops.',
+    content: `# 📖 ONBOARDING GUIDE & FAQ: [PROJECT_NAME]
+## 👋 Welcome: The First 5 Minutes
+- **What is [Project Name]?**
+  A 1-sentence explanation of what the user bought or downloaded.
+- **Step 1: Your First Action**
+  Where should they click immediately to get their first win?
+
+## ⚡ Core Workflows
+### "How do I do [X]?"
+- Navigate to the [Tab/Screen].
+- Select [Action].
+- Wait for the [Result].
+
+### "Can I export my data?"
+- Yes. Go to Settings -> Export. Data is formatted as [JSON/CSV].
+
+## 🏥 Troubleshooting (When things break)
+- **"The generation failed."** Check your API Keys in Settings.
+- **"I lost connection."** Don't worry, the local engine caches your work offline.
+
+## 💬 Found a bug or want a feature?
+- Reach out directly to me (the founder) at: [Email / Twitter / Discord]`
+  },
+  {
+    id: 'CHANGELOG',
+    name: '📝 Release Notes Generator',
+    description: 'Map out technical commits into human-readable value updates for your audience.',
+    content: `# 🚀 RELEASE NOTES: [VERSION_NUMBER]
+## 🎯 The Big Win (Headline Feature)
+- **[Feature Name]:** Explain *why* this matters. Did it cut processing time by 50%? Does it unlock a new workflow?
+
+## ✨ Enhancements & Polish
+- **UI Upgrade:** What feels faster, tighter, or cleaner?
+- **Workflow Improvement:** What annoying friction point did you remove?
+
+## 🐛 Bug Fixes
+- **Squashed:** Fixed an obscure bug where users couldn't hit "Save" on mobile.
+- **Patched:** Secured an edge case with the authentication flow.
+
+## 🔮 What's Next?
+- Tease the single biggest feature you're actively building this week to keep momentum high.`
+  },
+  {
+    id: 'INVESTOR_UPDATE',
+    name: '📊 Simple Stakeholder Update',
+    description: 'Format a crisp monthly update for investors, team members, or public building logs.',
+    content: `# 📊 STAKEHOLDER UPDATE: [MONTH, YEAR]
+## ⚡ Executive Summary
+- **MRR (Monthly Recurring Revenue):** [$X] (Up X% MoM)
+- **Active Users:** [Y] (Up Y% MoM)
+- **Runway:** [Z Months]
+- **One-Sentence Verdict:** [Are you in survival mode, growth mode, or iteration mode?]
+
+## 🟢 The Wins (What went right?)
+- **Product:** Shipped [Feature A] and [Feature B].
+- **Marketing:** Acquired [X] new users via [Channel].
+- **Operations:** Cut server costs by [X%].
+
+## 🔴 The Challenges (What is actively broken?)
+- **Growth:** Churn spiked because of [Reason].
+- **Technical:** Encountered scaling limits on [Database/API].
+
+## 🎯 Next Month's Core Focus
+- What is the ONE single metric you are trying to move next month?
+
+## 🙏 Asks
+- Do you need introductions to [Type of Client]?
+- Are you looking for a [Role] contractor?`
+  },
+  {
+    id: 'PITCH_DECK',
+    name: '📈 Pitch Deck Skeleton',
+    description: 'Standard 10-slide VC pitch structure.',
+    content: `# 📈 PITCH DECK SKELETON
+1. **Title:** App Name, Logo, 1-Sentence Hook.
+2. **Problem:** What is the painful problem?
+3. **Solution:** How do we solve it elegantly?
+4. **Why Now:** Why hasn't this been built before? Why is today the perfect time?
+5. **Market Size:** Total Addressable Market (TAM), SAM, SOM.
+6. **Product:** Core value loop & feature set.
+7. **Business Model:** How we make money (Pricing).
+8. **Go-To-Market:** How we acquire users.
+9. **Competition:** Competitive matrix & unfair advantage.
+10. **Team/Ask:** Who are we, what do we need, and what milestone does this unlock?`
+  },
+  {
+    id: 'MISSION_STATEMENT',
+    name: '🧭 Mission & Vision',
+    description: 'Define the big picture and long-term North Star.',
+    content: `# 🧭 MISSION & VISION ALIGNMENT
+## The Mission (What we do today)
+- *We exist to [action] for [audience] by providing [capability].*
+
+## The Vision (Where we are going)
+- *In 5 years, we want a world where [state of the world].*
+
+## Core Values (How we act)
+1. **[Value 1]:** What behavior do you prioritize over short-term revenue?
+2. **[Value 2]:** How do you ship products differently?
+3. **[Value 3]:** What is your standard of craft?`
   }
 ];
 
@@ -95,6 +232,7 @@ const KeynoteCompanion = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isExportingNotion, setIsExportingNotion] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const { 
     founderMood, 
     currentDocument, 
@@ -354,43 +492,69 @@ const KeynoteCompanion = () => {
     toast.success('CONTENT_COPIED_TO_CLIPBOARD');
   };
 
-  const handleExportPDF = () => {
-    if (!analysis) {
+  const handleExportPDF = async () => {
+    if (!analysis || !contentRef.current) {
       toast.error('NO_CONTENT_TO_EXPORT');
       return;
     }
 
     try {
-      const doc = new jsPDF();
-      
+      const toastId = toast.loading('GENERATING_PDF...');
+
+      const canvas = await html2canvas(contentRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff'
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
       // Header
-      doc.setFillColor(0, 0, 0);
-      doc.rect(0, 0, 210, 40, 'F');
+      pdf.setFillColor(0, 0, 0);
+      pdf.rect(0, 0, pdfWidth, 30, 'F');
       
-      doc.setTextColor(255, 255, 255);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(24);
-      doc.text('SOLOSCRIBE: STRATEGY_INTEL', 10, 25);
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(20);
+      pdf.text('SOLOSCRIBE: KEYNOTE', 10, 20);
       
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`EXPORTED_ON: ${new Date().toLocaleString()}`, 10, 50);
-      doc.text(`MOOD_CONTEXT: ${founderMood}`, 150, 50);
+      pdf.setTextColor(0, 0, 0);
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`TIME: ${new Date().toLocaleString()}`, 10, 40);
+      pdf.text(`MOOD: ${founderMood}`, 120, 40);
       
-      doc.setLineWidth(1);
-      doc.line(10, 55, 200, 55);
-      
-      // Content
-      doc.setFontSize(12);
-      const splitText = doc.splitTextToSize(analysis, 180);
-      doc.text(splitText, 10, 70);
-      
-      doc.save(`SoloScribe_Strategy_${Date.now()}.pdf`);
-      toast.success('PDF_EXPORT_SUCCESSFUL');
+      pdf.setLineWidth(0.5);
+      pdf.line(10, 45, pdfWidth - 10, 45);
+
+      // Handle Pagination
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      let imgHeightLeft = pdfHeight;
+      let position = 50; // initial vertical position
+
+      pdf.addImage(imgData, 'PNG', 10, position, pdfWidth - 20, pdfHeight);
+      imgHeightLeft -= (pageHeight - position);
+
+      while (imgHeightLeft > 0) {
+        position = imgHeightLeft - pdfHeight; 
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 10, position, pdfWidth - 20, pdfHeight);
+        imgHeightLeft -= pageHeight;
+      }
+
+      pdf.save(`Keynote_Export_${Date.now()}.pdf`);
+      toast.success('PDF_GENERATED_SUCCESSFULLY', { id: toastId });
     } catch (error) {
       console.error('PDF Export Error:', error);
-      toast.error('EXPORT_FAILURE: MODULE_CRITICAL_ERROR');
+      toast.error('EXPORT_FAILURE: COULD_NOT_PROCESS_PDF');
     }
   };
 
@@ -498,10 +662,67 @@ _Deployed via [SoloScribe](https://ai.studio/build)_`;
     toast.success('KANBAN_TRELLO_EXPORT_SUCCESS');
   };
 
+  const analysisWordCount = analysis ? analysis.trim().split(/\s+/).filter(w => w.length > 0).length : 0;
+  const analysisReadTime = Math.ceil(analysisWordCount / 200) || 1;
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check if Ctrl or Cmd is pressed
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === 's' || e.key === 'S') {
+          e.preventDefault();
+          handleSaveStrategy();
+        } else if (e.key === 'p' || e.key === 'P') {
+          e.preventDefault();
+          handleExportPDF();
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          handleAction('think');
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [analysis, input, isProcessing, isSaving, handleSaveStrategy, handleExportPDF, handleAction]);
+
   return (
-    <div className="flex flex-col lg:flex-row gap-8 h-[calc(100vh-12rem)] pb-8 pt-4">
+    <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-12rem)] pb-8 pt-4">
+      {/* TEMPLATES SIDEBAR */}
+      <div className="w-full lg:w-1/5 flex flex-col gap-4 overflow-y-auto scrollbar-hide bg-neo-white border-4 border-neo-black p-4 neo-shadow-lg">
+        <div className="flex items-center gap-2 border-b-4 border-neo-black pb-3 mb-2">
+          <FileText className="text-neo-cyan" />
+          <h3 className="font-black text-sm tracking-tighter uppercase relative top-0.5">Templates</h3>
+        </div>
+        <p className="text-[10px] uppercase font-bold text-zinc-500 mb-2 tracking-wide leading-tight">
+          Inject strategic frameworks instantly into the stream.
+        </p>
+        <div className="flex flex-col gap-3">
+          {PLAYBOOK_TEMPLATES.map((tmpl) => (
+            <button
+              key={tmpl.id}
+              type="button"
+              onClick={() => {
+                if (input.trim() && !window.confirm("APPEND_PRESET_BLUEPRINT? Current stream will be preserved.")) {
+                  return;
+                }
+                setInput((prev) => prev ? prev + "\n\n" + tmpl.content : tmpl.content);
+                toast.success('BLUEPRINT_INJECTED', {
+                  description: `Loaded: ${tmpl.name}`
+                });
+              }}
+              className="text-left bg-zinc-50 hover:bg-neo-yellow text-neo-black border-2 border-neo-black p-3 cursor-pointer hover:-translate-y-0.5 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none group"
+              title={tmpl.description}
+            >
+              <div className="font-black text-xs uppercase mb-1">{tmpl.name}</div>
+              <div className="text-[9px] font-medium leading-tight text-zinc-600 group-hover:text-zinc-800">{tmpl.description}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* INPUT PANEL - NEO-BRUTALIST */}
-      <div className="w-full lg:w-2/5 flex flex-col gap-6" data-tour="founder-stream">
+      <div className="w-full lg:w-[35%] flex flex-col gap-6" data-tour="founder-stream">
         <div className="bg-neo-white border-4 border-neo-black neo-shadow-lg flex-1 flex flex-col p-6 overflow-hidden transform hover:-rotate-1 transition-transform">
           <div className="flex items-center justify-between mb-4 border-b-4 border-neo-black pb-4">
              <div className="flex items-center gap-2">
@@ -510,35 +731,6 @@ _Deployed via [SoloScribe](https://ai.studio/build)_`;
              </div>
              <div className={`px-2 py-1 text-[10px] font-black border-2 border-neo-black ${isListening ? 'bg-neo-lime' : 'bg-neo-yellow'}`}>
                 {isListening ? 'LIVE_VOICE' : 'STANDBY'}
-             </div>
-          </div>
-
-          {/* STRATEGIC PLAYBOOK PRESETS */}
-          <div className="mb-4 bg-zinc-50 border-2 border-neo-black p-3.5">
-             <div className="text-[9px] font-mono font-black text-zinc-650 uppercase mb-2 flex justify-between items-center">
-               <span>SELECT_STRATEGIC_PLAYBOOK_BLUEPRINT:</span>
-               <span className="text-neo-pink font-mono text-[7px] animate-pulse">// OFFLINE_CAPABLE</span>
-             </div>
-             <div className="flex flex-wrap gap-1.5">
-               {PLAYBOOK_TEMPLATES.map((tmpl) => (
-                 <button
-                   key={tmpl.id}
-                   type="button"
-                   onClick={() => {
-                     if (input.trim() && !window.confirm("APPEND_PRESET_BLUEPRINT? Current stream will be preserved.")) {
-                       return;
-                     }
-                     setInput((prev) => prev ? prev + "\n\n" + tmpl.content : tmpl.content);
-                     toast.success('BLUEPRINT_INJECTED', {
-                       description: `Loaded: ${tmpl.name}`
-                     });
-                   }}
-                   className="text-[9px] font-mono font-black uppercase bg-white hover:bg-neo-cyan hover:text-neo-black text-neo-black border-2 border-neo-black px-2.5 py-1.5 cursor-pointer hover:-translate-y-0.5 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none"
-                   title={tmpl.description}
-                 >
-                   {tmpl.name}
-                 </button>
-               ))}
              </div>
           </div>
           
@@ -562,6 +754,7 @@ _Deployed via [SoloScribe](https://ai.studio/build)_`;
                 onClick={() => handleAction('think')}
                 disabled={isProcessing || !input.trim()}
                 className="flex-1 py-5 bg-neo-black text-neo-white font-black text-xl tracking-widest flex items-center justify-center gap-3 neo-shadow-hover disabled:bg-zinc-500"
+                title="Run Strategy (Ctrl+Enter)"
               >
                 {isProcessing ? <Zap className="animate-spin text-neo-yellow" /> : <Sparkles />}
                 RUN_STRATEGY
@@ -578,12 +771,19 @@ _Deployed via [SoloScribe](https://ai.studio/build)_`;
       </div>
 
       {/* ANALYSIS PANEL - NOTEBOOK PAPER STYLE */}
-      <div className="w-full lg:w-3/5 flex flex-col gap-6 relative" data-tour="notebook-area">
+      <div className="w-full lg:flex-1 flex flex-col gap-6 relative" data-tour="notebook-area">
         <div className="notebook-bg border-4 border-neo-black neo-shadow-lg flex-1 flex flex-col overflow-hidden transform hover:rotate-1 transition-transform">
           <div className="flex items-center justify-between p-4 bg-neo-black text-neo-white border-b-4 border-neo-black">
             <div className="flex items-center gap-3">
               <Sparkles className="text-neo-cyan" size={20} />
               <h3 className="font-black tracking-widest text-sm uppercase">Inklo Strategist Output</h3>
+              {analysisWordCount > 0 && (
+                <div className="hidden md:flex items-center gap-2 ml-4 px-2 py-0.5 bg-zinc-800 border border-zinc-700 font-mono text-[9px] text-zinc-300">
+                  <span title="Word Count">{analysisWordCount} W</span>
+                  <span className="opacity-50">|</span>
+                  <span title="Estimated read time">~{analysisReadTime}M READ</span>
+                </div>
+              )}
             </div>
             
             <div className="flex gap-2">
@@ -630,7 +830,7 @@ _Deployed via [SoloScribe](https://ai.studio/build)_`;
                 onClick={handleExportPDF}
                 disabled={!analysis}
                 className="p-2 border-2 border-neo-white hover:bg-neo-yellow hover:text-neo-black transition-all disabled:opacity-30"
-                title="Export as PDF"
+                title="Export as PDF (Ctrl+P)"
               >
                 <Download size={16} />
               </button>
@@ -654,7 +854,7 @@ _Deployed via [SoloScribe](https://ai.studio/build)_`;
                 onClick={handleSaveStrategy}
                 disabled={isSaving || !analysis}
                 className="p-2 border-2 border-neo-white hover:bg-neo-pink hover:text-neo-black transition-all disabled:opacity-30"
-                title="Save Strategy"
+                title="Save Strategy (Ctrl+S)"
               >
                 {isSaving ? <Zap className="animate-spin" size={16} /> : <Save size={16} />}
               </button>
@@ -703,7 +903,7 @@ _Deployed via [SoloScribe](https://ai.studio/build)_`;
             ref={scrollRef}
           >
             {analysis ? (
-              <div className="animate-in fade-in zoom-in-95 duration-500 whitespace-pre-wrap font-sans text-xl font-bold leading-relaxed text-black">
+              <div ref={contentRef} className="animate-in fade-in zoom-in-95 duration-500 whitespace-pre-wrap font-sans text-xl font-bold leading-relaxed text-black">
                 {analysis}
               </div>
             ) : (

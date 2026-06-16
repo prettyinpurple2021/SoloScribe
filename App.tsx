@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Toaster } from 'sonner';
-import { Sparkles, Brain, Settings, Rocket, Zap, Heart, Disc, LogOut, Eye, Book, Users } from 'lucide-react';
+import { Sparkles, Brain, Settings, Rocket, Zap, Heart, Disc, LogOut, Eye, Book, Users, Edit3 } from 'lucide-react';
 import { useAppStore } from './lib/state';
 import { auth } from './lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
@@ -22,11 +22,12 @@ import CommunityTab from './components/workspace/CommunityTab';
 import TermsOfService from './components/Legal/TermsOfService';
 import PrivacyPolicy from './components/Legal/PrivacyPolicy';
 import InkloChatbot from './components/InkloChatbot';
+import Scratchpad from './components/Scratchpad';
 
 function App() {
   const [view, setView] = useState<'home' | 'auth' | 'terms' | 'privacy'>('home');
   const [showTour, setShowTour] = useState(false);
-  const { user, setUser, founderMood, hasSeenTutorial, setHasSeenTutorial, activeTab, setActiveTab } = useAppStore();
+  const { user, setUser, founderMood, hasSeenTutorial, setHasSeenTutorial, activeTab, setActiveTab, isScratchpadOpen, setIsScratchpadOpen } = useAppStore();
 
 
   useEffect(() => {
@@ -144,6 +145,7 @@ function App() {
       </AnimatePresence>
 
       <InkloChatbot />
+      <Scratchpad />
 
       {/* HEADER / NAV - NEO-BRUTALIST */}
       <header className="fixed top-0 left-0 right-0 h-20 bg-neo-black text-white z-40 flex items-center justify-between px-6 border-b-4 border-neo-black">
@@ -183,6 +185,14 @@ function App() {
         </nav>
 
         <div className="flex items-center gap-4">
+          <button
+            onClick={() => setIsScratchpadOpen(!isScratchpadOpen)}
+            className="flex items-center gap-2 px-3 py-1 bg-neo-yellow border-2 border-neo-black neo-shadow-sm hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all text-neo-black"
+            title="Toggle Idea Scratchpad"
+          >
+            <Edit3 size={16} />
+            <span className="font-black text-xs uppercase hidden lg:inline">SCRATCHPAD</span>
+          </button>
           {user && (
             <button 
               onClick={() => setActiveTab('settings')}

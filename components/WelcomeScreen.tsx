@@ -13,6 +13,43 @@ const WelcomeScreen = () => {
   const [brainDump, setBrainDump] = useState('');
   const [selectedFramework, setSelectedFramework] = useState<'SWOT' | 'MOSCOW' | 'LEAN_CANVAS' | 'GROWTH_LOOPS'>('SWOT');
   
+  // Pulse State
+  const [focusLevel, setFocusLevel] = useState(5);
+  const [energyLevel, setEnergyLevel] = useState(5);
+  const [isLoggingPulse, setIsLoggingPulse] = useState(false);
+
+  const handleLogPulse = async () => {
+    if (!auth.currentUser) {
+      toast.error('AUTHENTICATION_REQUIRED', { description: 'Please authenticate to log your pulse.' });
+      return;
+    }
+
+    setIsLoggingPulse(true);
+    const toastId = toast.loading('LOGGING_FOUNDER_PULSE...');
+
+    try {
+      await addDoc(collection(db, 'users', auth.currentUser.uid, 'pulses'), {
+        userId: auth.currentUser.uid,
+        focus: focusLevel,
+        energy: energyLevel,
+        createdAt: serverTimestamp()
+      });
+
+      toast.success('PULSE_LOGGED_SUCCESSFULLY', {
+        id: toastId,
+        description: `Focus: ${focusLevel}/10 | Energy: ${energyLevel}/10 logged securely.`,
+      });
+    } catch (error: any) {
+      console.error(error);
+      toast.error('PULSE_LOG_FAILED', {
+        id: toastId,
+        description: error.message || 'Failed to sync pulse to the vault.'
+      });
+    } finally {
+      setIsLoggingPulse(false);
+    }
+  };
+  
   const frameworks = [
     {
       id: 'SWOT',
@@ -188,6 +225,54 @@ FORMAT: Please use clear markdown presentation format with elegant headers, bull
 
         {/* CURRENT SYSTEM STATS / QUICK ACTIONS */}
         <div className="space-y-6">
+          <section className="bg-neo-lime border-4 border-neo-black p-6 neo-shadow flex flex-col justify-between">
+            <div>
+              <h3 className="font-black text-2xl uppercase tracking-tighter flex items-center gap-2 mb-3">
+                 <Sparkles size={20} />
+                 FOUNDER_PULSE
+              </h3>
+              <p className="text-[11px] font-bold uppercase leading-tight mb-4">
+                Log your real-time focus and energy levels to track your daily execution limits.
+              </p>
+              
+              <div className="space-y-4 mb-4">
+                <div>
+                  <label className="font-mono text-[10px] font-black uppercase text-neo-black flex justify-between">
+                    <span>FOCUS_LEVEL</span>
+                    <span>{focusLevel}/10</span>
+                  </label>
+                  <input 
+                    type="range" min="1" max="10" 
+                    value={focusLevel} 
+                    onChange={(e) => setFocusLevel(parseInt(e.target.value))}
+                    className="w-full accent-neo-black h-2 bg-white border border-neo-black appearance-none cursor-pointer"
+                  />
+                </div>
+                <div>
+                  <label className="font-mono text-[10px] font-black uppercase text-neo-black flex justify-between">
+                    <span>ENERGY_RESERVES</span>
+                    <span>{energyLevel}/10</span>
+                  </label>
+                  <input 
+                    type="range" min="1" max="10" 
+                    value={energyLevel} 
+                    onChange={(e) => setEnergyLevel(parseInt(e.target.value))}
+                    className="w-full accent-neo-black h-2 bg-white border border-neo-black appearance-none cursor-pointer"
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <button
+               onClick={handleLogPulse}
+               disabled={isLoggingPulse}
+               className="w-full bg-neo-black text-white border-2 border-neo-black p-3 font-black text-xs uppercase hover:bg-zinc-800 transition-all text-center flex items-center justify-center gap-2 cursor-pointer neo-shadow-sm disabled:opacity-50"
+             >
+                {isLoggingPulse ? 'LOGGING_PULSE...' : 'LOG_CURRENT_STATE'}
+                {!isLoggingPulse && <ArrowRight size={14} />}
+             </button>
+          </section>
+
           <section className="bg-neo-cyan border-4 border-neo-black p-6 neo-shadow flex flex-col justify-between min-h-[220px]">
              <div>
                 <h3 className="font-black text-2xl uppercase tracking-tighter flex items-center gap-2 mb-3">
