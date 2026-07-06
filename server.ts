@@ -7,6 +7,18 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  // Environment Validation
+  if (!process.env.GEMINI_API_KEY) {
+    console.error("=========================================");
+    console.error("❌ ERROR: GEMINI_API_KEY is not set.");
+    console.error("Please add it to your environment variables.");
+    console.error("The application will not function correctly.");
+    console.error("=========================================");
+    if (process.env.NODE_ENV === "production") {
+       process.exit(1); // Fail fast in production
+    }
+  }
+
   app.use(express.json());
 
   // API Routes

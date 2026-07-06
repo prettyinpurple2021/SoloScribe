@@ -687,21 +687,24 @@ _Deployed via [SoloScribe](https://ai.studio/build)_`;
   }, [analysis, input, isProcessing, isSaving, handleSaveStrategy, handleExportPDF, handleAction]);
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-12rem)] pb-8 pt-4">
+    <div className="flex flex-col lg:flex-row gap-6 h-auto min-h-[calc(100vh-12rem)] lg:h-[calc(100vh-12rem)] pb-8 pt-4">
       {/* TEMPLATES SIDEBAR */}
-      <div className="w-full lg:w-1/5 flex flex-col gap-4 overflow-y-auto scrollbar-hide bg-neo-white border-4 border-neo-black p-4 neo-shadow-lg">
-        <div className="flex items-center gap-2 border-b-4 border-neo-black pb-3 mb-2">
-          <FileText className="text-neo-cyan" />
-          <h3 className="font-black text-sm tracking-tighter uppercase relative top-0.5">Templates</h3>
+      <div className="w-full lg:w-1/5 flex lg:flex-col overflow-x-auto lg:overflow-y-auto scrollbar-hide bg-neo-white border-4 border-neo-black p-4 neo-shadow-lg gap-4">
+        <div className="hidden lg:flex flex-col">
+          <div className="flex items-center gap-2 border-b-4 border-neo-black pb-3 mb-2">
+            <FileText className="text-neo-cyan" />
+            <h3 className="font-black text-sm tracking-tighter uppercase relative top-0.5">Templates</h3>
+          </div>
+          <p className="text-[10px] uppercase font-bold text-zinc-500 mb-2 tracking-wide leading-tight">
+            Inject strategic frameworks instantly into the stream.
+          </p>
         </div>
-        <p className="text-[10px] uppercase font-bold text-zinc-500 mb-2 tracking-wide leading-tight">
-          Inject strategic frameworks instantly into the stream.
-        </p>
-        <div className="flex flex-col gap-3">
+        <div className="flex lg:flex-col gap-3 min-w-max lg:min-w-0 pb-2 lg:pb-0">
           {PLAYBOOK_TEMPLATES.map((tmpl) => (
             <button
               key={tmpl.id}
               type="button"
+              aria-label={`Insert template: ${tmpl.name}`}
               onClick={() => {
                 if (input.trim() && !window.confirm("APPEND_PRESET_BLUEPRINT? Current stream will be preserved.")) {
                   return;
@@ -792,6 +795,7 @@ _Deployed via [SoloScribe](https://ai.studio/build)_`;
                 disabled={isProcessing || !analysis}
                 className="p-2 border-2 border-neo-white hover:bg-neo-cyan hover:text-neo-black transition-all"
                 title="Polish"
+                aria-label="Polish content"
               >
                 <Wand2 size={16} />
               </button>
@@ -799,6 +803,7 @@ _Deployed via [SoloScribe](https://ai.studio/build)_`;
                 onClick={() => { setAnalysis(''); setInput(''); setCurrentDocument(''); }}
                 className="p-2 border-2 border-neo-white hover:bg-neo-pink hover:text-neo-black transition-all"
                 title="New Strategy / Clear"
+                aria-label="Clear all content"
               >
                 <X size={16} />
               </button>
@@ -807,6 +812,7 @@ _Deployed via [SoloScribe](https://ai.studio/build)_`;
                 disabled={!analysis}
                 className="p-2 border-2 border-neo-white hover:bg-neo-lime hover:text-neo-black transition-all disabled:opacity-30"
                 title="Copy to Clipboard"
+                aria-label="Copy to Clipboard"
               >
                 <Copy size={16} />
               </button>
@@ -815,6 +821,7 @@ _Deployed via [SoloScribe](https://ai.studio/build)_`;
                 disabled={!analysis}
                 className="p-2 border-2 border-neo-white hover:bg-neo-cyan hover:text-neo-black transition-all disabled:opacity-30"
                 title="Export as Markdown"
+                aria-label="Export as Markdown format"
               >
                 <FileCode size={16} />
               </button>
@@ -823,6 +830,7 @@ _Deployed via [SoloScribe](https://ai.studio/build)_`;
                 disabled={!analysis}
                 className="p-2 border-2 border-neo-white hover:bg-neo-lime hover:text-neo-black transition-all disabled:opacity-30"
                 title="Export as Plain Text"
+                aria-label="Export as plain text"
               >
                 <FileText size={16} />
               </button>
@@ -831,6 +839,7 @@ _Deployed via [SoloScribe](https://ai.studio/build)_`;
                 disabled={!analysis}
                 className="p-2 border-2 border-neo-white hover:bg-neo-yellow hover:text-neo-black transition-all disabled:opacity-30"
                 title="Export as PDF (Ctrl+P)"
+                aria-label="Export as PDF format"
               >
                 <Download size={16} />
               </button>
@@ -839,6 +848,7 @@ _Deployed via [SoloScribe](https://ai.studio/build)_`;
                 disabled={isExportingNotion || !analysis}
                 className="p-2 border-2 border-neo-white hover:bg-neo-cyan hover:text-neo-black transition-all disabled:opacity-30"
                 title="Export directly to Notion"
+                aria-label="Export to Notion"
               >
                 {isExportingNotion ? <Zap className="animate-spin" size={16} /> : <Share2 size={16} />}
               </button>
@@ -847,6 +857,7 @@ _Deployed via [SoloScribe](https://ai.studio/build)_`;
                 disabled={isPublishingCommunity || !analysis}
                 className="p-2 border-2 border-neo-white hover:bg-neo-lime hover:text-neo-black transition-all disabled:opacity-30"
                 title="Broadcast package to Inklo Community Feed"
+                aria-label="Publish to Community"
               >
                 {isPublishingCommunity ? <Zap className="animate-spin" size={16} /> : <Globe size={16} />}
               </button>
@@ -855,6 +866,7 @@ _Deployed via [SoloScribe](https://ai.studio/build)_`;
                 disabled={isSaving || !analysis}
                 className="p-2 border-2 border-neo-white hover:bg-neo-pink hover:text-neo-black transition-all disabled:opacity-30"
                 title="Save Strategy (Ctrl+S)"
+                aria-label="Save Strategy"
               >
                 {isSaving ? <Zap className="animate-spin" size={16} /> : <Save size={16} />}
               </button>

@@ -26,9 +26,13 @@ export default function Scratchpad() {
             width: isExpanded ? '400px' : '300px',
             height: isExpanded ? '500px' : '350px'
           }}
+          style={{
+            maxWidth: 'calc(100vw - 32px)',
+            maxHeight: 'calc(100vh - 140px)'
+          }}
           exit={{ opacity: 0, x: 300, scale: 0.9 }}
           transition={{ type: "spring", stiffness: 300, damping: 25 }}
-          className="fixed bottom-24 right-8 z-40 bg-neo-yellow border-4 border-neo-black neo-shadow flex flex-col"
+          className="fixed bottom-20 md:bottom-24 right-4 md:right-8 z-40 bg-neo-yellow border-4 border-neo-black neo-shadow flex flex-col"
         >
           {/* Header */}
           <div className="bg-neo-black text-neo-white px-3 py-2 flex items-center justify-between border-b-4 border-neo-black cursor-move">
@@ -40,12 +44,14 @@ export default function Scratchpad() {
               <button 
                 onClick={() => setIsExpanded(!isExpanded)} 
                 className="hover:text-neo-yellow transition-colors"
+                aria-label={isExpanded ? "Minimize scratchpad" : "Maximize scratchpad"}
               >
                 {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
               </button>
               <button 
                 onClick={() => setIsScratchpadOpen(false)} 
                 className="hover:text-neo-pink transition-colors"
+                aria-label="Close scratchpad"
               >
                 <X size={18} />
               </button>
@@ -57,6 +63,7 @@ export default function Scratchpad() {
             value={scratchpadContent}
             onChange={(e) => setScratchpadContent(e.target.value)}
             placeholder="Log fleeting thoughts here. They'll survive tab switches and refreshes..."
+            aria-label="Scratchpad text area"
             className="flex-1 w-full bg-[#fefce8] p-4 font-sans text-sm outline-none resize-none placeholder-zinc-400 font-medium leading-relaxed"
           />
 
@@ -67,6 +74,7 @@ export default function Scratchpad() {
             </span>
             <button
               onClick={handleCopy}
+              aria-label="Copy scratchpad content to clipboard"
               className="bg-neo-black text-neo-white px-3 py-1 font-black text-[9px] uppercase hover:bg-neo-cyan hover:text-neo-black transition-colors"
             >
               COPY_TO_CLIPBOARD

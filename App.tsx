@@ -1,28 +1,36 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Toaster } from 'sonner';
 import { Sparkles, Brain, Settings, Rocket, Zap, Heart, Disc, LogOut, Eye, Book, Users, Edit3 } from 'lucide-react';
 import { useAppStore } from './lib/state';
 import { auth } from './lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import KeynoteCompanion from './components/workspace/KeynoteCompanion';
-import WelcomeScreen from './components/WelcomeScreen';
-import UserSettings from './components/UserSettings';
 import AuthPage from './components/auth/AuthPage';
 import LandingPage from './components/LandingPage';
 import Onboarding from './components/Onboarding';
 import FeatureTour from './components/FeatureTour';
-import MarketingTab from './components/workspace/MarketingTab';
-import ComplianceTab from './components/workspace/ComplianceTab';
-import MonetizationTab from './components/workspace/MonetizationTab';
-import AIAuditorTab from './components/workspace/AIAuditorTab';
-import RoadmapTab from './components/workspace/RoadmapTab';
-import StrategyVaultTab from './components/workspace/StrategyVaultTab';
-import CommunityTab from './components/workspace/CommunityTab';
 import TermsOfService from './components/Legal/TermsOfService';
 import PrivacyPolicy from './components/Legal/PrivacyPolicy';
 import InkloChatbot from './components/InkloChatbot';
 import Scratchpad from './components/Scratchpad';
+
+const KeynoteCompanion = React.lazy(() => import('./components/workspace/KeynoteCompanion'));
+const WelcomeScreen = React.lazy(() => import('./components/WelcomeScreen'));
+const UserSettings = React.lazy(() => import('./components/UserSettings'));
+const MarketingTab = React.lazy(() => import('./components/workspace/MarketingTab'));
+const ComplianceTab = React.lazy(() => import('./components/workspace/ComplianceTab'));
+const MonetizationTab = React.lazy(() => import('./components/workspace/MonetizationTab'));
+const AIAuditorTab = React.lazy(() => import('./components/workspace/AIAuditorTab'));
+const RoadmapTab = React.lazy(() => import('./components/workspace/RoadmapTab'));
+const StrategyVaultTab = React.lazy(() => import('./components/workspace/StrategyVaultTab'));
+const CommunityTab = React.lazy(() => import('./components/workspace/CommunityTab'));
+
+const FallbackLoader = () => (
+  <div className="w-full h-64 flex flex-col items-center justify-center gap-4 border-4 border-neo-black bg-neo-white neo-shadow-lg p-8">
+    <div className="w-8 h-8 border-4 border-neo-black border-t-neo-cyan animate-spin rounded-full" />
+    <div className="font-black uppercase tracking-widest text-xs">Loading Module...</div>
+  </div>
+);
 
 function App() {
   const [view, setView] = useState<'home' | 'auth' | 'terms' | 'privacy'>('home');
@@ -229,7 +237,9 @@ function App() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
             >
-              <WelcomeScreen />
+              <Suspense fallback={<FallbackLoader />}>
+                <WelcomeScreen />
+              </Suspense>
             </motion.div>
           )}
           {activeTab === 'keynote' && (
@@ -241,7 +251,9 @@ function App() {
               transition={{ type: "spring", stiffness: 100 }}
               className="w-full"
             >
-              <KeynoteCompanion />
+              <Suspense fallback={<FallbackLoader />}>
+                <KeynoteCompanion />
+              </Suspense>
             </motion.div>
           )}
           {activeTab === 'vault' && (
@@ -251,7 +263,9 @@ function App() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
             >
-              <StrategyVaultTab />
+              <Suspense fallback={<FallbackLoader />}>
+                <StrategyVaultTab />
+              </Suspense>
             </motion.div>
           )}
           {activeTab === 'community' && (
@@ -261,7 +275,9 @@ function App() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
             >
-              <CommunityTab />
+              <Suspense fallback={<FallbackLoader />}>
+                <CommunityTab />
+              </Suspense>
             </motion.div>
           )}
           {activeTab === 'marketing' && (
@@ -271,7 +287,9 @@ function App() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 30 }}
             >
-              <MarketingTab />
+              <Suspense fallback={<FallbackLoader />}>
+                <MarketingTab />
+              </Suspense>
             </motion.div>
           )}
           {activeTab === 'compliance' && (
@@ -281,7 +299,9 @@ function App() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
             >
-              <ComplianceTab />
+              <Suspense fallback={<FallbackLoader />}>
+                <ComplianceTab />
+              </Suspense>
             </motion.div>
           )}
           {activeTab === 'monetization' && (
@@ -291,7 +311,9 @@ function App() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -30 }}
             >
-              <MonetizationTab />
+              <Suspense fallback={<FallbackLoader />}>
+                <MonetizationTab />
+              </Suspense>
             </motion.div>
           )}
           {activeTab === 'audit' && (
@@ -301,7 +323,9 @@ function App() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 50 }}
             >
-              <AIAuditorTab />
+              <Suspense fallback={<FallbackLoader />}>
+                <AIAuditorTab />
+              </Suspense>
             </motion.div>
           )}
           {activeTab === 'roadmap' && (
@@ -311,7 +335,9 @@ function App() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 1.1 }}
             >
-              <RoadmapTab />
+              <Suspense fallback={<FallbackLoader />}>
+                <RoadmapTab />
+              </Suspense>
             </motion.div>
           )}
           {activeTab === 'settings' && (
@@ -321,7 +347,9 @@ function App() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 1.1 }}
             >
-              <UserSettings />
+              <Suspense fallback={<FallbackLoader />}>
+                <UserSettings />
+              </Suspense>
             </motion.div>
           )}
         </AnimatePresence>
