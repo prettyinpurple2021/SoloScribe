@@ -11,6 +11,12 @@ RUN npm install
 # Copy application code
 COPY . .
 
+# PostHog analytics config (inlined into the client bundle at build time by Vite).
+# These VITE_PUBLIC_* values are public client-side keys and .env is excluded from
+# the build context via .dockerignore, so they are set here for the production build.
+ENV VITE_PUBLIC_POSTHOG_KEY=phc_CwXUQjusQePk4RTj7YeEvJSsPfchPnxsPAaQiAew3yR9
+ENV VITE_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
+
 # Build the fullstack app (outputs to dist/)
 RUN npm run build
 
