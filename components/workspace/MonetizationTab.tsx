@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import posthog from 'posthog-js';
 import { DollarSign, TrendingUp, BarChart3, Zap, Sparkles, HelpCircle, ArrowUpRight } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAppStore } from '../../lib/state';
@@ -70,8 +71,16 @@ Please evaluate if these ratios are stable, suggest specific viral growth hacks,
       
       const response = await thinkDeeply(prompt, founderIdentity);
       setAiAuditReport(response);
+      posthog.capture('revenue_audit_run', {
+        traffic,
+        conversion_rate: conversion,
+        arpu,
+        churn_rate: churn,
+        peak_mrr: mathProjections.peakMRR,
+      });
       toast.success('INKLO_REVENUE_REPORT_COMPILED', { id: toastId });
     } catch (err: any) {
+      posthog.captureException(err);
       console.error(err);
       toast.error('REVENUE_AUDIT_FAIL', { id: toastId });
     } finally {

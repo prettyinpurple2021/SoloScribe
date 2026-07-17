@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import posthog from 'posthog-js';
 import { motion, AnimatePresence } from 'motion/react';
 import { Rocket, Brain, Sparkles, ArrowRight, X, Mic, Zap } from 'lucide-react';
 import Inklo from './Inklo';
@@ -48,11 +49,13 @@ const Onboarding = ({ onComplete }: OnboardingProps) => {
     if (currentStep < steps.length - 1) {
       setCurrentStep(prev => prev + 1);
     } else {
+      posthog.capture('onboarding_completed', { method: 'finished', started_tour: false });
       onComplete(false); // finish modal, don't start tour
     }
   };
 
   const startTour = () => {
+    posthog.capture('onboarding_completed', { method: 'finished', started_tour: true });
     onComplete(true); // start full tour
   };
 
@@ -110,8 +113,11 @@ const Onboarding = ({ onComplete }: OnboardingProps) => {
           </div>
 
           <div className="flex justify-between items-center gap-4">
-            <button 
-              onClick={() => onComplete(false)}
+            <button
+              onClick={() => {
+                posthog.capture('onboarding_completed', { method: 'skipped', step_reached: currentStep });
+                onComplete(false);
+              }}
               className="text-sm font-black underline uppercase hover:text-neo-pink transition-colors"
             >
               Skip All

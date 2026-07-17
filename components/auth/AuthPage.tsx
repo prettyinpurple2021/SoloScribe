@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
+import posthog from 'posthog-js';
 import { auth } from '../../lib/firebase';
-import { 
-  signInWithPopup, 
-  GoogleAuthProvider, 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword, 
-  sendPasswordResetEmail 
+import {
+  signInWithPopup,
+  GoogleAuthProvider,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { motion, AnimatePresence } from 'motion/react';
 import { LogIn, Rocket, ShieldCheck, Mail, Lock, UserPlus, HelpCircle, ArrowLeft } from 'lucide-react';
@@ -20,9 +21,12 @@ const AuthPage = () => {
   const handleGoogleSignIn = async () => {
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      const isNew = result.user.metadata.creationTime === result.user.metadata.lastSignInTime;
+      posthog.capture(isNew ? 'user_signed_up' : 'user_signed_in', { method: 'google' });
       toast.success('AUTHENTICATED: ACCESS GRANTED');
     } catch (error) {
+      posthog.captureException(error);
       console.error(error);
       toast.error('AUTHENTICATION FAILED: RETRYING...');
     }
@@ -34,9 +38,11 @@ const AuthPage = () => {
     try {
       if (mode === 'signup') {
         await createUserWithEmailAndPassword(auth, email, password);
+        posthog.capture('user_signed_up', { method: 'email' });
         toast.success('ACCOUNT CREATED: WELCOME FOUNDER');
       } else if (mode === 'signin') {
         await signInWithEmailAndPassword(auth, email, password);
+        posthog.capture('user_signed_in', { method: 'email' });
         toast.success('AUTHENTICATED: ACCESS GRANTED');
       } else {
         await sendPasswordResetEmail(auth, email);
@@ -44,6 +50,7 @@ const AuthPage = () => {
         setMode('signin');
       }
     } catch (error: any) {
+      posthog.captureException(error);
       toast.error(error.message.replace('Firebase:', '').trim());
     } finally {
       setLoading(false);

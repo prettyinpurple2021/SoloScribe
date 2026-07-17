@@ -33,6 +33,7 @@
     "motion": "^12.29.2",
     "path": "^0.12.7",
     "pdfjs-dist": "^5.4.624",
+    "posthog-js": "^1.404.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.18.1",

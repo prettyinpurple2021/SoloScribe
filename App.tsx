@@ -1,4 +1,5 @@
 import React, { useState, useEffect, Suspense } from 'react';
+import posthog from 'posthog-js';
 import { motion, AnimatePresence } from 'motion/react';
 import { Toaster } from 'sonner';
 import { Sparkles, Brain, Settings, Rocket, Zap, Heart, Disc, LogOut, Eye, Book, Users, Edit3 } from 'lucide-react';
@@ -46,6 +47,10 @@ function App() {
           email: firebaseUser.email,
           displayName: firebaseUser.displayName,
         });
+        posthog.identify(firebaseUser.uid, {
+          name: firebaseUser.displayName,
+          email: firebaseUser.email,
+        });
         setView('home');
 
         // Fetch additional profile data
@@ -70,6 +75,7 @@ function App() {
   }, [setUser]);
 
   const handleSignOut = () => {
+    posthog.reset();
     signOut(auth);
   };
 
