@@ -13,6 +13,8 @@ This document tracks and records every single one of our advanced interactive fe
 | **Compliance Shield** | Interactive Regulatory Shield | A customizable target-region parameter panel (GDPR, CCPA, LGPD) and active vendor options that calculates real-time compliance sovereignty scores and generates custom regulatory advisories. | ✅ COMPLETED | ✔️ YES |
 | **AI Auditor** | Competitive Gap Scanner | A target-focused competitive evaluation board where founders input their startup details and major competitors to produce AI-generated pivot plans and specific competitive vulnerability matrices. | ✅ COMPLETED | ✔️ YES |
 | **System Dashboard**| Elite Core Verification Tracker| A neat dashboard widget built to track and verify system features, logs, and implementation completeness. | ✅ COMPLETED | ✔️ YES |
+| **AI Intelligence**| Gemini Intelligence & High Thinking | Integrated server-side Gemini endpoints using `gemini-3.1-pro-preview` with `ThinkingLevel.HIGH` for deep reasoning, `gemini-3.5-flash` for content edits, and `gemini-3.1-flash-lite` for fast tasks. | ✅ COMPLETED | ✔️ YES |
+| **Roadmap Motion** | Smooth Task Item Transitions | Added fluid entry, exit, and layout shift animations powered by `AnimatePresence` and `motion.div` from `motion/react` when tasks move between columns or are marked as 'Done'. | ✅ COMPLETED | ✔️ YES |
 
 ---
 

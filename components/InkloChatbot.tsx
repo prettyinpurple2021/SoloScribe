@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MessageSquare, X, Send, User, Brain, HelpCircle, Bug, Sparkles, AlertTriangle } from 'lucide-react';
+import { MessageSquare, X, Send, User, Brain, HelpCircle, Bug, Sparkles, AlertTriangle, Mic, MicOff } from 'lucide-react';
 import Inklo from './Inklo';
 import { toast } from 'sonner';
 import { useAppStore } from '../lib/state';
@@ -24,6 +24,64 @@ const InkloChatbot = () => {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  useEffect(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const rec = new SpeechRecognition();
+      rec.continuous = false;
+      rec.interimResults = false;
+      rec.lang = 'en-US';
+
+      rec.onstart = () => {
+        setIsListening(true);
+        toast.info('VOICE_STREAM_ACTIVE: Speak now...', { position: 'bottom-right' });
+      };
+
+      rec.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setInput(prev => {
+          const space = prev && !prev.endsWith(' ') ? ' ' : '';
+          return `${prev}${space}${transcript}`;
+        });
+        toast.success('SPEECH_CAPTURED_SUCCESSFULLY', { position: 'bottom-right' });
+      };
+
+      rec.onerror = (event: any) => {
+        console.error("Speech recognition error", event);
+        if (event.error !== 'no-speech') {
+          toast.error(`SPEECH_RECOGNITION_ERROR: ${event.error}`, { position: 'bottom-right' });
+        }
+        setIsListening(false);
+      };
+
+      rec.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = rec;
+    }
+  }, []);
+
+  const toggleListening = () => {
+    if (!recognitionRef.current) {
+      toast.error('SPEECH_RECOGNITION_NOT_SUPPORTED in this environment. Try Chrome or Safari!', { position: 'bottom-right' });
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current.stop();
+    } else {
+      try {
+        recognitionRef.current.start();
+      } catch (err) {
+        console.error("Failed to start speech recognition:", err);
+      }
+    }
+  };
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -171,9 +229,22 @@ const InkloChatbot = () => {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 disabled={loading}
-                placeholder={loading ? "CONSTRUCTING..." : "REPORT_BUG_OR_ASK..."}
+                placeholder={loading ? "CONSTRUCTING..." : isListening ? "LISTENING... SPEAK NOW!" : "REPORT_BUG_OR_ASK..."}
                 className="flex-1 bg-zinc-50 border-2 border-neo-black p-2 font-black text-xs outline-none focus:bg-neo-cyan/10 disabled:opacity-50"
               />
+              <button 
+                type="button"
+                onClick={toggleListening}
+                disabled={loading}
+                title={isListening ? "Stop Listening" : "Start Voice Dictation"}
+                className={`p-2 border-2 border-neo-black neo-shadow-active transition-all cursor-pointer ${
+                  isListening 
+                    ? 'bg-neo-pink text-neo-black animate-pulse' 
+                    : 'bg-neo-yellow text-neo-black hover:bg-neo-pink/10'
+                }`}
+              >
+                {isListening ? <MicOff size={16} /> : <Mic size={16} />}
+              </button>
               <button 
                 type="submit" 
                 disabled={loading}

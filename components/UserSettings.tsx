@@ -18,8 +18,27 @@ const UserSettings = () => {
     notionParentId,
     setNotionParentId,
     notionParentType,
-    setNotionParentType
+    setNotionParentType,
+    roadmapTasks
   } = useAppStore();
+
+  const completedCount = roadmapTasks.filter(t => t.done || t.status === 'Done').length;
+  const totalCount = roadmapTasks.length || 1;
+  const progressPercent = Math.min(100, Math.round((completedCount / totalCount) * 100));
+
+  let founderLevel = 1;
+  let founderTitle = 'GARAGE_TINKERER';
+
+  if (completedCount >= 5) {
+    founderLevel = 4;
+    founderTitle = 'SOLO_TITAN';
+  } else if (completedCount >= 3) {
+    founderLevel = 3;
+    founderTitle = 'INDIE_OPERATOR';
+  } else if (completedCount >= 1) {
+    founderLevel = 2;
+    founderTitle = 'BOOTSTRAPPING_HACKER';
+  }
 
   const moods = ['PRODUCTIVE', 'HYPER-FOCUSED', 'CHAOTIC', 'STRATEGIC', 'GOD_MODE'];
 
@@ -169,6 +188,65 @@ const UserSettings = () => {
             <User size={32} className="text-neo-cyan" />
             FOUNDER_CORE_SETTINGS
          </h2>
+      </div>
+
+      {/* GAMIFIED FOUNDER STATS PANEL */}
+      <div className="bg-neo-yellow border-4 border-neo-black p-6 neo-shadow-lg mb-8 text-neo-black animate-in fade-in slide-in-from-top-4 duration-300">
+         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="space-y-2">
+               <div className="flex items-center gap-2">
+                  <span className="bg-neo-black text-neo-yellow text-[9px] font-black px-1.5 py-0.5 uppercase tracking-wider">// CLASSIFICATION</span>
+                  <span className="font-mono text-xs font-black text-neo-black/60">SOLOSCRIBE PROFILE GATE</span>
+               </div>
+               <h3 className="text-3xl font-black uppercase tracking-tighter leading-none">
+                  LEVEL {founderLevel}: {founderTitle}
+               </h3>
+               <p className="font-mono text-xs leading-none">
+                  COMPLETED WORK ITEMS: <span className="font-black">{completedCount}</span> / {totalCount}
+               </p>
+            </div>
+            
+            <div className="flex-1 max-w-md w-full space-y-2">
+               <div className="flex justify-between items-center font-mono text-xs font-black">
+                  <span>LEVEL_XP_PROGRESS</span>
+                  <span>{progressPercent}%</span>
+               </div>
+               {/* Progress bar */}
+               <div className="w-full bg-white border-4 border-neo-black h-8 relative neo-shadow-sm">
+                  <div 
+                     className="bg-neo-cyan h-full border-r-4 border-neo-black transition-all duration-500"
+                     style={{ width: `${progressPercent}%` }}
+                  />
+                  <span className="absolute inset-0 flex items-center justify-center font-mono text-[10px] font-black">
+                     {completedCount === totalCount ? 'MAX_XP_ACHIEVED' : `${completedCount} STEP(S) COMPLETED`}
+                  </span>
+               </div>
+            </div>
+         </div>
+
+         {/* Grid of details */}
+         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+            <div className="bg-white border-2 border-neo-black p-3.5 neo-shadow-sm flex flex-col justify-between">
+               <span className="font-mono text-[8px] font-bold text-zinc-500 uppercase block mb-1">OPERATIONAL_MODE</span>
+               <span className="font-black text-xs uppercase text-neo-pink">{useAppStore.getState().inkloMode || 'DEFAULT'}</span>
+            </div>
+            <div className="bg-white border-2 border-neo-black p-3.5 neo-shadow-sm flex flex-col justify-between">
+               <span className="font-mono text-[8px] font-bold text-zinc-500 uppercase block mb-1">CURRENT_MOOD</span>
+               <span className="font-black text-xs uppercase text-neo-cyan">{founderMood}</span>
+            </div>
+            <div className="bg-white border-2 border-neo-black p-3.5 neo-shadow-sm flex flex-col justify-between">
+               <span className="font-mono text-[8px] font-bold text-zinc-500 uppercase block mb-1">ROADMAP_STATUS</span>
+               <span className="font-black text-xs uppercase text-zinc-800">
+                  {completedCount === totalCount ? 'SYNC_DONE' : `${totalCount - completedCount} ACTIVE`}
+               </span>
+            </div>
+            <div className="bg-white border-2 border-neo-black p-3.5 neo-shadow-sm flex flex-col justify-between">
+               <span className="font-mono text-[8px] font-bold text-zinc-500 uppercase block mb-1">STREAK_COEFFICIENT</span>
+               <span className="font-black text-xs uppercase text-neo-lime">
+                  {progressPercent >= 75 ? '🔥 HYPER_STREAK' : progressPercent >= 25 ? '⚡ WORK_LOADED' : '💤 COLD_START'}
+               </span>
+            </div>
+         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

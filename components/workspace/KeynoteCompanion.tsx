@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import posthog from 'posthog-js';
 import { motion } from 'motion/react';
 import { Brain, Mic, MicOff, Sparkles, Wand2, History, Languages, X, Save, Copy, Zap, Download, FileText, FileCode, Share2, Globe } from 'lucide-react';
 import { thinkDeeply, quickPolish } from '../../lib/ai-tools';
@@ -284,13 +283,11 @@ const KeynoteCompanion = () => {
       };
 
       await addDoc(collection(db, 'posts'), customPost);
-      posthog.capture('strategy_published_to_community');
       toast.success('PUBLISHED_TO_COMMUNITY_FEED', {
         id: toastId,
         description: `Successfully broadcast: "${docTitle}"`
       });
     } catch (err: any) {
-      posthog.captureException(err);
       console.error(err);
       toast.error('COMMUNITY_PUBLISH_FAILED', {
         id: toastId,
@@ -333,7 +330,6 @@ const KeynoteCompanion = () => {
         content: analysis
       });
 
-      posthog.capture('strategy_exported', { format: 'notion' });
       toast.success('EXPORT_TO_NOTION_SUCCESS', {
         id: toastId,
         description: `Published: "${docTitle}"`,
@@ -343,7 +339,6 @@ const KeynoteCompanion = () => {
         }
       });
     } catch (err: any) {
-      posthog.captureException(err);
       console.error(err);
       toast.error('NOTION_PUBLICATION_FAILED', {
         id: toastId,
@@ -368,7 +363,6 @@ const KeynoteCompanion = () => {
     element.download = `SoloScribe_Strategy_${Date.now()}.md`;
     document.body.appendChild(element);
     element.click();
-    posthog.capture('strategy_exported', { format: 'markdown' });
     toast.success('MARKDOWN_EXPORT_SUCCESS');
   };
 
@@ -380,7 +374,6 @@ const KeynoteCompanion = () => {
     element.download = `SoloScribe_Strategy_${Date.now()}.txt`;
     document.body.appendChild(element);
     element.click();
-    posthog.capture('strategy_exported', { format: 'txt' });
     toast.success('PLAIN_TEXT_EXPORT_SUCCESS');
   };
 
@@ -417,18 +410,15 @@ const KeynoteCompanion = () => {
       if (type === 'think') {
         const thoughts = await thinkDeeply(input, founderIdentity);
         setAnalysis(thoughts);
-        posthog.capture('strategy_generated', { input_length: input.length });
         toast.success('INKLO ENGINE: ANALYSIS COMPLETE', {
            style: { border: '4px solid black', borderRadius: 0, fontWeight: 'bold' }
         });
       } else {
         const polished = await quickPolish(analysis, founderIdentity);
         setAnalysis(polished);
-        posthog.capture('strategy_polished');
         toast.success('INKLO ENGINE: CONTENT REFINED');
       }
     } catch (error) {
-      posthog.captureException(error);
       toast.error('ENGINE ERROR: RECALIBRATING...');
     } finally {
       setIsProcessing(false);
@@ -470,29 +460,25 @@ const KeynoteCompanion = () => {
       if (!snapshot.empty) {
         toast.dismiss(toastId);
         const choice = window.confirm(`EXISTING_STRATEGY_FOUND: "${title}"\n\nOK = SAVE_AS_NEW_VERSION (History preserved)\nCANCEL = OVERWRITE_MOST_RECENT (Clean slate)`);
-
+        
         if (choice) {
           // SAVE AS NEW VERSION
           strategyData.createdAt = serverTimestamp();
           await addDoc(collection(db, 'users', auth.currentUser.uid, 'strategies'), strategyData);
-          posthog.capture('strategy_saved', { save_type: 'new_version' });
           toast.success('NEW_VERSION_COMMITTED', { id: toastId });
         } else {
           // OVERWRITE (Update the most recent one with this name)
           const docToUpdate = snapshot.docs[0]; // Usually the first one found
           await updateDoc(firestoreDoc(db, 'users', auth.currentUser.uid, 'strategies', docToUpdate.id), strategyData);
-          posthog.capture('strategy_saved', { save_type: 'overwrite' });
           toast.success('STRATEGY_OVERWRITTEN', { id: toastId });
         }
       } else {
         // NORMAL SAVE
         strategyData.createdAt = serverTimestamp();
         await addDoc(collection(db, 'users', auth.currentUser.uid, 'strategies'), strategyData);
-        posthog.capture('strategy_saved', { save_type: 'new' });
         toast.success('STRATEGY_PERSISTED_SUCCESSFULLY', { id: toastId });
       }
     } catch (error: any) {
-      posthog.captureException(error);
       console.error('Save Strategy Error:', error);
       toast.error('PERSISTENCE_FAILURE: ' + (error.message || 'UNKNOWN_ERROR'), { id: toastId });
     } finally {
@@ -565,10 +551,8 @@ const KeynoteCompanion = () => {
       }
 
       pdf.save(`Keynote_Export_${Date.now()}.pdf`);
-      posthog.capture('strategy_exported', { format: 'pdf' });
       toast.success('PDF_GENERATED_SUCCESSFULLY', { id: toastId });
     } catch (error) {
-      posthog.captureException(error);
       console.error('PDF Export Error:', error);
       toast.error('EXPORT_FAILURE: COULD_NOT_PROCESS_PDF');
     }
@@ -597,7 +581,6 @@ ${analysis}
     element.download = `Obsidian_Vault_Strategy_${Date.now()}.md`;
     document.body.appendChild(element);
     element.click();
-    posthog.capture('strategy_exported', { format: 'obsidian' });
     toast.success('OBSIDIAN_VAULT_EXPORT_SUCCESS');
   };
 
@@ -632,7 +615,6 @@ _Deployed via [SoloScribe](https://ai.studio/build)_`;
     element.download = `GitHub_Issue_Strategy_${Date.now()}.md`;
     document.body.appendChild(element);
     element.click();
-    posthog.capture('strategy_exported', { format: 'github' });
     toast.success('GITHUB_FLAVORED_EXPORT_SUCCESS');
   };
 
@@ -677,7 +659,6 @@ _Deployed via [SoloScribe](https://ai.studio/build)_`;
     element.download = `Trello_Kanban_Import_${Date.now()}.json`;
     document.body.appendChild(element);
     element.click();
-    posthog.capture('strategy_exported', { format: 'trello' });
     toast.success('KANBAN_TRELLO_EXPORT_SUCCESS');
   };
 
@@ -729,7 +710,6 @@ _Deployed via [SoloScribe](https://ai.studio/build)_`;
                   return;
                 }
                 setInput((prev) => prev ? prev + "\n\n" + tmpl.content : tmpl.content);
-                posthog.capture('template_loaded', { template_id: tmpl.id, template_name: tmpl.name });
                 toast.success('BLUEPRINT_INJECTED', {
                   description: `Loaded: ${tmpl.name}`
                 });

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import posthog from 'posthog-js';
 import { Eye, Search, Zap, AlertCircle, Sparkles, Trophy, Shuffle, Swords } from 'lucide-react';
 import { useAppStore } from '../../lib/state';
 import { thinkDeeply } from '../../lib/ai-tools';
@@ -44,12 +43,8 @@ Keep the presentation in an ultra-clean, high-energy, neo-brutalist markdown tem
 
       const result = await thinkDeeply(prompt, founderIdentity);
       setCompetitiveReport(result);
-      posthog.capture('competitive_audit_run', {
-        competitor_count: competitors.split(',').filter(c => c.trim()).length,
-      });
       toast.success('COMPETITIVE_AUDIT_SYNCHRONIZED', { id: toastId });
     } catch (error: any) {
-      posthog.captureException(error);
       console.error(error);
       toast.error('COMPETITIVE_AUDIT_FAIL', { id: toastId });
     } finally {

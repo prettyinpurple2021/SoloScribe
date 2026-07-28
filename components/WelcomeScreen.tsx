@@ -1,18 +1,88 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Rocket, Sparkles, Brain, Mic, MessageSquare, Wand2, ArrowRight, BookOpen, Clock, AlertTriangle } from 'lucide-react';
+import { Rocket, Sparkles, Brain, Mic, MessageSquare, Wand2, ArrowRight, BookOpen, Clock, AlertTriangle, Activity, CheckSquare, FileText } from 'lucide-react';
 import Inklo from './Inklo';
 import { useAppStore } from '../lib/state';
 import { thinkDeeply } from '../lib/ai-tools';
 import { db, auth } from '../lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { toast } from 'sonner';
 
 const WelcomeScreen = () => {
-  const { founderIdentity, founderMood, setInkloMode, isProcessing, setIsProcessing, setActiveTab } = useAppStore();
+  const { founderIdentity, founderMood, setInkloMode, isProcessing, setIsProcessing, setActiveTab, roadmapTasks } = useAppStore();
   const [brainDump, setBrainDump] = useState('');
   const [selectedFramework, setSelectedFramework] = useState<'SWOT' | 'MOSCOW' | 'LEAN_CANVAS' | 'GROWTH_LOOPS'>('SWOT');
   
+  // Auto-Save Draft Recovery System
+  const [cachedDraft, setCachedDraft] = useState('');
+  const [saveStatus, setSaveStatus] = useState<'IDLE' | 'TYPING' | 'SAVED'>('IDLE');
+
+  useEffect(() => {
+    // Check for cached draft on mount
+    const saved = localStorage.getItem('soloscribe_active_draft');
+    if (saved && saved.trim()) {
+      setCachedDraft(saved);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!brainDump.trim()) {
+      setSaveStatus('IDLE');
+      return;
+    }
+
+    setSaveStatus('TYPING');
+    const delayDebounceFn = setTimeout(() => {
+      localStorage.setItem('soloscribe_active_draft', brainDump);
+      setSaveStatus('SAVED');
+    }, 2500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [brainDump]);
+
+  const recoverDraft = () => {
+    setBrainDump(cachedDraft);
+    setCachedDraft('');
+    toast.success('DRAFT_RECOVERED', { description: 'Loaded your last uncommitted strategic thoughts.' });
+  };
+
+  const discardDraft = () => {
+    localStorage.removeItem('soloscribe_active_draft');
+    setCachedDraft('');
+    toast.info('DRAFT_PURGED_FROM_CACHE');
+  };
+
+  // Recent activity / snapshot states
+  const [recentStrategies, setRecentStrategies] = useState<any[]>([]);
+  const [strategiesLoading, setStrategiesLoading] = useState(true);
+
+  useEffect(() => {
+    if (!auth.currentUser) {
+      setStrategiesLoading(false);
+      return;
+    }
+
+    const q = query(
+      collection(db, 'users', auth.currentUser.uid, 'strategies'),
+      orderBy('createdAt', 'desc'),
+      limit(5)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setRecentStrategies(data);
+      setStrategiesLoading(false);
+    }, (error) => {
+      console.error("Error fetching recent strategies:", error);
+      setStrategiesLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   // Pulse State
   const [focusLevel, setFocusLevel] = useState(5);
   const [energyLevel, setEnergyLevel] = useState(5);
@@ -123,6 +193,7 @@ FORMAT: Please use clear markdown presentation format with elegant headers, bull
 
       // Clear dump index
       setBrainDump('');
+      localStorage.removeItem('soloscribe_active_draft');
     } catch (error: any) {
       console.error(error);
       toast.error('STRATEGY_COMPILATION_FAIL', {
@@ -171,6 +242,32 @@ FORMAT: Please use clear markdown presentation format with elegant headers, bull
               Paste your raw thoughts, midnight ideas, or coffee-induced epiphanies below. Inklo will compile it into high-fidelity tactical strategy.
             </p>
 
+            {cachedDraft && (
+              <div className="bg-neo-pink border-4 border-neo-black p-4 mb-4 neo-shadow flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 animate-in fade-in slide-in-from-top-2 duration-300 text-neo-black">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-[8px] font-black animate-pulse bg-neo-black text-neo-lime px-2 py-0.5 rounded-sm">🔌 RESILIENCE_SAFE_MODE</span>
+                    <span className="font-black text-xs uppercase text-neo-black leading-none">UNCOMMITTED STRATEGY RECOVERED //</span>
+                  </div>
+                  <span className="font-mono text-[9px] font-bold text-neo-black/60 uppercase">An unsaved strategic brainstorm session was recovered from local memory cache.</span>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <button 
+                    onClick={recoverDraft} 
+                    className="bg-white hover:bg-neo-lime text-neo-black border-2 border-neo-black px-3 py-1 font-black text-xs uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all cursor-pointer"
+                  >
+                    RECOVER_DRAFT
+                  </button>
+                  <button 
+                    onClick={discardDraft} 
+                    className="bg-white hover:bg-neo-yellow text-neo-black border-2 border-neo-black px-3 py-1 font-black text-xs uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all cursor-pointer"
+                  >
+                    DISCARD
+                  </button>
+                </div>
+              </div>
+            )}
+
             <textarea
               value={brainDump}
               onChange={(e) => setBrainDump(e.target.value)}
@@ -178,6 +275,30 @@ FORMAT: Please use clear markdown presentation format with elegant headers, bull
               placeholder="Dump your strategic thoughts here (e.g., 'I want to build a newsletter for solo developers selling SaaS ideas, charging $10/mo but offering premium micro-credits. I'm afraid competitors like IndyHackers have too much content, so I want to focus strictly on real-time feedback widgets...')"
               className="w-full bg-zinc-50 border-2 border-neo-black p-4 font-bold text-sm focus:bg-white outline-none min-h-[180px] font-sans"
             />
+
+            <div className="flex justify-between items-center mt-3 font-mono text-[9px] font-black uppercase text-zinc-500">
+              <span className="flex items-center gap-1.5">
+                {saveStatus === 'SAVED' && (
+                  <>
+                    <span className="w-2.5 h-2.5 rounded-full bg-neo-lime animate-pulse inline-block" />
+                    <span className="text-neo-lime font-black">● OFFLINE_HANDSHAKE_READY: SAVED_DRAFT_TO_DISK_CACHE</span>
+                  </>
+                )}
+                {saveStatus === 'TYPING' && (
+                  <>
+                    <span className="w-2.5 h-2.5 rounded-full bg-neo-yellow animate-ping inline-block" />
+                    <span className="text-neo-yellow font-black animate-pulse">● WRITING: STABILIZING_PENDING_2.5s_AUTO_SAVE...</span>
+                  </>
+                )}
+                {saveStatus === 'IDLE' && (
+                  <>
+                    <span className="w-2.5 h-2.5 rounded-full bg-zinc-400 inline-block" />
+                    <span>● READY: AWAITING_COFFEE_INDUCED_EPIPHANIES...</span>
+                  </>
+                )}
+              </span>
+              <span>BUFFER_STATUS: 100% HEALTHY //</span>
+            </div>
           </section>
 
           {/* FRAMEWORK EXPANSIONS */}
@@ -225,6 +346,91 @@ FORMAT: Please use clear markdown presentation format with elegant headers, bull
 
         {/* CURRENT SYSTEM STATS / QUICK ACTIONS */}
         <div className="space-y-6">
+          {/* QUICK SNAPSHOT WIDGET */}
+          <section className="bg-white border-4 border-neo-black p-6 neo-shadow">
+            <div className="flex items-center justify-between border-b-2 border-neo-black pb-3 mb-4">
+              <h3 className="font-black text-xl uppercase tracking-tighter flex items-center gap-2">
+                <Activity className="text-neo-pink" size={22} />
+                QUICK_SNAPSHOT
+              </h3>
+              <span className="font-mono text-[9px] font-black bg-neo-black text-white px-2 py-0.5 rounded-sm">
+                LIVE_FEED
+              </span>
+            </div>
+
+            <div className="space-y-4">
+              {/* ROADMAP SNAPSHOT */}
+              <div 
+                onClick={() => setActiveTab('roadmap')}
+                className="border-2 border-neo-black p-3 hover:bg-neo-cyan/10 transition-colors cursor-pointer group"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckSquare className="text-neo-lime" size={16} />
+                  <span className="font-mono text-[10px] font-black uppercase text-zinc-500">ROADMAP_STATUS</span>
+                </div>
+                <div className="flex justify-between items-end mb-1">
+                  <span className="font-black uppercase text-xs">
+                    {roadmapTasks.filter(t => !t.done).length} Active Tasks
+                  </span>
+                  <span className="font-mono text-[10px] font-black text-zinc-600">
+                    {roadmapTasks.filter(t => t.done).length}/{roadmapTasks.length} Done
+                  </span>
+                </div>
+                {/* Progress bar */}
+                <div className="w-full bg-zinc-150 border-2 border-neo-black h-4 overflow-hidden flex">
+                  <div 
+                    className="bg-neo-lime h-full border-r-2 border-neo-black transition-all duration-500"
+                    style={{ width: `${roadmapTasks.length > 0 ? (roadmapTasks.filter(t => t.done).length / roadmapTasks.length) * 100 : 0}%` }}
+                  />
+                </div>
+                <div className="flex justify-end mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="font-mono text-[9px] font-black uppercase text-neo-pink flex items-center gap-1">
+                    Manage Tasks <ArrowRight size={10} />
+                  </span>
+                </div>
+              </div>
+
+              {/* RECENT DOCUMENT SNAPSHOT */}
+              <div 
+                onClick={() => setActiveTab('vault')}
+                className="border-2 border-neo-black p-3 hover:bg-neo-pink/10 transition-colors cursor-pointer group"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <FileText className="text-neo-cyan" size={16} />
+                  <span className="font-mono text-[10px] font-black uppercase text-zinc-500">LAST_COMPILED_STRATEGY</span>
+                </div>
+                {strategiesLoading ? (
+                  <div className="h-10 flex items-center justify-center">
+                    <span className="font-mono text-[10px] animate-pulse">QUERYING_VAULT...</span>
+                  </div>
+                ) : recentStrategies.length > 0 ? (
+                  <div>
+                    <h4 className="font-black text-sm uppercase truncate text-neo-black mb-1">
+                      {recentStrategies[0].title}
+                    </h4>
+                    <div className="flex items-center justify-between text-[10px] font-mono text-zinc-500">
+                      <span>Mood: {recentStrategies[0].founderMood || 'N/A'}</span>
+                      <span>
+                        {recentStrategies[0].createdAt?.toDate 
+                          ? new Date(recentStrategies[0].createdAt.toDate()).toLocaleDateString() 
+                          : 'Recent'}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-xs font-bold uppercase text-zinc-400 italic">No strategies compiled yet.</p>
+                  </div>
+                )}
+                <div className="flex justify-end mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="font-mono text-[9px] font-black uppercase text-neo-cyan flex items-center gap-1">
+                    Open Vault <ArrowRight size={10} />
+                  </span>
+                </div>
+              </div>
+            </div>
+          </section>
+
           <section className="bg-neo-lime border-4 border-neo-black p-6 neo-shadow flex flex-col justify-between">
             <div>
               <h3 className="font-black text-2xl uppercase tracking-tighter flex items-center gap-2 mb-3">

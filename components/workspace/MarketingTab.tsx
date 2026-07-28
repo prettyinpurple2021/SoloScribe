@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import posthog from 'posthog-js';
 import { Target, Users, Share2, MessageCircle, Zap } from 'lucide-react';
 import { useAppStore } from '../../lib/state';
 import { thinkDeeply } from '../../lib/ai-tools';
@@ -16,10 +15,8 @@ const MarketingTab = () => {
       const prompt = `Generate a high-velocity, neo-brutalist marketing campaign copy for this founder's project. Focus on 3 viral channel headlines and a short 100-word elevator pitch that avoids cliches.`;
       const result = await thinkDeeply(prompt, founderIdentity);
       setCopy(result);
-      posthog.capture('marketing_copy_generated');
       toast.success('MARKETING_INTEL_SYNCHRONIZED');
     } catch (error) {
-      posthog.captureException(error);
       toast.error('GENERATION_FAILURE');
     } finally {
       setIsProcessing(false);

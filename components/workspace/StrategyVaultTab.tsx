@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { db, auth } from '../../lib/firebase';
 import { collection, query, onSnapshot, orderBy, deleteDoc, doc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
-import { Book, Trash2, Send, Archive, Search, RefreshCw, Globe, Zap } from 'lucide-react';
+import { Book, Trash2, Send, Archive, Search, RefreshCw, Globe, Zap, Download, FileText, Filter, ListOrdered } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAppStore } from '../../lib/state';
 
@@ -18,8 +18,11 @@ const StrategyVaultTab = () => {
   const [strategies, setStrategies] = useState<StrategyRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterMood, setFilterMood] = useState<string>('ALL');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'alphabetical'>('newest');
   const [selectedStrategy, setSelectedStrategy] = useState<StrategyRecord | null>(null);
   const [isExportingNotion, setIsExportingNotion] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
   const { 
     setCurrentDocument, 
     setFounderMood, 
@@ -60,10 +63,25 @@ const StrategyVaultTab = () => {
     }, new Map<string, StrategyRecord>()).values()
   );
 
-  const filtered = uniqueLatest.filter(s => 
-    s.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.content.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filtered = uniqueLatest
+    .filter(s => {
+      const matchesSearch = s.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        s.content.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesMood = filterMood === 'ALL' || s.founderMood === filterMood;
+      return matchesSearch && matchesMood;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'newest') {
+        return (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0);
+      }
+      if (sortBy === 'oldest') {
+        return (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0);
+      }
+      if (sortBy === 'alphabetical') {
+        return (a.title || '').localeCompare(b.title || '');
+      }
+      return 0;
+    });
 
   // Versions of the selected strategy title
   const versions = selectedStrategy 
@@ -151,6 +169,171 @@ const StrategyVaultTab = () => {
     } finally {
       setIsExportingNotion(false);
     }
+  };
+
+  const handleExportPDF = async () => {
+    if (!selectedStrategy || !contentRef.current) {
+      toast.error('NO_CONTENT_TO_EXPORT');
+      return;
+    }
+
+    try {
+      const toastId = toast.loading('GENERATING_PDF_DOCUMENT...');
+      const { jsPDF } = await import('jspdf');
+      const html2canvas = (await import('html2canvas')).default;
+
+      const canvas = await html2canvas(contentRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff'
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+      // Header Banner
+      pdf.setFillColor(0, 0, 0);
+      pdf.rect(0, 0, pdfWidth, 25, 'F');
+      
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(16);
+      pdf.text('SOLOSCRIBE INTEL VAULT', 10, 16);
+      
+      pdf.setTextColor(150, 150, 150);
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`TITLE: ${selectedStrategy.title.toUpperCase()}`, 10, 32);
+      pdf.text(`EXPORTED: ${new Date().toLocaleString()}`, 10, 37);
+      pdf.text(`FOUNDER MOOD: ${selectedStrategy.founderMood}`, pdfWidth - 80, 32);
+      
+      pdf.setDrawColor(0, 0, 0);
+      pdf.setLineWidth(0.5);
+      pdf.line(10, 42, pdfWidth - 10, 42);
+
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      let imgHeightLeft = pdfHeight;
+      let position = 46; // initial position after header
+
+      pdf.addImage(imgData, 'PNG', 10, position, pdfWidth - 20, pdfHeight - 20);
+      imgHeightLeft -= (pageHeight - position);
+
+      while (imgHeightLeft > 0) {
+        pdf.addPage();
+        position = 15; // padding on subsequent pages
+        pdf.addImage(imgData, 'PNG', 10, position, pdfWidth - 20, pdfHeight - 20);
+        imgHeightLeft -= pageHeight;
+      }
+
+      pdf.save(`SoloScribe_Strategy_${selectedStrategy.title.replace(/\s+/g, '_')}_${Date.now()}.pdf`);
+      toast.success('PDF_EXPORT_SUCCESS', { id: toastId });
+    } catch (error) {
+      console.error('PDF Export Error:', error);
+      toast.error('PDF_EXPORT_FAILED');
+    }
+  };
+
+  const handleExportHTML = () => {
+    if (!selectedStrategy) return;
+    const dateStr = new Date().toLocaleDateString();
+    
+    const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SoloScribe Strategic Document: ${selectedStrategy.title}</title>
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #f3f4f6;
+      color: #171717;
+      margin: 0;
+      padding: 40px 20px;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #ffffff;
+      border: 4px solid #171717;
+      box-shadow: 8px 8px 0px 0px #171717;
+      padding: 40px;
+    }
+    .header {
+      border-bottom: 4px solid #171717;
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+    }
+    .title {
+      font-size: 2.5rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: -0.05em;
+      margin: 0 0 10px 0;
+    }
+    .metadata {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      color: #4b5563;
+    }
+    .meta-tag {
+      background: #e5e7eb;
+      border: 1px solid #171717;
+      padding: 3px 8px;
+      font-weight: bold;
+    }
+    .content {
+      white-space: pre-wrap;
+      font-size: 1.1rem;
+      color: #262626;
+    }
+    .footer {
+      margin-top: 50px;
+      border-top: 2px dashed #e5e7eb;
+      padding-top: 20px;
+      font-size: 0.8rem;
+      text-align: center;
+      color: #6b7280;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1 class="title">${selectedStrategy.title}</h1>
+      <div class="metadata">
+        <span class="meta-tag">MOOD: ${selectedStrategy.founderMood}</span>
+        <span class="meta-tag">EXPORTED: ${dateStr}</span>
+        <span class="meta-tag">SYSTEM: SOLOSCRIBE_VAULT</span>
+      </div>
+    </div>
+    <div class="content">${selectedStrategy.content}</div>
+    <div class="footer">
+      GENERATED BY SOLOSCRIBE INTEL SYSTEM &copy; ${new Date().getFullYear()} ALL RIGHTS RESERVED.
+    </div>
+  </div>
+</body>
+</html>`;
+
+    const element = document.createElement("a");
+    const file = new Blob([htmlContent], { type: 'text/html' });
+    element.href = URL.createObjectURL(file);
+    element.download = `SoloScribe_Strategy_${selectedStrategy.title.replace(/\s+/g, '_')}_${Date.now()}.html`;
+    document.body.appendChild(element);
+    element.click();
+    toast.success('HTML_PORTABLE_EXPORT_SUCCESS');
   };
 
   const handleExportObsidian = () => {
@@ -302,6 +485,49 @@ _Deployed via [SoloScribe](https://ai.studio/build)_`;
            />
         </div>
 
+        {/* Advanced Sort & Mood Filters */}
+        <div className="bg-white border-4 border-neo-black p-4 neo-shadow-sm space-y-4">
+          <div>
+            <span className="font-mono text-[9px] font-black text-zinc-400 block mb-2 uppercase flex items-center gap-1">
+              <ListOrdered size={10} /> SORT_ORDER //
+            </span>
+            <div className="flex gap-1.5">
+              {(['newest', 'oldest', 'alphabetical'] as const).map(order => (
+                <button
+                  key={order}
+                  type="button"
+                  onClick={() => setSortBy(order)}
+                  className={`flex-1 py-1 px-1.5 border-2 border-neo-black font-mono text-[8px] font-black uppercase transition-all
+                    ${sortBy === order ? 'bg-neo-yellow text-neo-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]' : 'bg-white hover:bg-zinc-100'}
+                  `}
+                >
+                  {order}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <span className="font-mono text-[9px] font-black text-zinc-400 block mb-2 uppercase flex items-center gap-1">
+              <Filter size={10} /> FILTER_BY_MOOD //
+            </span>
+            <div className="flex flex-wrap gap-1">
+              {['ALL', 'PRODUCTIVE', 'HYPER-FOCUSED', 'CHAOTIC', 'STRATEGIC', 'GOD_MODE'].map(mood => (
+                <button
+                  key={mood}
+                  type="button"
+                  onClick={() => setFilterMood(mood)}
+                  className={`px-1.5 py-0.5 border border-neo-black font-mono text-[8px] font-black uppercase transition-all
+                    ${filterMood === mood ? 'bg-neo-cyan text-neo-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]' : 'bg-white hover:bg-zinc-100'}
+                  `}
+                >
+                  {mood}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
         <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
            {loading ? (
              [...Array(3)].map((_, i) => <div key={i} className="h-24 bg-white/50 border-4 border-neo-black animate-pulse" />)
@@ -436,17 +662,33 @@ _Deployed via [SoloScribe](https://ai.studio/build)_`;
                  </div>
               </div>
 
-              <div className="flex-1 p-8 notebook-bg overflow-y-auto whitespace-pre-wrap font-sans font-bold text-lg leading-relaxed text-zinc-700">
+              <div ref={contentRef} className="flex-1 p-8 notebook-bg overflow-y-auto whitespace-pre-wrap font-sans font-bold text-lg leading-relaxed text-zinc-700">
                  {selectedStrategy.content}
               </div>
 
-              {/* DYNAMIC MULTI-TARGET EXPORTERS PRO BANNER */}
+              {/* DYNAMIC MULTI-TARGET EXPORTERS PRO BANNER v2 */}
               <div className="bg-neo-yellow border-t-4 border-neo-black p-3.5 flex flex-col md:flex-row items-center justify-between gap-3 text-xs font-black uppercase text-neo-black font-mono relative z-20">
                  <div className="flex items-center gap-2">
                     <span className="bg-neo-black text-neo-lime px-2 py-0.5 text-[8px] animate-pulse">// VAULT RECOVERY SYSTEM_v5</span>
                     <span className="tracking-tighter">PORTABILITY ACTIONS (BEYOND NOTION):</span>
                  </div>
                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={handleExportPDF}
+                      className="bg-white hover:bg-neo-cyan border-2 border-neo-black px-2.5 py-1 text-[9px] font-black cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all flex items-center gap-1"
+                      title="Generate beautiful, print-ready PDF with letterhead"
+                    >
+                      🔴 DOWNLOAD [PDF]
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleExportHTML}
+                      className="bg-white hover:bg-neo-lime border-2 border-neo-black px-2.5 py-1 text-[9px] font-black cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all flex items-center gap-1"
+                      title="Download portable offline-ready HTML presentation slide"
+                    >
+                      🟢 DOWNLOAD [HTML]
+                    </button>
                     <button
                       type="button"
                       onClick={handleExportObsidian}
